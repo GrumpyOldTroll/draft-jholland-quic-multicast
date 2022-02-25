@@ -19,28 +19,28 @@
 # Change the file extension to match the format (.xml for XML, etc...)
 #
 ###
-title: "TODO - Your title"
-abbrev: "TODO - Abbreviation"
-category: info
+title: "Multicast Extension for QUIC"
+abbrev: "Multicast QUIC"
+category: std
 
-docname: draft-todo-yourname-protocol-latest
+docname: draft-jholland-quic-multicast-latest
 v: 3
-area: AREA
-workgroup: WG Working Group
+area: TSV
+workgroup: QUIC Working Group
 keyword: Internet-Draft
 venue:
-  group: WG
+  group: QUIC
   type: Working Group
-  mail: WG@example.com
+  mail: public-multicast@w3.org
   arch: https://example.com/WG
-  github: USER/REPO
+  github: GrumpyOldTroll/draft-jholland-quic-multicast
   latest: https://example.com/LATEST
 
 author:
  -
-    fullname: Your Name Here
-    organization: Your Organization Here
-    email: your.email@example.com
+    fullname: Jacob Holland
+    organization: Akamai Technologies, Inc.
+    email: jakeholland.net@gmail.com
 
 normative:
 
