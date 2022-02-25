@@ -5,16 +5,16 @@ category: std
 
 docname: draft-jholland-quic-multicast-latest
 v: 3
-area: TSV
-workgroup: QUIC Working Group
+area: "Transport"
+workgroup: "QUIC"
 keyword: Internet-Draft
 venue:
-  group: QUIC
-  type: Working Group
-  mail: public-multicast@w3.org
-  arch: https://example.com/WG
-  github: GrumpyOldTroll/draft-jholland-quic-multicast
-  latest: https://example.com/LATEST
+  group: "QUIC"
+  type: "Working Group"
+  mail: "quic@ietf.org"
+  arch: "https://mailarchive.ietf.org/arch/browse/quic/"
+  github: "GrumpyOldTroll/draft-jholland-quic-multicast"
+  latest: "https://GrumpyOldTroll.github.io/draft-jholland-quic-multicast/draft-jholland-quic-multicast.html"
 
 author:
  -
