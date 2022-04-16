@@ -61,10 +61,6 @@ This document does not define any multicast transport except server to client.
 
 {::boilerplate bcp14}
 
-# Handshake Negotiation and Transport Parameter
-
-TODO (next)
-
 # Multicast Session
 
 A multicast session (or just session) is a one-way communication stream by which a server can transport data to a client as part of the QUIC connection between the server and client.
@@ -83,6 +79,43 @@ It is recommended that applications designed to leverage the multicast capabilit
 The server has access to all data transmitted on any multicast session it uses, and could optionally send this data with unicast instead.
 An application using a multicast-capable QUIC implementation that receives a datagram or stream data has no knowledge at the application layer whether multicast was used or not used for that data, it will only know it has received unidirectional server-to-client application data.
 
+# Transport Parameter {#transport-parameter}
+
+Support for multicast extesnsions in a client is advertised by means of a QUIC transport parameter:
+
+ * name: multicast_client_params (TBD - experiments use 0xff3e8000)
+
+If a multicast_client_params transport parameter is not included, servers MUST NOT send any frames defined in this document.  (Given that a server never sends any MC_SESSION_JOIN frames, the clients also will never send any frames in this document so only the client-to-server advertisement is necessary.)
+
+The multicast_client_params parameter has the structure below:
+
+multicast_client_params parameters are formatted as shown in {{fig-transport-parameter-format}}.
+
+~~~
+multicast_client_params {
+  Permit IPv4 (1),
+  Permit IPv6 (1),
+  Reserved (6),
+  Max Aggregate Rate (i),
+  Max Session IDs (i),
+  Hash Algorithms Supported (i),
+  AEAD Algorithms Supported (i),
+  Hash Algorithms List (16 * Hash Algorithms Supported),
+  AEAD Algorithms List (16 * AEAD Algorithms Supported)
+}
+~~~
+{: #fig-transport-parameter-format title="multicast_client_params Format"}
+
+The Permit IPv4, Permit IPv6, Max Aggregate Rate, and Max Session IDs fields are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
+
+The AEAD Algorithms List field is in order of prefernce (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast sessions, and the server MUST NOT send a MP_SESSION_JOIN to this client for any sessions using unsupported algorithms:
+
+  - <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>
+
+The Hash Algorithms List field is in order of prefernce (most preferred occurring first) using values from this registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast sessions, and the server MUST NOT send a MP_SESSION_JOIN to this client for any sessions using unsupported algorithms:
+
+ - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
+
 # Extension Overview
 
 A client has the option of refusal and the power to impose upper bound maxima on several resources (see {{flow-control}}), but otherwise its join status for all multicast sessions is entirely managed by the server.
@@ -93,7 +126,7 @@ A client has the option of refusal and the power to impose upper bound maxima on
 
 ## Session Management
 
-The client tells its server about some restrictions on resources that the server's instructions must remain within using MC_CLIENT_LIMITS {{client-limits-frame}} frames as covered in {{flow-control}}.
+The client tells its server about some restrictions on resources that the server's instructions with the initial values in the multicast_client_params transport parameter ({{transport-parameter}}) and later can update these limits with MC_CLIENT_LIMITS {{client-limits-frame}} frames. Servers ensure the set of sessions the client is currently requested to join remains within these advertised client limits as covered in {{flow-control}}.
 
 The server asks the client to join sessions with MC_SESSION_JOIN ({{session-join-frame}}) frames and to leave sessions with MC_SESSION_LEAVE ({{session-leave-frame}}) frames.
 
@@ -102,7 +135,7 @@ The server uses MC_SESSION_PROPERTIES ({{session-properties-frame}}) frames befo
 When the server has asked the client to join a session, it also sends MC_SESSION_INTEGRITY ({{session-integrity-frame}} frames to enable the client to verify packet integrity before processing the packet.
 A client MUST NOT decode packets for a session for which it has not received an applicable set of MC_SESSION_PROPERTIES ({{session-properties-frame}}) frames containing the full set of data required, or for which it has not received a matching packet hash in an MC_SESSION_INTEGRITY ({{session-integrity-frame}}) frame.
 
-The server ensures that in aggregate, all sessions that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the last MC_CLIENT_LIMITS ({{client-limits-frame}}) frame the server received.
+The server ensures that in aggregate, all sessions that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_CLIENT_LIMITS ({{client-limits-frame}}) frame the server received.
 
 ## Client Response
 
@@ -140,7 +173,7 @@ These frames enable new clients joining a session to start receiving application
 
 The values used for unicast flow control cannot be used to limit the transmission rate of a multicast session because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that sessions responded to each client's limits.
 
-Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS ({{client-limits-frame}}) frames.
+Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
 The server advertises the expected maxima of the values that can contribute toward client resource limits within a session in MC_SESSION_PROPERTIES ({{session-properties-frame}}) frames.
 
 If the server asks the client to join a session that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client shoud send back a MC_SESSION_STATE_CHANGE with "Declined Join" and reason "Protocol Violation".
@@ -187,10 +220,10 @@ MC_SESSION_PROPERTIES Frame {
     Has Max Idle Time (1),
     Has Recommended Max Streams (1),
     Has SSM (1),
-    Has Addresses (1),
-    IP Family (4)
+    Has Addresses (1)
   },
-  Reserved (3),
+  Reserved (6),
+  IP Family (1)
   Until Packet Number (0..32),
   AEAD Algorithm (0..16),
   Key (...),
@@ -222,6 +255,8 @@ If a field is not included, it remains unchanged unless a different semantic is 
    - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
    - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
    - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
+ * If Has Addresses is 0, then Has SSM and IP Family are ignored and neither Source IP nor Group IP is present.  If Has Addresses is 1, then SSM indicates the presence of Source IP (1 means present, 0 means not present), and IP Family indicates the address family of both Source IP (if present) and Group IP, with 0 meaning IPv4 (32 bits) and 1 meaning IPv6 (128 bits).
+an IP Family of 0 indicates the Group (if present) are IPv4, or an IP family of 1 indicates the Group and Source are IPv6.
 
 ## MC_SESSION_JOIN {#session-join-frame}
 
@@ -349,6 +384,9 @@ MC_CLIENT_LIMITS Frame {
   Max Session IDs (i)
 ~~~
 {: #fig-mc-client-limits-format title="MC_CLIENT_LIMITS Frame Format"}
+
+The sequence number is implicitly 0 before the first MC_CLIENT_LIMITS frame from the client, and increases by 1 each new frame that's sent.
+Newer frames override older ones.
 
 Max Aggregate Rate allowed across all joined sessions is in Kibps.
 
