@@ -36,6 +36,7 @@ normative:
   I-D.draft-krose-multicast-security:
   I-D.draft-ietf-quic-multipath:
   RFC9000:
+  RFC9001:
   RFC9221:
 
 informative:
@@ -132,7 +133,7 @@ The server asks the client to join sessions with MC_SESSION_JOIN ({{session-join
 
 The server uses MC_SESSION_PROPERTIES ({{session-properties-frame}}) frames before any join or leave frames for the session to describe the session properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the keys necessary to decode packets in the session.
 
-When the server has asked the client to join a session, it also sends MC_SESSION_INTEGRITY ({{session-integrity-frame}} frames to enable the client to verify packet integrity before processing the packet.
+When the server has asked the client to join a session, it also sends MC_SESSION_INTEGRITY frames ({{session-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
 A client MUST NOT decode packets for a session for which it has not received an applicable set of MC_SESSION_PROPERTIES ({{session-properties-frame}}) frames containing the full set of data required, or for which it has not received a matching packet hash in an MC_SESSION_INTEGRITY ({{session-integrity-frame}}) frame.
 
 The server ensures that in aggregate, all sessions that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_CLIENT_LIMITS ({{client-limits-frame}}) frame the server received.
@@ -210,53 +211,74 @@ MC_SESSION_PROPERTIES Frame {
   Type (i) = TBD-01 (experiments use 0xff3e8001),
   Session ID (i),
   Properties Sequence Number (i),
-  From Packet Number (32),
-  Selectors (12) {
+  From Packet Number (i),
+  Selectors (9) {
     Has Until Packet Number (1),
-    Has Key (1),
+    Has Addresses (1)
+    Has SSM (1),
     Has Header Key (1),
+    Has Key (1),
     Has Hash Algorithm (1),
     Has Max Rate (1),
     Has Max Idle Time (1),
-    Has Recommended Max Streams (1),
-    Has SSM (1),
-    Has Addresses (1)
+    Has Max Streams (1),
   },
-  Reserved (6),
-  IP Family (1)
-  Until Packet Number (0..32),
+  Reserved (5),
+  Key Phase (1),
+  [IP Family] (1),
+  Until Packet Number (0..i),
+  [Source IP] (0..128),
+  [Group IP] (0..128),
+  [UDP Port] (0..16)
+  [Header AEAD Algorithm] (0..16),
+  [Header Key] (...),
   AEAD Algorithm (0..16),
   Key (...),
-  Header AEAD Algorithm (0..16),
-  Header Key (...),
   Integrity Hash Algorithm (0..8),
   Max Rate (0..i),
   Max Idle Time (0..i),
-  Recommended Max Streams (0..i),
-  Source IP (...),
-  Group IP (...),
-  UDP Port (0..16)
+  Max Streams (0..i),
 }
+[] = immutable values
 ~~~
 {: #fig-mc-session-properties-format title="MC_SESSION_PROPERTIES Frame Format"}
 
-The 'Has' fields in the Selector determine presence or absence of the corresponding values in the rest of the frame.
+The 'Has' fields in the Selector determine presence or absence of the corresponding values in the rest of the frame, as described below.
 If a field is not included, it remains unchanged unless a different semantic is explained below.
 
- * From Packet Number, Until Packet Number: the changes given in this MC_SESSION_PROPERTIES frame apply to packets starting at From Packet Number and continuing until Until Packet Number-1.  If Until Packet Number is omitted it indicates the current property values for this session do not expire at any packet number.
- * AEAD Algorithm: a value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  Both this field and the Key field are present if and only if Has Key is set, and the length of the following Key field is determined by the algorithm value.  The algorithm value provided MUST be a value listed as supported by the client in the transport properties during initial negotiation.
- * Key: present if and only if Has Key is set, with length determined by the AEAD Algorith value.
- * Header AEAD Algorithm: Same as AEAD Algorithm, but the key and algorithm used to protect the header fields in the session packets.  This value cannot change during the lifetime of the connection.  Presence signaled by Has Header Key.
- * Header Key: Same as Key, but for the Header AEAD Algorithm.
-   * I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused?
-     <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>
+ * From Packet Number, Until Packet Number: the mutable values in this MC_SESSION_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is omitted it indicates the current property values for this session have no expiration at (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any prior (From,Until) range, it has no applicable session properties and MUST be dropped.
+ * Properties Sequence Number: increases by 1 each time the properties for the session are changed by the server.  For mutable properties, the client tracks the sequence number of the MC_SESSION_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequnce Number is higher.
+
+### Immutable Properties
+
+These values cannot change during the lifetime of the session.  If a new value is received that is not the same as a prior value, the client MUST close the connection with a PROTOCOL_ERROR.
+
+ * IP Family: Always present, but used only when Has Addresses=1 (ignored otherwise).  0 indicates IPv4, 1 indicates IPv6 for both Source IP (if present) and Group IP.
+ * Source IP: Present if Has Addresses=1 and Has SSM=1.  The IP Address of the source of the (S,G) for the session's channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
+ * Group IP: Present if Has Addresses=1.  The IP Address of the group of the (S,G) for the session's channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
+ * UDP Port: Present if Has Addressess=1.  The 16-bit UDP Port of traffic for the session's channel.
+ * Header AEAD Algorithm: Present when Has Header Key=1.  a value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the session packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
+ * Header Key: Present when Has Header Key=1.  A key with length and semantics determined by the Header AEAD Algorithm.
+   * I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
+
+### Mutable Properties
+
+These values MAY change during the lifetime of the session.
+From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of {{RFC9000}}) the 1-RTT packets received) over which these values are applicable.
+A From Packet Number without an Until Packet Number has an unspecified termination.
+If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to the new From Packet Number.
+
+ * Key Phase: Always present, used only if Has Key is set (otherwise ignored).  The key phase value in the 1-RTT packet that will be in use for this key (see Section 6 of {{RFC9001}}).
+ * AEAD Algorithm: Present if Has Key is set.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
+ * Key: present if and only if Has Key is set, with length determined by the AEAD Algorith value.  Used to protect the packet contents of 1-RTT packets for the session as described in {{RFC9001}}.
  * Integrity Hash Algorithm: the hash algorithm used in integrity frames
    Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:
    - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
    - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
    - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
- * If Has Addresses is 0, then Has SSM and IP Family are ignored and neither Source IP nor Group IP is present.  If Has Addresses is 1, then SSM indicates the presence of Source IP (1 means present, 0 means not present), and IP Family indicates the address family of both Source IP (if present) and Group IP, with 0 meaning IPv4 (32 bits) and 1 meaning IPv6 (128 bits).
-an IP Family of 0 indicates the Group (if present) are IPv4, or an IP family of 1 indicates the Group and Source are IPv6.
+ * Max Rate: The maximum rate in Kibps of the payload data for this session.Session data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the session with reason Max Rate Exceeded.
+ * Max Idle Time: The maximum expected idle time of the session.  If this amount of time passes in a joined session without data received, clients SHOULD leave the session with reason Max Idle Time Exceeded.
+ * Max Streams: The maximum stream ID that might appear in the session.  If a client joined to this session can raise its Max Streams limit up to or above this value it SHOULD do so, otherwise it SHOULD leave or decline join for the session with Max Streams Exceeded.
 
 ## MC_SESSION_JOIN {#session-join-frame}
 
