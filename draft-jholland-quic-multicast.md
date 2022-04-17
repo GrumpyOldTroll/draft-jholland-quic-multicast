@@ -84,7 +84,7 @@ An application using a multicast-capable QUIC implementation that receives a dat
 
 Support for multicast extesnsions in a client is advertised by means of a QUIC transport parameter:
 
- * name: multicast_client_params (TBD - experiments use 0xff3e8000)
+ * name: multicast_client_params (TBD - experiments use 0xff3e800)
 
 If a multicast_client_params transport parameter is not included, servers MUST NOT send any frames defined in this document.  (Given that a server never sends any MC_SESSION_JOIN frames, the clients also will never send any frames in this document so only the client-to-server advertisement is necessary.)
 
@@ -208,7 +208,7 @@ MC_SESSION_PROPERTIES frames are formatted as shown in {{fig-mc-session-properti
 
 ~~~
 MC_SESSION_PROPERTIES Frame {
-  Type (i) = TBD-01 (experiments use 0xff3e8001),
+  Type (i) = TBD-01 (experiments use 0xff3e801),
   Session ID (i),
   Properties Sequence Number (i),
   From Packet Number (i),
@@ -288,7 +288,7 @@ MC_SESSION_JOIN frames are formatted as shown in {{fig-mc-session-join-format}}.
 
 ~~~
 MC_SESSION_JOIN Frame {
-  Type (i) = TBD-02 (experiments use 0xff3e8002),
+  Type (i) = TBD-02 (experiments use 0xff3e802),
   Session ID (i),
   MC_CLIENT_LIMIT Sequence Number (i),
   MC_CLIENT_SESSION_STATE Sequence Number (i),
@@ -310,7 +310,7 @@ MC_SESSION_LEAVE frames are formatted as shown in {{fig-mc-session-leave-format}
 
 ~~~
 MC_SESSION_LEAVE Frame {
-  Type (i) = TBD-03 (experiments use 0xff3e8003),
+  Type (i) = TBD-03 (experiments use 0xff3e803),
   Session ID (i),
   After Packet Number (i)
 ~~~
@@ -324,7 +324,7 @@ MC_SESSION_INTEGRITY frames are formatted as shown in {{fig-mc-session-integrity
 
 ~~~
 MC_SESSION_INTEGRITY Frame {
-  Type (i) = TBD-04..TBD-05 (experiments use 0xff3e8004 and 0xff3e8005),
+  Type (i) = TBD-04..TBD-05 (experiments use 0xff3e804/0xff3e805),
   Session ID (i),
   Packet Number Start (i),
   [Length (i)],
@@ -342,7 +342,7 @@ MC_SESSION_STREAM_BOUNDARY_OFFSET frames are formatted as shown in {{fig-mc-sess
 
 ~~~
 MC_SESSION_STREAM_BOUNDARY_OFFSET Frame {
-  Type (i) = TBD-06 (experiments use 0xff3e8006),
+  Type (i) = TBD-06 (experiments use 0xff3e806),
   Session ID (i),
   Stream ID (i),
   Stream Offset (i)
@@ -363,7 +363,7 @@ MC_SESSION_ACK frames are formatted as shown in {{fig-mc-session-ack-format}}.
 
 ~~~
   MC_SESSION_ACK Frame {
-    Type (i) = TBD-07 (experiments use 0xff3e8007),
+    Type (i) = TBD-07 (experiments use 0xff3e807),
     Session ID (i),
     Largest Acknowledged (i),
     ACK Delay (i),
@@ -397,7 +397,7 @@ MC_CLIENT_LIMITS frames are formatted as shown in {{fig-mc-client-limits-format}
 
 ~~~
 MC_CLIENT_LIMITS Frame {
-  Type (i) = TBD-09 (experiments use 0xff3e8009),
+  Type (i) = TBD-09 (experiments use 0xff3e809),
   Client Limits Sequence Number (i),
   Permit IPv4 (1),
   Permit IPv6 (1),
@@ -418,7 +418,7 @@ MC_SESSION_RETIRE frames are formatted as shown in {{fig-mc-session-retire-forma
 
 ~~~
 MC_SESSION_RETIRE Frame {
-  Type (i) = TBD-0a (experiments use 0xff3e800a),
+  Type (i) = TBD-0a (experiments use 0xff3e80a),
   Session IDs (i)
 ~~~
 {: #fig-mc-session-retire-format title="MC_SESSION_RETIRE Frame Format"}
@@ -431,7 +431,7 @@ MC_CLIENT_SESSION_STATE frames are formatted as shown in {{fig-mc-client-session
 
 ~~~
 MC_CLIENT_SESSION_STATE Frame {
-  Type (i) = TBD-0b (experiments use 0xff3e800b),
+  Type (i) = TBD-0b (experiments use 0xff3e80b),
   Client Session State Sequence Number (i),
   State (i),
   Reason (0..i)
