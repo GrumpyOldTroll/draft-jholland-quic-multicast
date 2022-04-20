@@ -78,7 +78,11 @@ The use of any particular session is OPTIONAL for both the server and the client
 It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceeful degradation for endpoints that do not or cannot make use of the multicast functionality.
 
 The server has access to all data transmitted on any multicast session it uses, and could optionally send this data with unicast instead.
-An application using a multicast-capable QUIC implementation that receives a datagram or stream data has no knowledge at the application layer whether multicast was used or not used for that data, it will only know it has received unidirectional server-to-client application data.
+
+No special handling of the data is required in a client application that has enabled multicast.
+A datagram or any particular bytes from a server-initiated unidirectional stream can be delivered over the unicast connection or a multicast session transparently to the client.
+
+Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in {{I-D.draft-krose-multicast-security}}.
 
 # Transport Parameter {#transport-parameter}
 
