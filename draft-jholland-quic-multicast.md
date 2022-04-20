@@ -64,15 +64,24 @@ This document does not define any multicast transport except server to client.
 
 # Multicast Session
 
-A multicast session (or just session) is a one-way communication stream by which a server can transport data to a client as part of the QUIC connection between the server and client.
+A multicast session (or just session) is a one-way network path that a server can use as an alternate path to send QUIC connection data to a client.
 
-Multicast sessions are additional network paths that can optionally be used by the server and client to transport application data concurrently with other network paths used by the connection.
+Multicast sessions are designed to leverage multicast IP and to be shared by many different connections simultaneously for unidirectional server-initiated data.
+Many servers can use the same session to send the same data to many clients.
 
-Sessions are designed to leverage multicast IP, so all clients joined to a session will receive identical data packets for that session at the IP layer.
-Sessions are designed to be shared by many connections so that many servers can use the same session to communicate the same data to many clients.
+QUIC connections are defined in Section 5 of {{RFC9000}} and are not changed in this document; each connection is a shared state between a client and a server.
 
-Note that each QUIC connection still is defined only between a single client and a single server.
-But when using the multicast extension defined in this document, some of the data transmitted from server to client may be data that used a network transport path that was shared with other connections.
+Sessions carry only 1-RTT packets.
+Packets associated with a session contain a Session ID in place of a Destination Connection ID.
+(A Session ID cannot be zero length.)
+This adds a layer of indirection to the process described in Section 5.2 of {{RFC9000}}} for matching packets to connections upon receipt.
+Incoming packets received on the network path associated with a session use the Session ID to associate the packet with a joined session.
+
+A client with a matching joined session always has at least one connection associated with the session.
+If a client has no matching joined session, the packet is discarded.
+
+Since the network path for a session is unidirectional, packets associated with a session are acknowledged with MP_SESSION_ACK frames {{session-ack-frames}} instead of with ACK frames.
+Each session has an independent sequence number space.
 
 The use of any particular session is OPTIONAL for both the server and the client.
 It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceeful degradation for endpoints that do not or cannot make use of the multicast functionality.
