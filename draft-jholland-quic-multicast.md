@@ -187,6 +187,16 @@ The server maintains a full view of the traffic received by the client via the A
 
 Under sustained persistent loss, the server SHOULD instruct the client such that the aggregate rate of joined sessions remains under the data rate successfully received by the client in the recent past.
 
+# Data Integrity
+
+TODO: import the {{I-D.draft-krose-multicast-security}} explanation for why extra integrity protection is necessary (many client have the shared key, so AEAD doesn't provide authentication against other valid clients on its own).
+
+## Packet Hashes {#packet-hashes}
+
+TODO: explanation and example for how to calculate the packet hash.
+Note that the hash is on the unencrypted packet because it checks against a specific packet number, which is protected by AEAD.
+(This approach also may help make better use of crypto hardware offload.)
+
 # Packet Scheduling
 
 # Implementation and Operational Considerations
@@ -329,12 +339,18 @@ MC_SESSION_INTEGRITY Frame {
   Packet Number Start (i),
   [Length (i)],
   Packet Hashes (..)
+}
 ~~~
 {: #fig-mc-session-integrity-format title="MC_SESSION_INTEGRITY Frame Format"}
 
 For type TBD-05, Length is present and is a count of packet hashes.  For TBD-04, Length is not present and the packet hashes extend to the end of the packet.
 
+The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Session ID equal to the Session ID in the MC_SESSION_INTEGRITY frame and packet number equal to the Packet Number Start field.
+Subsequent hashes refer to the packets for the session with packet numbers increasing by 1.
+
 Packet hashes MUST have length with an integer multiple of the length indicated by the Hash Algorithm from the Session Properties.
+
+See {{packet-hashes}} for a description of the packet hash calculation.
 
 ## MC_SESSION_STREAM_BOUNDARY_OFFSET {#session-stream-boundary-offset-frame}
 
