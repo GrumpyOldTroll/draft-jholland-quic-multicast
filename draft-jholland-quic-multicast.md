@@ -64,10 +64,10 @@ This document does not define any multicast transport except server to client.
 
 # Multicast Session
 
-A multicast session (or just session) is a one-way network path that a server can use as an alternate path to send QUIC connection data to a client.
+A QUIC multicast session (or just session) is a one-way network path that a server can use as an alternate path to send QUIC connection data to a client.
 
 Multicast sessions are designed to leverage multicast IP and to be shared by many different connections simultaneously for unidirectional server-initiated data.
-Many servers can use the same session to send the same data to many clients.
+One or more servers can use the same QUIC multicast session to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
 
 QUIC connections are defined in Section 5 of {{RFC9000}} and are not changed in this document; each connection is a shared state between a client and a server.
 
