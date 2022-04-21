@@ -80,7 +80,7 @@ Incoming packets received on the network path associated with a session use the 
 A client with a matching joined session always has at least one connection associated with the session.
 If a client has no matching joined session, the packet is discarded.
 
-Since the network path for a session is unidirectional, packets associated with a session are acknowledged with MP_SESSION_ACK frames {{session-ack-frames}} instead of with ACK frames.
+Since the network path for a session is unidirectional, packets associated with a session are acknowledged with MP_SESSION_ACK frames {{session-ack-frame}} instead of with ACK frames.
 Each session has an independent sequence number space.
 
 The use of any particular session is OPTIONAL for both the server and the client.
