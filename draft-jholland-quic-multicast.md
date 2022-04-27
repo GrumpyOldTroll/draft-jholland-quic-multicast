@@ -81,7 +81,7 @@ A client with a matching joined channel always has at least one connection assoc
 If a client has no matching joined channel, the packet is discarded.
 
 Since the network path for a channel is unidirectional, packets associated with a channel are acknowledged with MP_CHANNEL_ACK frames {{channel-ack-frame}} instead of with ACK frames.
-Each channel has an independent sequence number space.
+Each channel has an independent packet number space.
 
 The use of any particular channel is OPTIONAL for both the server and the client.
 It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceeful degradation for endpoints that do not or cannot make use of the multicast functionality.
@@ -101,9 +101,7 @@ Support for multicast extesnsions in a client is advertised by means of a QUIC t
 
 If a multicast_client_params transport parameter is not included, servers MUST NOT send any frames defined in this document.  (Given that a server never sends any MC_CHANNEL_JOIN frames, the clients also will never send any frames in this document so only the client-to-server advertisement is necessary.)
 
-The multicast_client_params parameter has the structure below:
-
-multicast_client_params parameters are formatted as shown in {{fig-transport-parameter-format}}.
+The multicast_client_params parameter has the structure shown below in {{fig-transport-parameter-format}}.
 
 ~~~
 multicast_client_params {
@@ -122,11 +120,11 @@ multicast_client_params {
 
 The Permit IPv4, Permit IPv6, Max Aggregate Rate, and Max Channel IDs fields are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
 
-The AEAD Algorithms List field is in order of prefernce (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send a MP_CHANNEL_JOIN to this client for any channels using unsupported algorithms:
+The AEAD Algorithms List field is in order of prefernce (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send a MC_CHANNEL_JOIN to this client for any channels using unsupported algorithms:
 
   - <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>
 
-The Hash Algorithms List field is in order of prefernce (most preferred occurring first) using values from this registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send a MP_CHANNEL_JOIN to this client for any channels using unsupported algorithms:
+The Hash Algorithms List field is in order of prefernce (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send a MC_CHANNEL_JOIN to this client for any channels using unsupported algorithms:
 
  - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
 
@@ -155,8 +153,6 @@ The server ensures that in aggregate, all channels that the client has currently
 
 The client sends back information about how it has responded to the server's requests to join and leave channels in MC_CLIENT_CHANNEL_STATE ({{client-channel-state-frame}}) frames.
 MC_CLIENT_CHANNEL_STATE frames are only sent for channels after the server has requested the client to join the channel, and are thereafter sent any time the state changes.
-
-The client also sends back acknowledgements of data packets received from joined channels with MC_CHANNEL_ACK ({{channel-ack-frame}}) frames.
 
 Clients that receive and decode data on a multicast channel send acknowledgements for the data on a unicast channel using MC_CHANNEL_ACK frames.
 Channels also will periodically contain PATH_CHALLENGE ({{RFC9000}} Section 19.17) frames, which cause clients to send MC_PATH_RESPONSE ({{path-response-frame}}) frames on the unicast connection in addition to their MC_CHANNEL_ACK frames.
@@ -235,7 +231,7 @@ MC_CHANNEL_PROPERTIES Frame {
   Channel ID (i),
   Properties Sequence Number (i),
   From Packet Number (i),
-  Selectors (9) {
+  Selectors (10) {
     Has Until Packet Number (1),
     Has Addresses (1)
     Has SSM (1),
@@ -245,8 +241,9 @@ MC_CHANNEL_PROPERTIES Frame {
     Has Max Rate (1),
     Has Max Idle Time (1),
     Has Max Streams (1),
+    Has ACK Bundle Size (1),
   },
-  Reserved (5),
+  Reserved (4),
   Key Phase (1),
   [IP Family] (1),
   Until Packet Number (0..i),
@@ -261,6 +258,7 @@ MC_CHANNEL_PROPERTIES Frame {
   Max Rate (0..i),
   Max Idle Time (0..i),
   Max Streams (0..i),
+  ACK Bundle Size (0..8),
 }
 [] = immutable values
 ~~~
@@ -302,6 +300,7 @@ If new property values appear and are different from prior values, the From Pack
  * Max Rate: The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
  * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
  * Max Streams: The maximum stream ID that might appear in the channel.  If a client joined to this channel can raise its Max Streams limit up to or above this value it SHOULD do so, otherwise it SHOULD leave or decline join for the channel with Max Streams Exceeded.
+ * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. The Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
 
 ## MC_CHANNEL_JOIN {#channel-join-frame}
 
