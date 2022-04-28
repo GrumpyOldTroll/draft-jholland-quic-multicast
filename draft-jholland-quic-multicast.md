@@ -319,7 +319,7 @@ MC_SESSION_JOIN Frame {
 ~~~
 {: #fig-mc-session-join-format title="MC_SESSION_JOIN Frame Format"}
 
-The sequence numbers are present to allow the client to distinguish between a broken sender that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_SESSION_PROPERTIES not yet received by the client or one or more missing updates to MC_CLIENT_LIMITS or MC_CLIENT_SESSION_STATE not yet received by the server).
+The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_SESSION_PROPERTIES not yet received by the client or one or more missing updates to MC_CLIENT_LIMITS or MC_CLIENT_SESSION_STATE not yet received by the server).
 
 A client SHOULD perform the join if it has the sequence number of the corresponding sesssion properties and the client's limits will not be exceeded, even if the client sequence numbers are not up to date.
 If the client does not join, it MUST send a MC_CLIENT_SESSION_STATE with "Declined Join" and a reason.
