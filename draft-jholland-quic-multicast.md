@@ -343,6 +343,8 @@ If After Packet Number is nonzero, wait until receiving that packet or a higher 
 
 ## MC_SESSION_INTEGRITY {#session-integrity-frame}
 
+MC_SESSION_INTEGRITY frames are sent from server to client and are used to convey packet hashes for validating the integrity of packets received over the multicast session as described in {{packet-hashes}}.
+
 MC_SESSION_INTEGRITY frames are formatted as shown in {{fig-mc-session-integrity-format}}.
 
 ~~~
