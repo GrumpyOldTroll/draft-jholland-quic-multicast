@@ -154,7 +154,7 @@ The server ensures that in aggregate, all channels that the client has currently
 The client sends back information about how it has responded to the server's requests to join and leave channels in MC_CLIENT_CHANNEL_STATE ({{client-channel-state-frame}}) frames.
 MC_CLIENT_CHANNEL_STATE frames are only sent for channels after the server has requested the client to join the channel, and are thereafter sent any time the state changes.
 
-Clients that receive and decode data on a multicast channel send acknowledgements for the data on a unicast channel using MC_CHANNEL_ACK frames.
+Clients that receive and decode data on a multicast channel send acknowledgements for the data on a unicast channel using MC_CHANNEL_ACK ({{channel-ack-frame}}) frames.
 Channels also will periodically contain PATH_CHALLENGE ({{RFC9000}} Section 19.17) frames, which cause clients to send MC_PATH_RESPONSE ({{path-response-frame}}) frames on the unicast connection in addition to their MC_CHANNEL_ACK frames.
 
 ## Data Carried in Channels
