@@ -80,7 +80,7 @@ Incoming packets received on the network path associated with a session use the 
 A client with a matching joined session always has at least one connection associated with the session.
 If a client has no matching joined session, the packet is discarded.
 
-Since the network path for a session is unidirectional, packets associated with a session are acknowledged with MP_SESSION_ACK frames {{session-ack-frame}} instead of with ACK frames.
+Since the network path for a session is unidirectional, packets associated with a session are acknowledged with MC_SESSION_ACK frames {{session-ack-frame}} instead of with ACK frames.
 Each session has an independent packet number space.
 
 The use of any particular session is OPTIONAL for both the server and the client.
@@ -120,11 +120,11 @@ multicast_client_params {
 
 The Permit IPv4, Permit IPv6, Max Aggregate Rate, and Max Session IDs fields are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
 
-The AEAD Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast sessions, and the server MUST NOT send a MP_SESSION_JOIN to this client for any sessions using unsupported algorithms:
+The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast sessions, and the server MUST NOT send a MC_SESSION_JOIN to this client for any sessions using unsupported algorithms:
 
   - <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>
 
-The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from this registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast sessions, and the server MUST NOT send a MP_SESSION_JOIN to this client for any sessions using unsupported algorithms:
+The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from this registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast sessions, and the server MUST NOT send a MC_SESSION_JOIN to this client for any sessions using unsupported algorithms:
 
  - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
 
@@ -138,7 +138,7 @@ A client has the option of refusal and the power to impose upper bound maxima on
 
 ## Session Management
 
-The client tells its server about some restrictions on resources that the server's instructions with the initial values in the multicast_client_params transport parameter ({{transport-parameter}}) and later can update these limits with MC_CLIENT_LIMITS {{client-limits-frame}} frames. Servers ensure the set of sessions the client is currently requested to join remains within these advertised client limits as covered in {{flow-control}}.
+The client tells its server about some restrictions on resources that it is capable of processing with the initial values in the multicast_client_params transport parameter ({{transport-parameter}}) and later can update these limits with MC_CLIENT_LIMITS {{client-limits-frame}} frames. Servers ensure the set of sessions the client is currently requested to join remains within these advertised client limits as covered in {{flow-control}}.
 
 The server asks the client to join sessions with MC_SESSION_JOIN ({{session-join-frame}}) frames and to leave sessions with MC_SESSION_LEAVE ({{session-leave-frame}}) frames.
 
@@ -186,7 +186,7 @@ The values used for unicast flow control cannot be used to limit the transmissio
 Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
 The server advertises the expected maxima of the values that can contribute toward client resource limits within a session in MC_SESSION_PROPERTIES ({{session-properties-frame}}) frames.
 
-If the server asks the client to join a session that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client shoud send back a MC_SESSION_STATE_CHANGE with "Declined Join" and reason "Protocol Violation".
+If the server asks the client to join a session that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client shoud send back a MC_CLIENT_SESSION_STATE with "Declined Join" and reason "Protocol Violation".
 If the server asks the client to join a session that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Session Property Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
 If the actual contents sent in the session exceed the advertised limits from the MC_SESSION_PROPERTY, clients SHOULD leave the stream with a PROTOCOL_ERROR/Limit Violated state change.
 
@@ -280,7 +280,7 @@ These values cannot change during the lifetime of the session.  If a new value i
  * UDP Port: Present if Has Addressess=1.  The 16-bit UDP Port of traffic for the session's channel.
  * Header AEAD Algorithm: Present when Has Header Key=1.  a value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the session packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
  * Header Key: Present when Has Header Key=1.  A key with length and semantics determined by the Header AEAD Algorithm.
-   * I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
+> **Author's Note:** I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
 
 ### Mutable Properties
 
@@ -293,7 +293,7 @@ If new property values appear and are different from prior values, the From Pack
  * AEAD Algorithm: Present if Has Key is set.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
  * Key: present if and only if Has Key is set, with length determined by the AEAD Algorith value.  Used to protect the packet contents of 1-RTT packets for the session as described in {{RFC9001}}.
  * Integrity Hash Algorithm: the hash algorithm used in integrity frames
-   Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:
+> **Author's Note:** Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:
    - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
    - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
    - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
@@ -312,13 +312,13 @@ MC_SESSION_JOIN frames are formatted as shown in {{fig-mc-session-join-format}}.
 MC_SESSION_JOIN Frame {
   Type (i) = TBD-02 (experiments use 0xff3e802),
   Session ID (i),
-  MC_CLIENT_LIMIT Sequence Number (i),
+  MC_CLIENT_LIMITS Sequence Number (i),
   MC_CLIENT_SESSION_STATE Sequence Number (i),
   MC_SESSION_PROPERTIES Sequence Number (i)
 ~~~
 {: #fig-mc-session-join-format title="MC_SESSION_JOIN Frame Format"}
 
-The sequence numbers are present to allow the client to distinguish between a broken sender that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_SESSION_PROPERTIES not yet received by the client or one or more missing updates to MC_CLIENT_LIMIT or MC_CLIENT_SESSION_STATE not yet received by the server).
+The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_SESSION_PROPERTIES not yet received by the client or one or more missing updates to MC_CLIENT_LIMITS or MC_CLIENT_SESSION_STATE not yet received by the server).
 
 A client SHOULD perform the join if it has the sequence number of the corresponding sesssion properties and the client's limits will not be exceeded, even if the client sequence numbers are not up to date.
 If the client does not join, it MUST send a MC_CLIENT_SESSION_STATE with "Declined Join" and a reason.
@@ -341,6 +341,8 @@ MC_SESSION_LEAVE Frame {
 If After Packet Number is nonzero, wait until receiving that packet or a higher valued number before leaving.
 
 ## MC_SESSION_INTEGRITY {#session-integrity-frame}
+
+MC_SESSION_INTEGRITY frames are sent from server to client and are used to convey packet hashes for validating the integrity of packets received over the multicast session as described in {{packet-hashes}}.
 
 MC_SESSION_INTEGRITY frames are formatted as shown in {{fig-mc-session-integrity-format}}.
 
