@@ -212,6 +212,11 @@ Note that the hash is on the unencrypted packet because it checks against a spec
 
 # Packet Scheduling
 
+# Stateless Reset
+
+As clients can unilaterally stop the delivery of multicast packets by leaving the relevant Group or Channel, sessions do not need stateless reset tokens.
+Instead, if an endpoint receives a packet addressed to a multicast group it can not associate with an existing session, it SHOULD take the necessary steps to prevent the reception of further such packets. For example, it might issue an IGMP or MLD report indicating a desire to leave the (S,G) associated with the unwanted packet.
+
 # Implementation and Operational Considerations
 
 # New Frames
