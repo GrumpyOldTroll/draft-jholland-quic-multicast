@@ -282,7 +282,7 @@ These values cannot change during the lifetime of the session.  If a new value i
  * UDP Port: Present if Has Addressess=1.  The 16-bit UDP Port of traffic for the session's channel.
  * Header AEAD Algorithm: Present when Has Header Key=1.  a value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the session packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
  * Header Key: Present when Has Header Key=1.  A key with length and semantics determined by the Header AEAD Algorithm.
-   * I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
+> **Author's Note:** I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
 
 ### Mutable Properties
 
@@ -295,7 +295,7 @@ If new property values appear and are different from prior values, the From Pack
  * AEAD Algorithm: Present if Has Key is set.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
  * Key: present if and only if Has Key is set, with length determined by the AEAD Algorith value.  Used to protect the packet contents of 1-RTT packets for the session as described in {{RFC9001}}.
  * Integrity Hash Algorithm: the hash algorithm used in integrity frames
-   Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:
+> **Author's Note:** Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:
    - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
    - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
    - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
