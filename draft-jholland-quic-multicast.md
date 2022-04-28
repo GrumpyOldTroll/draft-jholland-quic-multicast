@@ -140,7 +140,7 @@ A client has the option of refusal and the power to impose upper bound maxima on
 
 ## Session Management
 
-The client tells its server about some restrictions on resources that the server's instructions with the initial values in the multicast_client_params transport parameter ({{transport-parameter}}) and later can update these limits with MC_CLIENT_LIMITS {{client-limits-frame}} frames. Servers ensure the set of sessions the client is currently requested to join remains within these advertised client limits as covered in {{flow-control}}.
+The client tells its server about some restrictions on resources that it is capable of processing with the initial values in the multicast_client_params transport parameter ({{transport-parameter}}) and later can update these limits with MC_CLIENT_LIMITS {{client-limits-frame}} frames. Servers ensure the set of sessions the client is currently requested to join remains within these advertised client limits as covered in {{flow-control}}.
 
 The server asks the client to join sessions with MC_SESSION_JOIN ({{session-join-frame}}) frames and to leave sessions with MC_SESSION_LEAVE ({{session-leave-frame}}) frames.
 
