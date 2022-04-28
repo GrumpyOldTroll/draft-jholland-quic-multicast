@@ -154,7 +154,7 @@ The server ensures that in aggregate, all sessions that the client has currently
 The client sends back information about how it has responded to the server's requests to join and leave sessions in MC_CLIENT_SESSION_STATE ({{client-session-state-frame}}) frames.
 MC_CLIENT_SESSION_STATE frames are only sent for sessions after the server has requested the client to join the session, and are thereafter sent any time the state changes.
 
-Clients that receive and decode data on a multicast session send acknowledgements for the data on a unicast session using MC_SESSION_ACK frames.
+Clients that receive and decode data on a multicast session send acknowledgements for the data on a unicast session using MC_SESSION_ACK ({{session-ack-frame}}) frames.
 Sessions also will periodically contain PATH_CHALLENGE ({{RFC9000}} Section 19.17) frames, which cause clients to send MC_PATH_RESPONSE ({{path-response-frame}}) frames on the unicast connection in addition to their MC_SESSION_ACK frames.
 
 ## Data Carried in Sessions
