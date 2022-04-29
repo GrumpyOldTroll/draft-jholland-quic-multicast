@@ -120,6 +120,7 @@ multicast_client_params {
 
 The Permit IPv4, Permit IPv6, Max Aggregate Rate, and Max Channel IDs fields are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
 
+<<<<<<< HEAD
 The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send a MC_CHANNEL_JOIN to this client for any channels using unsupported algorithms:
 
   - <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>
@@ -138,7 +139,7 @@ A client has the option of refusal and the power to impose upper bound maxima on
 
 ## Channel Management
 
-The client tells its server about some restrictions on resources that the server's instructions with the initial values in the multicast_client_params transport parameter ({{transport-parameter}}) and later can update these limits with MC_CLIENT_LIMITS {{client-limits-frame}} frames. Servers ensure the set of channels the client is currently requested to join remains within these advertised client limits as covered in {{flow-control}}.
+The client tells its server about some restrictions on resources that it is capable of processing with the initial values in the multicast_client_params transport parameter ({{transport-parameter}}) and later can update these limits with MC_CLIENT_LIMITS {{client-limits-frame}} frames. Servers ensure the set of channels the client is currently requested to join remains within these advertised client limits as covered in {{flow-control}}.
 
 The server asks the client to join channels with MC_CHANNEL_JOIN ({{channel-join-frame}}) frames and to leave channels with MC_CHANNEL_LEAVE ({{channel-leave-frame}}) frames.
 
@@ -186,7 +187,7 @@ The values used for unicast flow control cannot be used to limit the transmissio
 Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
 The server advertises the expected maxima of the values that can contribute toward client resource limits within a channel in MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames.
 
-If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client shoud send back a MC_CHANNEL_STATE_CHANGE with "Declined Join" and reason "Protocol Violation".
+If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CHANNEL_STATE_CHANGE with "Declined Join" and reason "Protocol Violation".
 If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Property Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
 If the actual contents sent in the channel exceed the advertised limits from the MC_CHANNEL_PROPERTY, clients SHOULD leave the stream with a PROTOCOL_ERROR/Limit Violated state change.
 
@@ -280,7 +281,7 @@ These values cannot change during the lifetime of the channel.  If a new value i
  * UDP Port: Present if Has Addressess=1.  The 16-bit UDP Port of traffic for the channel's channel.
  * Header AEAD Algorithm: Present when Has Header Key=1.  a value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
  * Header Key: Present when Has Header Key=1.  A key with length and semantics determined by the Header AEAD Algorithm.
-   * I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
+> **Author's Note:** I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
 
 ### Mutable Properties
 
@@ -293,14 +294,14 @@ If new property values appear and are different from prior values, the From Pack
  * AEAD Algorithm: Present if Has Key is set.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
  * Key: present if and only if Has Key is set, with length determined by the AEAD Algorith value.  Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}.
  * Integrity Hash Algorithm: the hash algorithm used in integrity frames
-   Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:
+> **Author's Note:** Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:
    - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
    - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
    - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
  * Max Rate: The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
  * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
  * Max Streams: The maximum stream ID that might appear in the channel.  If a client joined to this channel can raise its Max Streams limit up to or above this value it SHOULD do so, otherwise it SHOULD leave or decline join for the channel with Max Streams Exceeded.
- * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. The Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
+ * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
 
 ## MC_CHANNEL_JOIN {#channel-join-frame}
 
@@ -315,10 +316,11 @@ MC_CHANNEL_JOIN Frame {
   MC_CLIENT_LIMIT Sequence Number (i),
   MC_CLIENT_CHANNEL_STATE Sequence Number (i),
   MC_CHANNEL_PROPERTIES Sequence Number (i)
+}
 ~~~
 {: #fig-mc-channel-join-format title="MC_CHANNEL_JOIN Frame Format"}
 
-The sequence numbers are present to allow the client to distinguish between a broken sender that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_CHANNEL_PROPERTIES not yet received by the client or one or more missing updates to MC_CLIENT_LIMIT or MC_CLIENT_CHANNEL_STATE not yet received by the server).
+The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_CHANNEL_PROPERTIES not yet received by the client or one or more missing updates to MC_CLIENT_LIMITS or MC_CLIENT_CHANNEL_STATE not yet received by the server).
 
 A client SHOULD perform the join if it has the sequence number of the corresponding sesssion properties and the client's limits will not be exceeded, even if the client sequence numbers are not up to date.
 If the client does not join, it MUST send a MC_CLIENT_CHANNEL_STATE with "Declined Join" and a reason.
@@ -341,6 +343,8 @@ MC_CHANNEL_LEAVE Frame {
 If After Packet Number is nonzero, wait until receiving that packet or a higher valued number before leaving.
 
 ## MC_CHANNEL_INTEGRITY {#channel-integrity-frame}
+
+MC_CHANNEL_INTEGRITY frames are sent from server to client and are used to convey packet hashes for validating the integrity of packets received over the multicast channel as described in {{packet-hashes}}.
 
 MC_CHANNEL_INTEGRITY frames are formatted as shown in {{fig-mc-channel-integrity-format}}.
 
