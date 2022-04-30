@@ -229,7 +229,7 @@ MC_CHANNEL_PROPERTIES frames are formatted as shown in {{fig-mc-channel-properti
 ~~~
 MC_CHANNEL_PROPERTIES Frame {
   Type (i) = TBD-01 (experiments use 0xff3e801),
-  Channel ID (i),
+  Channel ID (8..160),
   Properties Sequence Number (i),
   From Packet Number (i),
   Selectors (10) {
@@ -312,7 +312,7 @@ MC_CHANNEL_JOIN frames are formatted as shown in {{fig-mc-channel-join-format}}.
 ~~~
 MC_CHANNEL_JOIN Frame {
   Type (i) = TBD-02 (experiments use 0xff3e802),
-  Channel ID (i),
+  Channel ID (8..160),
   MC_CLIENT_LIMIT Sequence Number (i),
   MC_CLIENT_CHANNEL_STATE Sequence Number (i),
   MC_CHANNEL_PROPERTIES Sequence Number (i)
@@ -335,8 +335,9 @@ MC_CHANNEL_LEAVE frames are formatted as shown in {{fig-mc-channel-leave-format}
 ~~~
 MC_CHANNEL_LEAVE Frame {
   Type (i) = TBD-03 (experiments use 0xff3e803),
-  Channel ID (i),
+  Channel ID (8..160),
   After Packet Number (i)
+}
 ~~~
 {: #fig-mc-channel-leave-format title="MC_CHANNEL_LEAVE Frame Format"}
 
@@ -351,7 +352,7 @@ MC_CHANNEL_INTEGRITY frames are formatted as shown in {{fig-mc-channel-integrity
 ~~~
 MC_CHANNEL_INTEGRITY Frame {
   Type (i) = TBD-04..TBD-05 (experiments use 0xff3e804/0xff3e805),
-  Channel ID (i),
+  Channel ID (8..160),
   Packet Number Start (i),
   [Length (i)],
   Packet Hashes (..)
@@ -375,9 +376,10 @@ MC_CHANNEL_STREAM_BOUNDARY_OFFSET frames are formatted as shown in {{fig-mc-chan
 ~~~
 MC_CHANNEL_STREAM_BOUNDARY_OFFSET Frame {
   Type (i) = TBD-06 (experiments use 0xff3e806),
-  Channel ID (i),
+  Channel ID (8..160),
   Stream ID (i),
   Stream Offset (i)
+}
 ~~~
 {: #fig-mc-channel-stream-boundary-offset-format title="MC_CHANNEL_STREAM_BOUNDARY_OFFSET Frame Format"}
 
@@ -394,16 +396,16 @@ Client->Server on unicast connection.
 MC_CHANNEL_ACK frames are formatted as shown in {{fig-mc-channel-ack-format}}.
 
 ~~~
-  MC_CHANNEL_ACK Frame {
-    Type (i) = TBD-07 (experiments use 0xff3e807),
-    Channel ID (i),
-    Largest Acknowledged (i),
-    ACK Delay (i),
-    ACK Range Count (i),
-    First ACK Range (i),
-    ACK Range (..) ...,
-    [ECN Counts (..)],
-  }
+MC_CHANNEL_ACK Frame {
+  Type (i) = TBD-07 (experiments use 0xff3e807),
+  Channel ID (8..160),
+  Largest Acknowledged (i),
+  ACK Delay (i),
+  ACK Range Count (i),
+  First ACK Range (i),
+  ACK Range (..) ...,
+  [ECN Counts (..)],
+}
 ~~~
 {: #fig-mc-channel-ack-format title="MC_CHANNEL_ACK Frame Format"}
 
@@ -417,7 +419,7 @@ MC_PATH_RESPONSE frames are formatted as shown in {{fig-mc-path-response-format}
 ~~~
 MC_PATH_RESPONSE Frame {
   Type (i) = TBD-08 (experiments use 0xffe38008)
-  Channel ID (i),
+  Channel ID (8..160),
   Data (64)
 }
 ~~~
@@ -436,6 +438,7 @@ MC_CLIENT_LIMITS Frame {
   Reserved (6),
   Max Aggregate Rate (i),
   Max Channel IDs (i)
+}
 ~~~
 {: #fig-mc-client-limits-format title="MC_CLIENT_LIMITS Frame Format"}
 
@@ -452,6 +455,7 @@ MC_CHANNEL_RETIRE frames are formatted as shown in {{fig-mc-channel-retire-forma
 MC_CHANNEL_RETIRE Frame {
   Type (i) = TBD-0a (experiments use 0xff3e80a),
   Channel IDs (i)
+}
 ~~~
 {: #fig-mc-channel-retire-format title="MC_CHANNEL_RETIRE Frame Format"}
 
@@ -467,6 +471,7 @@ MC_CLIENT_CHANNEL_STATE Frame {
   Client Channel State Sequence Number (i),
   State (i),
   Reason (0..i)
+}
 ~~~
 {: #fig-mc-client-channel-state-format title="MC_CLIENT_CHANNEL_STATE Frame Format"}
 
