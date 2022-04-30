@@ -210,9 +210,11 @@ Note that the hash is on the unencrypted packet because it checks against a spec
 # Packet Scheduling
 
 # Stateless Reset
+As clients can unilaterally stop the delivery of multicast packets by leaving the relevant Groups, channels do not need stateless reset tokens.
+Client's therefore do not share the stateless reset tokens of channels with the server. Instead, if an endpoint receives packets addressed to a group IP that it can not associate with any existing channel,
+it MAY take the necessary steps to prevent the reception of further such packets, without signaling to the server that it should stop sending.
 
-As clients can unilaterally stop the delivery of multicast packets by leaving the relevant Group, channels do not need stateless reset tokens.
-Instead, if an endpoint receives packets addressed to a group IP that it can not associate with any existing channel, it MAY take the necessary steps to prevent the reception of further such packets. For example, it might issue an IGMP or MLD report indicating a desire to leave the (S,G) associated with the unwanted packet.
+If a server or client somehow still detect a stateless reset for a channel, they MUST ignore it.
 
 # Implementation and Operational Considerations
 
@@ -281,9 +283,9 @@ If a field is not included, it remains unchanged unless a different semantic is 
 These values cannot change during the lifetime of the channel.  If a new value is received that is not the same as a prior value, the client MUST close the connection with a PROTOCOL_ERROR.
 
  * IP Family: Always present, but used only when Has Addresses=1 (ignored otherwise).  0 indicates IPv4, 1 indicates IPv6 for both Source IP (if present) and Group IP.
- * Source IP: Present if Has Addresses=1 and Has SSM=1.  The IP Address of the source of the (S,G) for the channel's channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
- * Group IP: Present if Has Addresses=1.  The IP Address of the group of the (S,G) for the channel's channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
- * UDP Port: Present if Has Addressess=1.  The 16-bit UDP Port of traffic for the channel's channel.
+ * Source IP: Present if Has Addresses=1 and Has SSM=1.  The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
+ * Group IP: Present if Has Addresses=1.  The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
+ * UDP Port: Present if Has Addressess=1.  The 16-bit UDP Port of traffic for the channel.
  * Header AEAD Algorithm: Present when Has Header Key=1.  a value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
  * Header Key: Present when Has Header Key=1.  A key with length and semantics determined by the Header AEAD Algorithm.
 > **Author's Note:** I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
@@ -489,7 +491,12 @@ For Left, Reason must be set to one of:
  * 0x3: High Loss
  * 0x4: Exceeded max idle time
  * 0x5: Administrative change
- * 0x6: other
+ * 0x6: Spurious traffic
+ * 0x7: other
+
+(TODO: Either move spurious traffic explanation somewhere else or add more explanations for other reasons)
+
+A client might receive multicast packets that it can not associate with any channel ID. If these are addressed to an (S,G) that is used for reception in one or more known channels, it MAY leave these channels with reason "Spurious traffic".
 
 For Declined Join, Reason must be set to one of:
 
