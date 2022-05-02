@@ -301,6 +301,7 @@ If new property values appear and are different from prior values, the From Pack
  * Key Phase: Always present, used only if Has Key is set (otherwise ignored).  The key phase value in the 1-RTT packet that will be in use for this key (see Section 6 of {{RFC9001}}).
  * AEAD Algorithm: Present if Has Key is set.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
  * Key: present if and only if Has Key is set, with length determined by the AEAD Algorith value.  Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}.
+To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates over unicast.
  * Integrity Hash Algorithm: the hash algorithm used in integrity frames
 > **Author's Note:** Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:
    - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
