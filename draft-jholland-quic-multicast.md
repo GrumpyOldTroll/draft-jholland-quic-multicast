@@ -211,10 +211,11 @@ Note that the hash is on the unencrypted packet because it checks against a spec
 
 # Stateless Reset
 As clients can unilaterally stop the delivery of multicast packets by leaving the relevant Groups, channels do not need stateless reset tokens.
-Client's therefore do not share the stateless reset tokens of channels with the server. Instead, if an endpoint receives packets addressed to a group IP that it can not associate with any existing channel,
-it MAY take the necessary steps to prevent the reception of further such packets, without signaling to the server that it should stop sending.
+Clients therefore do not share the stateless reset tokens of channels with the server. Instead, if an endpoint receives packets addressed to a group IP that it can not associate with any existing channel,
+it MAY take the necessary steps to prevent the reception of further such packets, without the need to signal to the server that it should stop sending.
 
 If a server or client somehow still detect a stateless reset for a channel, they MUST ignore it.
+
 
 # Implementation and Operational Considerations
 
