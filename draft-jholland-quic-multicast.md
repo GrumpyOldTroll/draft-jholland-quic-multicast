@@ -41,6 +41,8 @@ normative:
 
 informative:
 
+  RFC4607:
+
 --- abstract
 
 This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections.
@@ -56,11 +58,14 @@ When support for multicast is negotiated, the server can optionally advertise ex
 
 Enabling this can provide large scalability benefits for popular traffic over multicast-capable networks.
 
-This document does not define any multicast transport except server to client.
-
+This document does not define any multicast transport except server to client and only includes semantics for source-specific multicast.
 ## Conventions and Definitions
 
 {::boilerplate bcp14}
+
+Commonly used terms in this document are described below.
+
+(S,G): A tuple of IP addresses identifying a source-specific multicast channel, as described in {{RFC4607}}.
 
 # Multicast Channel
 
@@ -68,6 +73,9 @@ A QUIC multicast channel (or just channel) is a one-way network path that a serv
 
 Multicast channels are designed to leverage multicast IP and to be shared by many different connections simultaneously for unidirectional server-initiated data.
 One or more servers can use the same QUIC multicast channel to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
+
+Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the IP layer multicast packets. Channels do not support any-source multicast semantics.
+This however does not impose a requirement on how the underlying network stack has to handle the forwarding and delivery of multicast packets.
 
 QUIC connections are defined in Section 5 of {{RFC9000}} and are not changed in this document; each connection is a shared state between a client and a server.
 
@@ -121,7 +129,7 @@ Capabilities Flags is a bit field structured as follows:
  - 0x1 is set if IPv4 channels are permitted
  - 0x2 is set if IPv6 channels are permitted
 
-A server MUST NOT send MC_CHANNEL_PROPERTIES with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_CLIENT_LIMITS frame later adds permission for a different address family.
+A server MUST NOT send MC_CHANNEL_PROPERTIES with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_CLIENT_LIMITS frame adds permission for a different address family.
 
 The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
 
@@ -214,8 +222,8 @@ Note that the hash is on the unencrypted packet because it checks against a spec
 # Packet Scheduling
 
 # Stateless Reset
-As clients can unilaterally stop the delivery of multicast packets by leaving the relevant Groups, channels do not need stateless reset tokens.
-Clients therefore do not share the stateless reset tokens of channels with the server. Instead, if an endpoint receives packets addressed to a group IP that it can not associate with any existing channel,
+As clients can unilaterally stop the delivery of multicast packets by leaving the relevant (S,G), channels do not need stateless reset tokens.
+Clients therefore do not share the stateless reset tokens of channels with the server. Instead, if an endpoint receives packets addressed to an (S,G) that it can not associate with any existing channel,
 it MAY take the necessary steps to prevent the reception of further such packets, without the need to signal to the server that it should stop sending.
 
 If a server or client somehow still detect a stateless reset for a channel, they MUST ignore it.
@@ -299,7 +307,7 @@ These values cannot change during the lifetime of the channel.  If a new value i
  * IP Family: Used only when Has Addresses is set in the Content Field (ignored otherwise).  Unset indicates IPv4, Set indicates IPv6 for both Source IP (if present) and Group IP.
  * Source IP: Present if Has Addresses is set in the Content Field.  The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
  * Group IP: Present if Has Addresses is set in the Content Field.  The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
- * UDP Port: Present if Has Addressess is set in the Content Field.  The 16-bit UDP Port of traffic for the channel.
+ * UDP Port: Present if Has Addresses is set in the Content Field.  The 16-bit UDP Port of traffic for the channel.
  * Header AEAD Algorithm: Present when Has Header Key is set in the Content Field.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
  * Header Key Length: Present when Has Header Key is set in the Content Field.  Provides the length of the Key field.  It MUST match a valid key length for the Header AEAD Algorithm.
  * Header Key: Present when Has Header Key is set in the Content Field.  A key for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in {{RFC9001}}.
@@ -348,13 +356,13 @@ MC_CHANNEL_JOIN Frame {
 
 The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_CHANNEL_PROPERTIES not yet received by the client or one or more missing updates to MC_CLIENT_LIMITS or MC_CLIENT_CHANNEL_STATE not yet received by the server).
 
-A client MAY perform the join if it has the sequence number of the corresponding sesssion properties and the client's limits will not be exceeded, even if the client sequence numbers are not up to date.
+A client MAY perform the join if it has the sequence number of the corresponding channel properties and the client's limits will not be exceeded, even if the client sequence numbers are not up-to-date.
 If the client does not join, it MUST send a MC_CLIENT_CHANNEL_STATE with "Declined Join" and a reason.
 
 ## MC_CHANNEL_LEAVE {#channel-leave-frame}
 
 An MC_CHANNEL_LEAVE frame (type=TBD-03) is sent from server to client
-Server-to-client in unicast connection or inside channel.
+in either the unicast connection or a channel.
 
 MC_CHANNEL_LEAVE frames are formatted as shown in {{fig-mc-channel-leave-format}}.
 
@@ -413,7 +421,7 @@ MC_CHANNEL_STREAM_BOUNDARY_OFFSET Frame {
 ~~~
 {: #fig-mc-channel-stream-boundary-offset-format title="MC_CHANNEL_STREAM_BOUNDARY_OFFSET Frame Format"}
 
-Client must discard data before Stream Offset, and should start accepting stream data at Stream Offset as though it's a new stream with offset 0.
+Clients must discard data before Stream Offset, and should start accepting stream data at Stream Offset as though it's a new stream with offset 0.
 
 A server must ensure that data beginning at the given stream offsets could equivalently begin a new stream, and are safe for clients to start processing in order to use this.  (Well-suited for boundaries of http server push objects, for example, which otherwise would need to start a new stream per object in order to be usable by late joiners.)
 
@@ -554,7 +562,7 @@ The things server needs to know for state changes *could* maybe be inferred from
 
 # Frames Carried in Channel Packets
 
-MC Channels will contain normal quic 1-rtt data packets (see Section 17.3.1 of {{RFC9000}}) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys from MC_CHANNEL_PROPERTIES for the corresponding channel.
+MC Channels will contain normal QUIC 1-rtt data packets (see Section 17.3.1 of {{RFC9000}}) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys from MC_CHANNEL_PROPERTIES for the corresponding channel.
 
 Data packet hashes will also be sent in MC_CHANNEL_INTEGRITY frames, as keys cannot be trusted for integrity due to giving them to too many receivers, as in {{I-D.draft-krose-multicast-security}}.
 
