@@ -74,7 +74,7 @@ A QUIC multicast channel (or just channel) is a one-way network path that a serv
 Multicast channels are designed to leverage multicast IP and to be shared by many different connections simultaneously for unidirectional server-initiated data.
 One or more servers can use the same QUIC multicast channel to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
 
-Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the IP layer multicast packets. Channels do not support any-source multicast semantics.
+Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels do not support any-source multicast semantics.
 This however does not impose a requirement on how the underlying network stack has to handle the forwarding and delivery of multicast packets.
 
 QUIC connections are defined in Section 5 of {{RFC9000}} and are not changed in this document; each connection is a shared state between a client and a server.
