@@ -304,7 +304,7 @@ If no prior value is known, requests to join the channel MUST result in a Declin
 
 These values cannot change during the lifetime of the channel.  If a new value is received that is not the same as a prior value, the client MUST close the connection with a PROTOCOL_ERROR.
 
- * IP Family: Used only when Has Addresses is set in the Content Field (ignored otherwise).  Unset indicates IPv4, Set indicates IPv6 for both Source IP (if present) and Group IP.
+ * IP Family: Used only when Has Addresses is set in the Content Field (ignored otherwise).  Unset indicates IPv4, Set indicates IPv6 for both Source IP and Group IP.
  * Source IP: Present if Has Addresses is set in the Content Field.  The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
  * Group IP: Present if Has Addresses is set in the Content Field.  The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
  * UDP Port: Present if Has Addresses is set in the Content Field.  The 16-bit UDP Port of traffic for the channel.
