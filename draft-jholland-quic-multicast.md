@@ -116,8 +116,6 @@ multicast_client_params {
 ~~~
 {: #fig-transport-parameter-format title="multicast_client_params Format"}
 
-The Capabilities Field is a bit field with boolean values for capabilities supported.
-
 Capabilities Flags is a bit field structured as follows:
 
  - 0x1 is set if IPv4 channels are permitted
