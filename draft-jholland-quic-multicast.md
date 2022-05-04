@@ -238,7 +238,7 @@ MC_CHANNEL_PROPERTIES frames are formatted as shown in {{fig-mc-channel-properti
 MC_CHANNEL_PROPERTIES Frame {
   Type (i) = TBD-01 (experiments use 0xff3e801),
   Properties Sequence Number (i),
-  ID Length (i),
+  ID Length (8),
   Channel ID (8..160),
   From Packet Number (i),
   Content Field (i),
@@ -248,10 +248,10 @@ MC_CHANNEL_PROPERTIES Frame {
   [UDP Port] (0..16)
   [Header AEAD Algorithm] (0..16),
   [Header Key Length] (0..i),
-  [Header Key] (...),
+  [Header Key] (..),
   AEAD Algorithm (0..16),
   Key Length (0..i),
-  Key (...),
+  Key (..),
   Integrity Hash Algorithm (0..i),
   Max Rate (0..i),
   Max Idle Time (0..i),
@@ -337,7 +337,7 @@ MC_CHANNEL_JOIN Frame {
   MC_CLIENT_LIMIT Sequence Number (i),
   MC_CLIENT_CHANNEL_STATE Sequence Number (i),
   MC_CHANNEL_PROPERTIES Sequence Number (i),
-  ID Length (i),
+  ID Length (8),
   Channel ID (8..160)
 }
 ~~~
@@ -359,7 +359,7 @@ MC_CHANNEL_LEAVE frames are formatted as shown in {{fig-mc-channel-leave-format}
 MC_CHANNEL_LEAVE Frame {
   Type (i) = TBD-03 (experiments use 0xff3e803),
   MC_CLIENT_CHANNEL_STATE Sequence Number (i),
-  ID Length (i),
+  ID Length (8),
   Channel ID (8..160),
   After Packet Number (i)
 }
@@ -377,7 +377,7 @@ MC_CHANNEL_INTEGRITY frames are formatted as shown in {{fig-mc-channel-integrity
 ~~~
 MC_CHANNEL_INTEGRITY Frame {
   Type (i) = TBD-04..TBD-05 (experiments use 0xff3e804/0xff3e805),
-  ID Length (i),
+  ID Length (8),
   Channel ID (8..160),
   Packet Number Start (i),
   [Length (i)],
@@ -402,7 +402,7 @@ MC_CHANNEL_STREAM_BOUNDARY_OFFSET frames are formatted as shown in {{fig-mc-chan
 ~~~
 MC_CHANNEL_STREAM_BOUNDARY_OFFSET Frame {
   Type (i) = TBD-06 (experiments use 0xff3e806),
-  ID Length (i),
+  ID Length (8),
   Channel ID (8..160),
   Stream ID (i),
   Stream Offset (i)
@@ -425,7 +425,7 @@ MC_CHANNEL_ACK frames are formatted as shown in {{fig-mc-channel-ack-format}}.
 ~~~
 MC_CHANNEL_ACK Frame {
   Type (i) = TBD-07 (experiments use 0xff3e807),
-  ID Length (i),
+  ID Length (8),
   Channel ID (8..160),
   Largest Acknowledged (i),
   ACK Delay (i),
@@ -447,7 +447,7 @@ MC_PATH_RESPONSE frames are formatted as shown in {{fig-mc-path-response-format}
 ~~~
 MC_PATH_RESPONSE Frame {
   Type (i) = TBD-08 (experiments use 0xffe38008),
-  ID Length (i),
+  ID Length (8),
   Channel ID (8..160),
   Data (64)
 }
@@ -495,7 +495,7 @@ MC_CHANNEL_RETIRE frames are formatted as shown in {{fig-mc-channel-retire-forma
 ~~~
 MC_CHANNEL_RETIRE Frame {
   Type (i) = TBD-0a (experiments use 0xff3e80a),
-  ID Length (i),
+  ID Length (8),
   Channel ID (8..160)
 }
 ~~~
@@ -511,7 +511,7 @@ MC_CLIENT_CHANNEL_STATE frames are formatted as shown in {{fig-mc-client-channel
 MC_CLIENT_CHANNEL_STATE Frame {
   Type (i) = TBD-0b (experiments use 0xff3e80b),
   Client Channel State Sequence Number (i),
-  ID Length (i),
+  ID Length (8),
   Channel ID (8..160),
   State (i),
   Reason (0..i)
