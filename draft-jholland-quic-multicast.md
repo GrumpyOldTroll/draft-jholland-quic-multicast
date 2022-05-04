@@ -221,6 +221,31 @@ If a server or client somehow still detect a stateless reset for a channel, they
 
 # New Frames
 
+## MC_RESERVE_CHANNEL_IDS {#reserve-channel-ids-frame}
+
+If a server learns that a client supports multicast through its transport parameters, it SHOULD immediately send a MC_RESERVE_CHANNEL_IDS frame (type=TBD-00) that includes all channel IDs that might be used by its multicast channels.
+This is done to prevent a client from using those connection IDs for the unicast connection, which could cause a delay when attempting to join a channel as they would first have to be retired for the unicast connection.
+
+MC_RESERVE_CHANNEL_IDS frames are formatted as shown in {{fig-mc-channel-reserve-ids}}.
+
+~~~
+MC_RESERVE_CHANNEL_IDS Frame {
+  Type (i) = TBD-00 (experiments use 0xff3e800),
+  Length (i),
+  Channel ID List (8..160) ...,
+}
+~~~
+{: #fig-mc-channel-reserve-ids title="MC_RESERVE_CHANNEL_IDS Frame Format"}
+
+MC_RESERVE_CHANNEL_IDS frames contain the following fields:
+
+* Length: A variable-length integer specifying the number of channel IDs in the list.
+* Channel ID List: A list of channel IDs that are reserved by the server for multicast channels.
+
+A client MUST NOT use any of the channel IDs included in the MC_RESERVE_CHANNEL_IDS frame as connection IDs for the unicast connection. If any of them are already in use, the client SHOULD retire them as soon as possible.
+As the server knows which connection IDs are in use by the client, it SHOULD wait with sending a MC_CHANNEL_JOIN until the channel ID associated with it has been retired by the client.
+#TODO: Maybe also add a refuse join reason to MC_CLIENT_CHANNEL_STATE for Collision ID as suggested by Jake, after the framespec cleanup
+
 ## MC_CHANNEL_PROPERTIES {#channel-properties-frame}
 
 An MC_CHANNEL_PROPERTIES frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
