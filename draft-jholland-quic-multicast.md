@@ -244,7 +244,8 @@ MC_RESERVE_CHANNEL_IDS frames contain the following fields:
 
 A client MUST NOT use any of the channel IDs included in the MC_RESERVE_CHANNEL_IDS frame as connection IDs for the unicast connection. If any of them are already in use, the client SHOULD retire them as soon as possible.
 As the server knows which connection IDs are in use by the client, it SHOULD wait with sending a MC_CHANNEL_JOIN until the channel ID associated with it has been retired by the client.
-#TODO: Maybe also add a refuse join reason to MC_CLIENT_CHANNEL_STATE for Collision ID as suggested by Jake, after the framespec cleanup
+
+TODO: Maybe also add a refuse join reason to MC_CLIENT_CHANNEL_STATE for Collision ID as suggested by Jake, after the framespec cleanup
 
 ## MC_CHANNEL_PROPERTIES {#channel-properties-frame}
 
