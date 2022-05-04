@@ -232,6 +232,7 @@ MC_RESERVE_CHANNEL_IDS frames are formatted as shown in {{fig-mc-channel-reserve
 MC_RESERVE_CHANNEL_IDS Frame {
   Type (i) = TBD-00 (experiments use 0xff3e800),
   Length (i),
+  Channel ID Lengths (8) ...,
   Channel ID List (8..160) ...,
 }
 ~~~
@@ -240,7 +241,8 @@ MC_RESERVE_CHANNEL_IDS Frame {
 MC_RESERVE_CHANNEL_IDS frames contain the following fields:
 
 * Length: A variable-length integer specifying the number of channel IDs in the list.
-* Channel ID List: A list of channel IDs that are reserved by the server for multicast channels.
+* Channel ID Lengths: A list with the lengths of the channel IDs.
+* Channel ID List: A list of channel IDs that are reserved by the server for multicast channels. They come in the same order as their lengths in the previous list.
 
 A client MUST NOT use any of the channel IDs included in the MC_RESERVE_CHANNEL_IDS frame as connection IDs for the unicast connection. If any of them are already in use, the client SHOULD retire them as soon as possible.
 As the server knows which connection IDs are in use by the client, it SHOULD wait with sending a MC_CHANNEL_JOIN until the channel ID associated with it has been retired by the client.
