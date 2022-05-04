@@ -105,9 +105,7 @@ The multicast_client_params parameter has the structure shown below in {{fig-tra
 
 ~~~
 multicast_client_params {
-  Permit IPv4 (1),
-  Permit IPv6 (1),
-  Reserved (6),
+  Capabilities Field (i),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Hash Algorithms Supported (i),
@@ -118,9 +116,17 @@ multicast_client_params {
 ~~~
 {: #fig-transport-parameter-format title="multicast_client_params Format"}
 
-The Permit IPv4, Permit IPv6, Max Aggregate Rate, and Max Channel IDs fields are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
+The Capabilities Field is a bit field with boolean values for capabilities supported.
 
-<<<<<<< HEAD
+Capabilities Flags is a bit field structured as follows:
+
+ - 0x1 is set if IPv4 channels are permitted
+ - 0x2 is set if IPv6 channels are permitted
+
+A server MUST NOT send MC_CHANNEL_PROPERTIES with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_CLIENT_LIMITS frame later adds permission for a different address family.
+
+The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
+
 The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send a MC_CHANNEL_JOIN to this client for any channels using unsupported algorithms:
 
   - <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>
@@ -273,14 +279,13 @@ Frame Contents:
 
  - 0x0004: Has Until Packet Numbeer
  - 0x0008: Has Addresses
- - 0x0010: Has SSM
- - 0x0020: Has Header Key
- - 0x0040: Has Key
- - 0x0080: Has Hash Algorithm
- - 0x0100: Has Max Rate
- - 0x0200: Has Max Idle Time
- - 0x0400: Has Max Streams
- - 0x0800: Has Ack Bundle Size
+ - 0x0010: Has Header Key
+ - 0x0020: Has Key
+ - 0x0040: Has Hash Algorithm
+ - 0x0080: Has Max Rate
+ - 0x0100: Has Max Idle Time
+ - 0x0200: Has Max Streams
+ - 0x0400: Has Ack Bundle Size
 
 The 'Has' fields in the Content Field determine presence or absence of the corresponding values in the rest of the frame, as described below.
 If a field is not included in a Channel Property frame, it remains unchanged from its previous value.
@@ -294,7 +299,7 @@ If no prior value is known, requests to join the channel MUST result in a Declin
 These values cannot change during the lifetime of the channel.  If a new value is received that is not the same as a prior value, the client MUST close the connection with a PROTOCOL_ERROR.
 
  * IP Family: Used only when Has Addresses is set in the Content Field (ignored otherwise).  Unset indicates IPv4, Set indicates IPv6 for both Source IP (if present) and Group IP.
- * Source IP: Present if Has Addresses and Has SSM are both set in the Content Field.  The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
+ * Source IP: Present if Has Addresses is set in the Content Field.  The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
  * Group IP: Present if Has Addresses is set in the Content Field.  The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
  * UDP Port: Present if Has Addressess is set in the Content Field.  The 16-bit UDP Port of traffic for the channel.
  * Header AEAD Algorithm: Present when Has Header Key is set in the Content Field.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
@@ -473,14 +478,12 @@ MC_CLIENT_LIMITS Frame {
 The sequence number is implicitly 0 before the first MC_CLIENT_LIMITS frame from the client, and increases by 1 each new frame that's sent.
 Newer frames override older ones.
 
-Limit Support Flags is a bit field computed as follows:
+Capabilities Flags is a bit field structured as follows:
 
  - 0x1 is set if IPv4 channels are permitted
  - 0x2 is set if IPv6 channels are permitted
- - 0x4 is set if SSM channels are permitted
- - 0x8 is set if ASM channels are permitted
 
-For example, a Limit Support Flags value of 6 (0x110) indicates that only SSM IPv6 channels are supported.  Other kinds of channels SHOULD NOT have properties sent to this client.
+For example, a Capabilities Flags value of 3 (0x11) indicates that both IPv4 and IPv6 channels are permitted.
 
 Max Aggregate Rate allowed across all joined channels is in Kibps.
 
