@@ -52,7 +52,7 @@ This document defines a multicast extension to QUIC to enable the efficient use 
 This document specifies an extension to QUIC version 1 {{RFC9000}} to enable the use of multicast IP transport of identical data packets for use in many individual QUIC connections.
 
 The multicast data can only be consumed in conjunction with a unicast QUIC connection.
-When support for multicast is negotiated, the server can optionally advertise existence of one or more multicst channels that contain unidirectional data streams from server to client, and the client can optionally join the multicast channel and verify from integrity data the server provides that correct data is being received, then acknowledge the data from the multicast channel(s) over the unicast connection.
+When support for multicast is negotiated, the server can optionally advertise existence of one or more multicast channels that contain unidirectional data streams from server to client, and the client can optionally join the multicast channel and verify from integrity data the server provides that correct data is being received, then acknowledge the data from the multicast channel(s) over the unicast connection.
 
 Enabling this can provide large scalability benefits for popular traffic over multicast-capable networks.
 
@@ -105,9 +105,7 @@ The multicast_client_params parameter has the structure shown below in {{fig-tra
 
 ~~~
 multicast_client_params {
-  Permit IPv4 (1),
-  Permit IPv6 (1),
-  Reserved (6),
+  Capabilities Field (i),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Hash Algorithms Supported (i),
@@ -118,9 +116,15 @@ multicast_client_params {
 ~~~
 {: #fig-transport-parameter-format title="multicast_client_params Format"}
 
-The Permit IPv4, Permit IPv6, Max Aggregate Rate, and Max Channel IDs fields are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
+Capabilities Flags is a bit field structured as follows:
 
-<<<<<<< HEAD
+ - 0x1 is set if IPv4 channels are permitted
+ - 0x2 is set if IPv6 channels are permitted
+
+A server MUST NOT send MC_CHANNEL_PROPERTIES with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_CLIENT_LIMITS frame later adds permission for a different address family.
+
+The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
+
 The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send a MC_CHANNEL_JOIN to this client for any channels using unsupported algorithms:
 
   - <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>
@@ -187,7 +191,7 @@ The values used for unicast flow control cannot be used to limit the transmissio
 Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
 The server advertises the expected maxima of the values that can contribute toward client resource limits within a channel in MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames.
 
-If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CHANNEL_STATE_CHANGE with "Declined Join" and reason "Protocol Violation".
+If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CHANNEL_STATE_CHANGE with "Declined Join" and reason "Property Violation".
 If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Property Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
 If the actual contents sent in the channel exceed the advertised limits from the MC_CHANNEL_PROPERTY, clients SHOULD leave the stream with a PROTOCOL_ERROR/Limit Violated state change.
 
@@ -237,44 +241,53 @@ MC_CHANNEL_PROPERTIES frames are formatted as shown in {{fig-mc-channel-properti
 ~~~
 MC_CHANNEL_PROPERTIES Frame {
   Type (i) = TBD-01 (experiments use 0xff3e801),
-  Channel ID (8..160),
   Properties Sequence Number (i),
+  ID Length (8),
+  Channel ID (8..160),
   From Packet Number (i),
-  Selectors (10) {
-    Has Until Packet Number (1),
-    Has Addresses (1)
-    Has SSM (1),
-    Has Header Key (1),
-    Has Key (1),
-    Has Hash Algorithm (1),
-    Has Max Rate (1),
-    Has Max Idle Time (1),
-    Has Max Streams (1),
-    Has ACK Bundle Size (1),
-  },
-  Reserved (4),
-  Key Phase (1),
-  [IP Family] (1),
+  Content Field (i),
   Until Packet Number (0..i),
   [Source IP] (0..128),
   [Group IP] (0..128),
   [UDP Port] (0..16)
   [Header AEAD Algorithm] (0..16),
-  [Header Key] (...),
+  [Header Key Length] (0..i),
+  [Header Key] (..),
   AEAD Algorithm (0..16),
-  Key (...),
-  Integrity Hash Algorithm (0..8),
+  Key Length (0..i),
+  Key (..),
+  Integrity Hash Algorithm (0..i),
   Max Rate (0..i),
   Max Idle Time (0..i),
   Max Streams (0..i),
-  ACK Bundle Size (0..8),
+  ACK Bundle Size (0..i),
 }
 [] = immutable values
 ~~~
 {: #fig-mc-channel-properties-format title="MC_CHANNEL_PROPERTIES Frame Format"}
 
-The 'Has' fields in the Selector determine presence or absence of the corresponding values in the rest of the frame, as described below.
-If a field is not included, it remains unchanged unless a different semantic is explained below.
+The Content Field is a bit field defining the contents of this MC_CHANNEL_PROPERTIES frame, plus some boolean values that are part of the properties of the channel.
+
+Properties:
+
+ - 0x0001: Key phase
+ - 0x0002: IP Family
+
+Frame Contents:
+
+ - 0x0004: Has Until Packet Numbeer
+ - 0x0008: Has Addresses
+ - 0x0010: Has Header Key
+ - 0x0020: Has Key
+ - 0x0040: Has Hash Algorithm
+ - 0x0080: Has Max Rate
+ - 0x0100: Has Max Idle Time
+ - 0x0200: Has Max Streams
+ - 0x0400: Has Ack Bundle Size
+
+The 'Has' fields in the Content Field determine presence or absence of the corresponding values in the rest of the frame, as described below.
+If a field is not included in a Channel Property frame, it remains unchanged from its previous value.
+If no prior value is known, requests to join the channel MUST result in a Declined Join with reason Unsynchronized Properties.
 
  * From Packet Number, Until Packet Number: the mutable values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is omitted it indicates the current property values for this channel have no expiration at (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any prior (From,Until) range, it has no applicable channel properties and MUST be dropped.
  * Properties Sequence Number: increases by 1 each time the properties for the channel are changed by the server.  For mutable properties, the client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequnce Number is higher.
@@ -283,34 +296,37 @@ If a field is not included, it remains unchanged unless a different semantic is 
 
 These values cannot change during the lifetime of the channel.  If a new value is received that is not the same as a prior value, the client MUST close the connection with a PROTOCOL_ERROR.
 
- * IP Family: Always present, but used only when Has Addresses=1 (ignored otherwise).  0 indicates IPv4, 1 indicates IPv6 for both Source IP (if present) and Group IP.
- * Source IP: Present if Has Addresses=1 and Has SSM=1.  The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
- * Group IP: Present if Has Addresses=1.  The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
- * UDP Port: Present if Has Addressess=1.  The 16-bit UDP Port of traffic for the channel.
- * Header AEAD Algorithm: Present when Has Header Key=1.  a value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
- * Header Key: Present when Has Header Key=1.  A key with length and semantics determined by the Header AEAD Algorithm.
-> **Author's Note:** I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
+ * IP Family: Used only when Has Addresses is set in the Content Field (ignored otherwise).  Unset indicates IPv4, Set indicates IPv6 for both Source IP (if present) and Group IP.
+ * Source IP: Present if Has Addresses is set in the Content Field.  The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
+ * Group IP: Present if Has Addresses is set in the Content Field.  The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
+ * UDP Port: Present if Has Addressess is set in the Content Field.  The 16-bit UDP Port of traffic for the channel.
+ * Header AEAD Algorithm: Present when Has Header Key is set in the Content Field.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
+ * Header Key Length: Present when Has Header Key is set in the Content Field.  Provides the length of the Key field.  It MUST match a valid key length for the Header AEAD Algorithm.
+ * Header Key: Present when Has Header Key is set in the Content Field.  A key for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in {{RFC9001}}.
+   * **Author's Note:** I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
 
 ### Mutable Properties
 
 These values MAY change during the lifetime of the channel.
 From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of {{RFC9000}}) the 1-RTT packets received) over which these values are applicable.
 A From Packet Number without an Until Packet Number has an unspecified termination.
-If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to the new From Packet Number.
+If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to one below the new From Packet Number for all the changed properties.
 
- * Key Phase: Always present, used only if Has Key is set (otherwise ignored).  The key phase value in the 1-RTT packet that will be in use for this key (see Section 6 of {{RFC9001}}).
- * AEAD Algorithm: Present if Has Key is set.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
- * Key: present if and only if Has Key is set, with length determined by the AEAD Algorith value.  Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}.
-To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates over unicast.
- * Integrity Hash Algorithm: the hash algorithm used in integrity frames
-> **Author's Note:** Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:
-   - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
-   - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
-   - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
- * Max Rate: The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
- * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
- * Max Streams: The maximum stream ID that might appear in the channel.  If a client joined to this channel can raise its Max Streams limit up to or above this value it SHOULD do so, otherwise it SHOULD leave or decline join for the channel with Max Streams Exceeded.
- * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
+ * Key Phase: Used only when Has Key is set (otherwise ignored).  If set, indicates the Key Phase value is 1, or if unset indicates the Key Phase value is 0 in the 1-RTT packets that will be in use for this key (see Section 6 of {{RFC9001}}).
+ * AEAD Algorithm: Present when Has Key is set in the Content Field.  A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
+ * Key Length: present when Has Key is set in the Content Field.  Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm.
+ * Key: present when Has Key is set in the Content Field, with length given by Key Length.  Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}.
+
+   To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
+ * Integrity Hash Algorithm: present when Has Hash Algorithm is set in the Content Field.  The hash algorithm used in integrity frames.
+   * **Author's Note:** Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:
+     - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
+     - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
+     - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
+ * Max Rate: Present when Has Max Rate is set in the Content Field.  The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
+ * Max Idle Time: Present when Has Max Idle Time is set in the Content Field.  The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
+ * Max Streams: Present when Has Max Streams is set in the Content Field.  The maximum stream ID that might appear in the channel.  If a client joined to this channel can raise its Max Streams limit up to or above this value it SHOULD do so, otherwise it SHOULD leave or decline join for the channel with Max Streams Exceeded.
+ * ACK Bundle Size: Present when Has Ack Bundle Size is set in the Content Field.  The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
 
 ## MC_CHANNEL_JOIN {#channel-join-frame}
 
@@ -321,17 +337,18 @@ MC_CHANNEL_JOIN frames are formatted as shown in {{fig-mc-channel-join-format}}.
 ~~~
 MC_CHANNEL_JOIN Frame {
   Type (i) = TBD-02 (experiments use 0xff3e802),
-  Channel ID (8..160),
   MC_CLIENT_LIMIT Sequence Number (i),
   MC_CLIENT_CHANNEL_STATE Sequence Number (i),
-  MC_CHANNEL_PROPERTIES Sequence Number (i)
+  MC_CHANNEL_PROPERTIES Sequence Number (i),
+  ID Length (8),
+  Channel ID (8..160)
 }
 ~~~
 {: #fig-mc-channel-join-format title="MC_CHANNEL_JOIN Frame Format"}
 
 The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_CHANNEL_PROPERTIES not yet received by the client or one or more missing updates to MC_CLIENT_LIMITS or MC_CLIENT_CHANNEL_STATE not yet received by the server).
 
-A client SHOULD perform the join if it has the sequence number of the corresponding sesssion properties and the client's limits will not be exceeded, even if the client sequence numbers are not up to date.
+A client MAY perform the join if it has the sequence number of the corresponding sesssion properties and the client's limits will not be exceeded, even if the client sequence numbers are not up to date.
 If the client does not join, it MUST send a MC_CLIENT_CHANNEL_STATE with "Declined Join" and a reason.
 
 ## MC_CHANNEL_LEAVE {#channel-leave-frame}
@@ -344,6 +361,8 @@ MC_CHANNEL_LEAVE frames are formatted as shown in {{fig-mc-channel-leave-format}
 ~~~
 MC_CHANNEL_LEAVE Frame {
   Type (i) = TBD-03 (experiments use 0xff3e803),
+  MC_CLIENT_CHANNEL_STATE Sequence Number (i),
+  ID Length (8),
   Channel ID (8..160),
   After Packet Number (i)
 }
@@ -361,6 +380,7 @@ MC_CHANNEL_INTEGRITY frames are formatted as shown in {{fig-mc-channel-integrity
 ~~~
 MC_CHANNEL_INTEGRITY Frame {
   Type (i) = TBD-04..TBD-05 (experiments use 0xff3e804/0xff3e805),
+  ID Length (8),
   Channel ID (8..160),
   Packet Number Start (i),
   [Length (i)],
@@ -385,6 +405,7 @@ MC_CHANNEL_STREAM_BOUNDARY_OFFSET frames are formatted as shown in {{fig-mc-chan
 ~~~
 MC_CHANNEL_STREAM_BOUNDARY_OFFSET Frame {
   Type (i) = TBD-06 (experiments use 0xff3e806),
+  ID Length (8),
   Channel ID (8..160),
   Stream ID (i),
   Stream Offset (i)
@@ -407,6 +428,7 @@ MC_CHANNEL_ACK frames are formatted as shown in {{fig-mc-channel-ack-format}}.
 ~~~
 MC_CHANNEL_ACK Frame {
   Type (i) = TBD-07 (experiments use 0xff3e807),
+  ID Length (8),
   Channel ID (8..160),
   Largest Acknowledged (i),
   ACK Delay (i),
@@ -427,7 +449,8 @@ MC_PATH_RESPONSE frames are formatted as shown in {{fig-mc-path-response-format}
 
 ~~~
 MC_PATH_RESPONSE Frame {
-  Type (i) = TBD-08 (experiments use 0xffe38008)
+  Type (i) = TBD-08 (experiments use 0xffe38008),
+  ID Length (8),
   Channel ID (8..160),
   Data (64)
 }
@@ -442,11 +465,10 @@ MC_CLIENT_LIMITS frames are formatted as shown in {{fig-mc-client-limits-format}
 MC_CLIENT_LIMITS Frame {
   Type (i) = TBD-09 (experiments use 0xff3e809),
   Client Limits Sequence Number (i),
-  Permit IPv4 (1),
-  Permit IPv6 (1),
-  Reserved (6),
+  Capabilities Flags(i),
   Max Aggregate Rate (i),
-  Max Channel IDs (i)
+  Max Channel IDs (i),
+  Max Joined Count (i),
 }
 ~~~
 {: #fig-mc-client-limits-format title="MC_CLIENT_LIMITS Frame Format"}
@@ -454,7 +476,18 @@ MC_CLIENT_LIMITS Frame {
 The sequence number is implicitly 0 before the first MC_CLIENT_LIMITS frame from the client, and increases by 1 each new frame that's sent.
 Newer frames override older ones.
 
+Capabilities Flags is a bit field structured as follows:
+
+ - 0x1 is set if IPv4 channels are permitted
+ - 0x2 is set if IPv6 channels are permitted
+
+For example, a Capabilities Flags value of 3 (0x11) indicates that both IPv4 and IPv6 channels are permitted.
+
 Max Aggregate Rate allowed across all joined channels is in Kibps.
+
+Max Channel IDs is the count of channel IDs that can be reserved and have properties.  Retired Channel IDs don't count against this value.
+
+Max Joined Count is the count of channels that are allowed to be joined concurrently.
 
 ## MC_CHANNEL_RETIRE {#channel-retire-frame}
 
@@ -463,7 +496,8 @@ MC_CHANNEL_RETIRE frames are formatted as shown in {{fig-mc-channel-retire-forma
 ~~~
 MC_CHANNEL_RETIRE Frame {
   Type (i) = TBD-0a (experiments use 0xff3e80a),
-  Channel IDs (i)
+  ID Length (8),
+  Channel ID (8..160)
 }
 ~~~
 {: #fig-mc-channel-retire-format title="MC_CHANNEL_RETIRE Frame Format"}
@@ -478,39 +512,39 @@ MC_CLIENT_CHANNEL_STATE frames are formatted as shown in {{fig-mc-client-channel
 MC_CLIENT_CHANNEL_STATE Frame {
   Type (i) = TBD-0b (experiments use 0xff3e80b),
   Client Channel State Sequence Number (i),
+  ID Length (8),
+  Channel ID (8..160),
   State (i),
   Reason (0..i)
 }
 ~~~
 {: #fig-mc-client-channel-state-format title="MC_CLIENT_CHANNEL_STATE Frame Format"}
 
-State has possible values:
+State has these defined values:
 
- * 0x0: Left
- * 0x1: Declined Join
- * 0x2: Joined
+ * 0x1: Left
+ * 0x2: Declined Join
+ * 0x3: Joined
 
-For Left, Reason must be set to one of:
+If State is Joined, the Reason field is absent.
 
- * 0x0: Left as requested by server
- * 0x1: Protocol Error
- * 0x2: Property Violation
- * 0x3: High Loss
- * 0x4: Exceeded max idle time
- * 0x5: Administrative change
- * 0x6: Spurious traffic
- * 0x7: other
+If State is Left or Declined Join, the Reason field is set to one of:
 
-(TODO: Either move spurious traffic explanation somewhere else or add more explanations for other reasons)
+ * 0x0: Unspecified Other
+ * 0x1: Left as requested by server
+ * 0x2: Administrative Block
+ * 0x3: Protocol Error
+ * 0x4: Property Violation
+ * 0x5: Unsynchronized Properties
+ * 0x6: ID Collision
+ * 0x10: Held Down
+ * 0x11: Max Idle Time Exceeded
+ * 0x12: Max Rate Exceeded
+ * 0x13: High Loss
+ * 0x14: Spurious Traffic
+ * 0x1000000-0x3fffffff: Application-specific Reason
 
 A client might receive multicast packets that it can not associate with any channel ID. If these are addressed to an (S,G) that is used for reception in one or more known channels, it MAY leave these channels with reason "Spurious traffic".
-
-For Declined Join, Reason must be set to one of:
-
- * Protocol Violation (limits exceeded, unsupported ciphersuite, etc)
- * held-down (prior channel failures, administrative block)
-
-(TODO: Should we include a loggable string in this?)
 
 (TODO: Or should we try to reuse PATH_ABANDON and/or PATH_STATUS?  I don’t think they’re sufficient, but maybe?):
   - {{I-D.draft-ietf-quic-multipath}}
