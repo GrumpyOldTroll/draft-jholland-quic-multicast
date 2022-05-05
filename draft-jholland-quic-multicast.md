@@ -227,27 +227,27 @@ If a server or client somehow still detect a stateless reset for a channel, they
 
 ## MC_CHANNEL_ANNOUNCE {#reserve-channel-ids-frame}
 
-Once a server learns that a client supports multicast through its transport parameters, it can send one or multiple MC_CHANNEL_ANNOUNCE frames (type=TBD-00) to share information about available channels with the client.
+Once a server learns that a client supports multicast through its transport parameters, it can send one or multiple MC_CHANNEL_ANNOUNCE frames (type=TBD-10..TBD-11) to share information about available channels with the client.
 The MC_CHANNEL_ANNOUNCE frame contains the static properties of a channel that do not change during its lifetime.
 
 MC_CHANNEL_ANNOUNCE frames are formatted as shown in {{fig-mc-channel-announce}}.
 
 ~~~
 MC_CHANNEL_ANNOUNCE Frame {
-  Type (i) = TBD-00 (experiments use 0xff3e800),
+  Type (i) = TBD-10..TBD-11 (experiments use 0xff3e810/0xff3e811),
   ID Length (8),
   Channel ID (8..160),
-  IP family (1),
-  Reserved (7),
-  Source IP (0..128),
-  Group IP (0..128),
-  UDP Port (0..16),
-  Header AEAD Algorithm (0..16),
-  Header Key Length (0..i),
+  Source IP (32..128),
+  Group IP (32..128),
+  UDP Port (16),
+  Header AEAD Algorithm (16),
+  Header Key Length (i),
   Header Key (..),
 }
 ~~~
 {: #fig-mc-channel-announce title="MC_CHANNEL_ANNOUNCE Frame Format"}
+
+Frames of type TBD-10 are used for IPv4 and both Source and Group address are 32 bits long. Frames of type TBD-11 are used for IPv6 and both Source and Group address are 128 bits long.
 
 MC_CHANNEL_ANNOUNCE frames contain the following fields:
 
@@ -262,16 +262,16 @@ MC_CHANNEL_ANNOUNCE frames contain the following fields:
   * Header Key: A key for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in {{RFC9001}}.
       * **Author's Note:** I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
 
-A client MUST NOT use the channel ID included in the MC_CHANNEL_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client SHOULD retire it as soon as possible.
-As the server knows which connection IDs are in use by the client, it SHOULD wait with the sending of a MC_CHANNEL_JOIN frame until the channel ID associated with it has been retired by the client.
+A client MUST NOT use the channel ID included in the MC_CHANNEL_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
+As the server knows which connection IDs are in use by the client, it MUST wait with the sending of a MC_CHANNEL_JOIN frame until the channel ID associated with it has been retired by the client.
 
 As the properties in MC_CHANNEL_ANNOUNCE frames are immutable during the lifetime of a channel, a server SHOULD NOT send a MC_CHANNEL_ANNOUNCE frame for the same channel more than once to each client.
 
-A server MUST send an MC_CHANNEL_ANNOUNCE frame for a channel before sending a MC_CHANNEL_PROPERTIES or MC_CHANNEL_JOIN frame for it.
+A server SHOULD send an MC_CHANNEL_ANNOUNCE frame for a channel before sending a MC_CHANNEL_PROPERTIES or MC_CHANNEL_JOIN frame for it.
 
 ## MC_CHANNEL_PROPERTIES {#channel-properties-frame}
 
-An MC_CHANNEL_PROPERTIES frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
+An MC_CHANNEL_PROPERTIES frame (type=TBD-12..TBD-13) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
 The MC_CHANNEL_PROPERTIES frame consists of the properties of a channel that are mutable and might change during the course of its lifetime.
 
 A server can send an update to a prior MC_CHANNEL_PROPERTIES frame with a new sequence number increased by one.
@@ -282,25 +282,25 @@ MC_CHANNEL_PROPERTIES frames are formatted as shown in {{fig-mc-channel-properti
 
 ~~~
 MC_CHANNEL_PROPERTIES Frame {
-  Type (i) = TBD-01 (experiments use 0xff3e801),
+  Type (i) = TBD-12..TBD-13 (experiments use 0xff3e812/0xff3e813),
   ID Length (8),
   Channel ID (8..160),
   Properties Sequence Number (i),
   From Packet Number (i),
-  Until Packet Number (0..i),
-  Key phase (1),
-  Reserved (7),
-  AEAD Algorithm (0..16),
-  Key Length (0..i),
+  Until Packet Number (i),
+  AEAD Algorithm (16),
+  Key Length (i),
   Key (..),
-  Integrity Hash Algorithm (0..i),
-  Max Rate (0..i),
-  Max Idle Time (0..i),
-  Max Streams (0..i),
-  ACK Bundle Size (0..i),
+  Integrity Hash Algorithm (16),
+  Max Rate (i),
+  Max Idle Time (i),
+  Max Streams (i),
+  ACK Bundle Size (i),
 }
 ~~~
 {: #fig-mc-channel-properties-format title="MC_CHANNEL_PROPERTIES Frame Format"}
+
+For type TBD-12 the Key Phase value is 1, while for type TBD-13 the Key Phase value is 0 in the 1-RTT packets that will be in use for this AEAD key (see Section 6 of {{RFC9001}}).
 
 MC_CHANNEL_PROPERTIES frames contain the following fields:
 
@@ -308,7 +308,6 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
   * Channel ID: The channel ID for the channel associated with this frame.
   * Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.
   * From Packet Number, Until Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is omitted it indicates the current property values for this channel have no expiration at (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any prior (From,Until) range, it has no applicable channel properties and MUST be dropped.
-  * Key Phase: If set, indicates the Key Phase value is 1, or if unset indicates the Key Phase value is 0 in the 1-RTT packets that will be in use for this key (see Section 6 of {{RFC9001}}).
   * AEAD Algorithm: A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
   * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm.
   * Key: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}, with length given by Key Length.
@@ -329,13 +328,15 @@ A From Packet Number without an Until Packet Number has an unspecified terminati
 
 If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to one below the new From Packet Number for all the changed properties.
 
-The properties of a channel MAY change during its lifetime. As such, a server SHOULD wait with sending an MC_CHANNEL_PROPERTIES frame intended to provide the initial properties to a client that hasn't joined the channel yet until immediately before sending the MC_CHANNEL_JOIN frame.
+The properties of a channel MAY change during its lifetime. As such, a server SHOULD NOT send properties for channels except those the client has joined or will be imminently asked to join.
 
 ## MC_CHANNEL_JOIN {#channel-join-frame}
 
 An MC_CHANNEL_JOIN frame (type TBD-02) is sent from server to client and requests that a client join the given transport addresses and ports and process packets with the given Channel ID according to the corresponding MC_CHANNEL_PROPERTIES.
 
 A client cannot join a multicast channel without first receiving a MC_CHANNEL_ANNOUNCE and MC_CHANNEL_PROPERTIES frame which together set all the values for a channel.
+
+If a client receives a MC_CHANNEL_JOIN for a channel for which it has not received both, it MUST respond with a MC_CLIENT_CHANNEL_STATE with State "Declined Join" and reason "Missing Properties". The server MAY send another MC_CHANNEL_JOIN after retransmitting the MC_CHANNEL_PROPERTIES and receiving an acknowledgement indicating receipt of the MC_CHANNEL_ANNOUNCE.
 
 MC_CHANNEL_JOIN frames are formatted as shown in {{fig-mc-channel-join-format}}.
 
