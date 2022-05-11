@@ -233,16 +233,16 @@ If a server or client somehow still detect a stateless reset for a channel, they
 
 # New Frames
 
-## MC_CHANNEL_ANNOUNCE {#reserve-channel-ids-frame}
+## MC_CHANNEL_ANNOUNCE {#channel-announce-frame}
 
-Once a server learns that a client supports multicast through its transport parameters, it can send one or multiple MC_CHANNEL_ANNOUNCE frames (type=TBD-10..TBD-11) to share information about available channels with the client.
+Once a server learns that a client supports multicast through its transport parameters, it can send one or multiple MC_CHANNEL_ANNOUNCE frames (type=TBD-11..TBD-22) to share information about available channels with the client.
 The MC_CHANNEL_ANNOUNCE frame contains the static properties of a channel that do not change during its lifetime.
 
 MC_CHANNEL_ANNOUNCE frames are formatted as shown in {{fig-mc-channel-announce}}.
 
 ~~~
 MC_CHANNEL_ANNOUNCE Frame {
-  Type (i) = TBD-10..TBD-11 (experiments use 0xff3e810/0xff3e811),
+  Type (i) = TBD-11..TBD-12 (experiments use 0xff3e811/0xff3e812),
   ID Length (8),
   Channel ID (8..160),
   Source IP (32..128),
@@ -279,7 +279,7 @@ A server SHOULD send an MC_CHANNEL_ANNOUNCE frame for a channel before sending a
 
 ## MC_CHANNEL_PROPERTIES {#channel-properties-frame}
 
-An MC_CHANNEL_PROPERTIES frame (type=TBD-12) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
+An MC_CHANNEL_PROPERTIES frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
 The MC_CHANNEL_PROPERTIES frame consists of the properties of a channel that are mutable and might change during the course of its lifetime.
 
 A server can send an update to a prior MC_CHANNEL_PROPERTIES frame with a new sequence number increased by one.
@@ -290,7 +290,7 @@ MC_CHANNEL_PROPERTIES frames are formatted as shown in {{fig-mc-channel-properti
 
 ~~~
 MC_CHANNEL_PROPERTIES Frame {
-  Type (i) = TBD-12 (experiments use 0xff3e812),
+  Type (i) = TBD-01 (experiments use 0xff3e801),
   ID Length (8),
   Channel ID (8..160),
   Properties Sequence Number (i),
