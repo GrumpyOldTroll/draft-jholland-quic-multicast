@@ -30,6 +30,10 @@ author:
  -
     fullname: Lucas Pardue
     email: lucaspardue.24.7@gmail.com
+ -
+    fullname: Max Franke
+    organization: TU Berlin
+    email: mfranke@inet.tu-berlin.de
 
 normative:
 
