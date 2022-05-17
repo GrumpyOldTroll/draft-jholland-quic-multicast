@@ -227,7 +227,7 @@ Note that the hash is on the unencrypted packet because it checks against a spec
 
 
 # Connection Termination
-Termination of the unicast connection behaves as described in Section 10. of {{RFC9000}}, with the following notable differences:
+Termination of the unicast connection behaves as described in Section 10 of {{RFC9000}}, with the following notable differences:
 
 * On the client side, termination of the unicast connection means that it MUST leave all multicast channels and discard any state associated with them. Servers MAY stop sending to multicast channels if there are no unicast connections left that are associated with them.
 
