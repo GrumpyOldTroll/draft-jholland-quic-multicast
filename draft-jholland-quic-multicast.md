@@ -367,17 +367,22 @@ If the client does not join, it MUST send a MC_CLIENT_CHANNEL_STATE with "Declin
 
 ## MC_CHANNEL_LEAVE {#channel-leave-frame}
 
-An MC_CHANNEL_LEAVE frame (type=TBD-03) is sent from server to client
-in either the unicast connection or a channel.
+An MC_CHANNEL_LEAVE frame (type=TBD-03) is sent from server to client, and requests that a client leave the given channel.
+
+If the client has already left or declined to join the channel, the MC_CHANNEL_LEAVE is ignored.
+
+If a MC_CHANNEL_JOIN or an MC_CHANNEL_LEAVE with the same Channel ID and a higher MC_CLIENT_CHANNEL_STATE Sequence number has previously been received, the MC_CHANNEL_LEAVE is ignored.
+
+Otherwise, the client MUST leave the channel and send a new MC_CLIENT_CHANNEL_STATE frame with reason Left as requested by server.
 
 MC_CHANNEL_LEAVE frames are formatted as shown in {{fig-mc-channel-leave-format}}.
 
 ~~~
 MC_CHANNEL_LEAVE Frame {
   Type (i) = TBD-03 (experiments use 0xff3e803),
-  MC_CLIENT_CHANNEL_STATE Sequence Number (i),
   ID Length (8),
   Channel ID (8..160),
+  MC_CLIENT_CHANNEL_STATE Sequence Number (i),
   After Packet Number (i)
 }
 ~~~
@@ -500,6 +505,10 @@ MC_CHANNEL_RETIRE Frame {
 Retires a channel by id.  (We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
 
 ## MC_CLIENT_CHANNEL_STATE {#client-channel-state-frame}
+
+MC_CLIENT_CHANNEL_STATE frames are sent from client to server to report changes in the client's channel state.
+Each time the channel state changes, the Client Channel State Sequence number is increased by one.
+It is a state change to the channel if the server requests that a client join a channel and the client declines the join, even though no join occurs on the network.
 
 MC_CLIENT_CHANNEL_STATE frames are formatted as shown in {{fig-mc-client-channel-state-format}}.
 
