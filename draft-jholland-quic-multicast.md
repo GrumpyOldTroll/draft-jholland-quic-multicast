@@ -193,9 +193,6 @@ Clients should therefore begin with a high initial_max_streams_uni or send an ea
 
 MC_CHANNEL_PROPERTIES can provide a recommended value for max_streams_uni to allow for uninterrupted transport using the multicast channel.
 
-Servers also can send MC_CHANNEL_STREAM_BOUNDARY_OFFSET ({{channel-stream-boundary-offset-frame}}) frames to indicate an application-layer boundary in a stream carried inside a channel.
-These frames enable new clients joining a channel to start receiving application data from the indicated stream as though the stream data at that offset had an offset of 0.
-
 # Flow Control {#flow-control}
 
 The values used for unicast flow control cannot be used to limit the transmission rate of a multicast channel because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that channels responded to each client's limits.
@@ -415,25 +412,6 @@ Packet hashes MUST have length with an integer multiple of the length indicated 
 
 See {{packet-hashes}} for a description of the packet hash calculation.
 
-## MC_CHANNEL_STREAM_BOUNDARY_OFFSET {#channel-stream-boundary-offset-frame}
-
-MC_CHANNEL_STREAM_BOUNDARY_OFFSET frames are formatted as shown in {{fig-mc-channel-stream-boundary-offset-format}}.
-
-~~~
-MC_CHANNEL_STREAM_BOUNDARY_OFFSET Frame {
-  Type (i) = TBD-06 (experiments use 0xff3e806),
-  ID Length (8),
-  Channel ID (8..160),
-  Stream ID (i),
-  Stream Offset (i)
-}
-~~~
-{: #fig-mc-channel-stream-boundary-offset-format title="MC_CHANNEL_STREAM_BOUNDARY_OFFSET Frame Format"}
-
-Clients must discard data before Stream Offset, and should start accepting stream data at Stream Offset as though it's a new stream with offset 0.
-
-A server must ensure that data beginning at the given stream offsets could equivalently begin a new stream, and are safe for clients to start processing in order to use this.  (Well-suited for boundaries of http server push objects, for example, which otherwise would need to start a new stream per object in order to be usable by late joiners.)
-
 ## MC_CHANNEL_ACK {#channel-ack-frame}
 
 Client->Server on unicast connection.
@@ -589,7 +567,6 @@ Permitted:
  - MC_CHANNEL_PROPERTIES
  - MC_CHANNEL_LEAVE (however, join must come over unicast?)
  - MC_CHANNEL_INTEGRITY (not for this channel, only for another)
- - MC_STREAM_BOUNDARY_OFFSET
  - MC_CHANNEL_RETIRE
 
 Not permitted:
