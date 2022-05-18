@@ -367,8 +367,7 @@ If the client does not join, it MUST send a MC_CLIENT_CHANNEL_STATE with "Declin
 
 ## MC_CHANNEL_LEAVE {#channel-leave-frame}
 
-An MC_CHANNEL_LEAVE frame (type=TBD-03) is sent from server to client
-in either the unicast connection or a channel, and requests that a client leave the given channel.
+An MC_CHANNEL_LEAVE frame (type=TBD-03) is sent from server to client, and requests that a client leave the given channel.
 
 If the client has already left or declined to join the channel, the MC_CHANNEL_LEAVE is ignored.
 
