@@ -188,7 +188,7 @@ Stream IDs in channels are restricted to unidirectional server initiated streams
 
 When a channel contains streams with ids above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in Sections 4.6 and 19.14 of {{RFC9000}}.
 
-If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server MUST send a MC_CHANNEL_LEAVE frame.
+If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send a MC_CHANNEL_LEAVE frame.
 
 If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason Max Streams Exceeded.
 
@@ -376,9 +376,9 @@ MC_CHANNEL_LEAVE frames are formatted as shown in {{fig-mc-channel-leave-format}
 ~~~
 MC_CHANNEL_LEAVE Frame {
   Type (i) = TBD-03 (experiments use 0xff3e803),
-  MC_CLIENT_CHANNEL_STATE Sequence Number (i),
   ID Length (8),
   Channel ID (8..160),
+  MC_CLIENT_CHANNEL_STATE Sequence Number (i),
   After Packet Number (i)
 }
 ~~~
@@ -538,6 +538,7 @@ If State is Left or Declined Join, the Reason field is set to one of:
  * 0x12: Max Rate Exceeded
  * 0x13: High Loss
  * 0x14: Spurious Traffic
+ * 0x15: Max Streams Exceeded
  * 0x1000000-0x3fffffff: Application-specific Reason
 
 A client might receive multicast packets that it can not associate with any channel ID. If these are addressed to an (S,G) that is used for reception in one or more known channels, it MAY leave these channels with reason "Spurious traffic".
