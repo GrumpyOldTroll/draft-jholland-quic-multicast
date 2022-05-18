@@ -186,12 +186,15 @@ The different path can be either the unicast connection or another multicast cha
 
 Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see {{RFC9000}} Section 2.1).
 
-Since a server has access to all data in channels it uses, a server can always avoid stream ID collisions with the stream IDs carried in channels, and can usually (depending on the timing) avoid allowing channels to exceed the client's max_streams_uni by requesting that clients leave channels before their limits would be exceeded.
+When a channel contains streams with ids above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in Sections 4.6 and 19.14 of {{RFC9000}}.
 
-However, since clients can join later than a channel began, clients supporting the multicast extensions to QUIC should be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream id count might have been increasing for a long time.
+If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send a MC_CHANNEL_LEAVE frame.
+
+If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason Max Streams Exceeded.
+
+Since clients can join later than a channel began, it is RECOMMENDED that clients supporting the multicast extensions to QUIC be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream id count might have been increasing for a long time.
 Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see Section 19.11 of {{RFC9000}}) with a high limit.
-
-MC_CHANNEL_PROPERTIES can provide a recommended value for max_streams_uni to allow for uninterrupted transport using the multicast channel.
+Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.
 
 # Flow Control {#flow-control}
 
@@ -303,7 +306,6 @@ MC_CHANNEL_PROPERTIES Frame {
   Integrity Hash Algorithm (16),
   Max Rate (i),
   Max Idle Time (i),
-  Max Streams (i),
   ACK Bundle Size (i),
 }
 ~~~
@@ -327,7 +329,6 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
       - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
   * Max Rate: The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
   * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
-  * Max Streams: The maximum stream ID that might appear in the channel.  If a client joined to this channel can raise its Max Streams limit up to or above this value it SHOULD do so, otherwise it SHOULD leave or decline join for the channel with Max Streams Exceeded.
   * ACK Bundle Size:nThe minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
 
 From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of {{RFC9000}}) the 1-RTT packets received) over which these values are applicable.
@@ -546,6 +547,7 @@ If State is Left or Declined Join, the Reason field is set to one of:
  * 0x12: Max Rate Exceeded
  * 0x13: High Loss
  * 0x14: Spurious Traffic
+ * 0x15: Max Streams Exceeded
  * 0x1000000-0x3fffffff: Application-specific Reason
 
 A client might receive multicast packets that it can not associate with any channel ID. If these are addressed to an (S,G) that is used for reception in one or more known channels, it MAY leave these channels with reason "Spurious traffic".
