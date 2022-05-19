@@ -617,7 +617,7 @@ Not permitted:
 
 # Security Considerations
 
-Authors comment: Mostly incorporate {{I-D.draft-krose-multicast-security}}.  Anything else?
+(Authors comment: Mostly incorporate {{I-D.draft-krose-multicast-security}}.  Anything else?
 
 e.g. if a different legitimate quic connection says someone
 else's quic multicast stream is theirs, that's maybe a problem
@@ -634,9 +634,9 @@ key that arrived on the multicast channel.
 (Note this doesn't prevent unauthorized receipt of multicast
 data packts, but does prevent a quic server from lying when
 claiming a multicast data channel belongs to it, preventing
-legit receivers from consuming it.)
+legit receivers from consuming it.
 
-(alternatively, can the multicast channel just periodically say
+alternatively, can the multicast channel just periodically say
 what domain name is expected for the quic connection and get the
 same crypto guarantee of a proper sender via the domain's cert,
 which was already checked on the unicast channel?)
