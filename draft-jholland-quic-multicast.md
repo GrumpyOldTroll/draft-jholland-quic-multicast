@@ -58,11 +58,12 @@ This document defines a multicast extension to QUIC to enable the efficient use 
 This document specifies an extension to QUIC version 1 {{RFC9000}} to enable the use of multicast IP transport of identical data packets for use in many individual QUIC connections.
 
 The multicast data can only be consumed in conjunction with a unicast QUIC connection.
-When support for multicast is negotiated, the server can optionally advertise existence of one or more multicast channels that contain unidirectional data streams from server to client, and the client can optionally join the multicast channel and verify from integrity data the server provides that correct data is being received, then acknowledge the data from the multicast channel(s) over the unicast connection.
+When support for multicast is negotiated, the server can optionally advertise the existence of one or more multicast channels that contain unidirectional data streams from server to client, and the client can optionally join the multicast channel and verify from integrity data the server provides that correct data is being received, then acknowledge the data from the multicast channel(s) over the unicast connection.
 
 Enabling this can provide large scalability benefits for popular traffic over multicast-capable networks.
 
 This document does not define any multicast transport except server to client and only includes semantics for source-specific multicast.
+
 ## Conventions and Definitions
 
 {::boilerplate bcp14}
@@ -86,17 +87,17 @@ QUIC connections are defined in Section 5 of {{RFC9000}} and are not changed in 
 Channels carry only 1-RTT packets.
 Packets associated with a channel contain a Channel ID in place of a Destination Connection ID.
 (A Channel ID cannot be zero length.)
-This adds a layer of indirection to the process described in Section 5.2 of {{RFC9000}}} for matching packets to connections upon receipt.
+This adds a layer of indirection to the process described in Section 5.2 of {{RFC9000}} for matching packets to connections upon receipt.
 Incoming packets received on the network path associated with a channel use the Channel ID to associate the packet with a joined channel.
 
 A client with a matching joined channel always has at least one connection associated with the channel.
 If a client has no matching joined channel, the packet is discarded.
 
-Since the network path for a channel is unidirectional, packets associated with a channel are acknowledged with MP_CHANNEL_ACK frames {{channel-ack-frame}} instead of with ACK frames.
+Since the network path for a channel is unidirectional, packets associated with a channel are acknowledged with MP_CHANNEL_ACK frames {{channel-ack-frame}} instead of ACK frames.
 Each channel has an independent packet number space.
 
 The use of any particular channel is OPTIONAL for both the server and the client.
-It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceeful degradation for endpoints that do not or cannot make use of the multicast functionality.
+It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceful degradation for endpoints that do not or cannot make use of the multicast functionality.
 
 The server has access to all data transmitted on any multicast channel it uses, and could optionally send this data with unicast instead.
 
@@ -107,7 +108,7 @@ Client applications should have a mechanism that disables the use of multicast o
 
 # Transport Parameter {#transport-parameter}
 
-Support for multicast extesnsions in a client is advertised by means of a QUIC transport parameter:
+Support for multicast extensions in a client is advertised by means of a QUIC transport parameter:
 
  * name: multicast_client_params (TBD - experiments use 0xff3e800)
 
@@ -133,7 +134,7 @@ Capabilities Flags is a bit field structured as follows:
  - 0x1 is set if IPv4 channels are permitted
  - 0x2 is set if IPv6 channels are permitted
 
-A server MUST NOT send MC_CHANNEL_PROPERTIES with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_CLIENT_LIMITS frame adds permission for a different address family.
+A server MUST NOT send MC_CHANNEL_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_CLIENT_LIMITS ({{client-limits-frame}})  frame adds permission for a different address family.
 
 The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
 
@@ -149,9 +150,9 @@ The Hash Algorithms List field is in order of preference (most preferred occurri
 
 A client has the option of refusal and the power to impose upper bound maxima on several resources (see {{flow-control}}), but otherwise its join status for all multicast channels is entirely managed by the server.
 
- * A client MUST NOT join a channel without receiving instructions from a server to do so
- * A client MUST leave joined channels when instructed by the server to do so
- * A client MAY leave channels or refuse to join channels, regardless of instructions from the server
+ * A client MUST NOT join a channel without receiving instructions from a server to do so.
+ * A client MUST leave joined channels when instructed by the server to do so.
+ * A client MAY leave channels or refuse to join channels, regardless of instructions from the server.
 
 ## Channel Management
 
@@ -159,7 +160,7 @@ The client tells its server about some restrictions on resources that it is capa
 
 The server asks the client to join channels with MC_CHANNEL_JOIN ({{channel-join-frame}}) frames and to leave channels with MC_CHANNEL_LEAVE ({{channel-leave-frame}}) frames.
 
-The server uses MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the keys necessary to decode packets in the channel.
+The server uses MC_CHANNEL_ANNOUNCE ({{channel-announce-frame}}) and MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the keys necessary to decode packets in the channel.
 
 When the server has asked the client to join a channel, it also sends MC_CHANNEL_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
 A client MUST NOT decode packets for a channel for which it has not received an applicable set of MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames containing the full set of data required, or for which it has not received a matching packet hash in an MC_CHANNEL_INTEGRITY ({{channel-integrity-frame}}) frame.
@@ -324,7 +325,7 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
 
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID for the channel associated with this frame.
-  * Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.
+  * Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set it is current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.
   * From Packet Number, Until Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is omitted it indicates the current property values for this channel have no expiration at (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any prior (From,Until) range, it has no applicable channel properties and MUST be dropped.
   * AEAD Algorithm: A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
   * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm.
@@ -337,9 +338,9 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
       - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
   * Max Rate: The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
   * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
-  * ACK Bundle Size:nThe minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
+  * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
 
-From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of {{RFC9000}}) the 1-RTT packets received) over which these values are applicable.
+From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of {{RFC9000}}) the 1-RTT packets received over which these values are applicable.
 
 A From Packet Number without an Until Packet Number has an unspecified termination.
 
@@ -428,7 +429,7 @@ See {{packet-hashes}} for a description of the packet hash calculation.
 
 ## MC_CHANNEL_ACK {#channel-ack-frame}
 
-Client->Server on unicast connection.
+This frame is sent from a client to a server on the unicast connection.
 
 (TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of {{I-D.draft-ietf-quic-multipath}}, defining channel id as the packet number space?  at 2022-04-12 they're identical.)
 
@@ -452,7 +453,7 @@ MC_CHANNEL_ACK Frame {
 
 ## MC_PATH_RESPONSE {#path-response-frame}
 
-MC_PATH_RESPONSE frames are sent from client to server in a unicast connection in response to an PATH_CHALLENGE received in a channel.  Like PATH_RESPONSE but includes a channel id.
+MC_PATH_RESPONSE frames are sent from a client to a server in a unicast connection in response to a PATH_CHALLENGE received in a channel.  Like PATH_RESPONSE but includes a channel id.
 
 MC_PATH_RESPONSE frames are formatted as shown in {{fig-mc-path-response-format}}.
 
@@ -564,7 +565,7 @@ A client might receive multicast packets that it can not associate with any chan
   - {{I-D.draft-ietf-quic-multipath}}
   - <https://datatracker.ietf.org/doc/html/draft-liu-multipath-quic-04#section-9.1>
 
-The things server needs to know for state changes *could* maybe be inferred from ack responses but explicit seems better, allowing for a more proactive response under strain?
+(Authors comment: The things server needs to know for state changes *could* maybe be inferred from ack responses but explicit seems better, allowing for a more proactive response under strain?)
 
 # Frames Carried in Channel Packets
 
@@ -616,7 +617,7 @@ Not permitted:
 
 # Security Considerations
 
-Mostly incorporate {{I-D.draft-krose-multicast-security}}.  Anything else?
+Authors comment: Mostly incorporate {{I-D.draft-krose-multicast-security}}.  Anything else?
 
 e.g. if a different legitimate quic connection says someone
 else's quic multicast stream is theirs, that's maybe a problem
