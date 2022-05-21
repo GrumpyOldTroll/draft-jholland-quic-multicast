@@ -428,15 +428,15 @@ See {{packet-hashes}} for a description of the packet hash calculation.
 
 ## MC_CHANNEL_ACK {#channel-ack-frame}
 
-Client->Server on unicast connection.
+The MC_CHANNEL_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by {{RFC9000}}. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_CHANNEL_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.
 
-(TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of {{I-D.draft-ietf-quic-multipath}}, defining channel id as the packet number space?  at 2022-04-12 they're identical.)
+(TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of {{I-D.draft-ietf-quic-multipath}}, defining channel id as the packet number space?  at 2022-05 they're identical.)
 
 MC_CHANNEL_ACK frames are formatted as shown in {{fig-mc-channel-ack-format}}.
 
 ~~~
 MC_CHANNEL_ACK Frame {
-  Type (i) = TBD-07 (experiments use 0xff3e807),
+  Type (i) = TBD-06..TBD-07 (experiments use 0xff3e806, 0xff3e807),
   ID Length (8),
   Channel ID (8..160),
   Largest Acknowledged (i),
@@ -448,7 +448,6 @@ MC_CHANNEL_ACK Frame {
 }
 ~~~
 {: #fig-mc-channel-ack-format title="MC_CHANNEL_ACK Frame Format"}
-
 
 ## MC_PATH_RESPONSE {#path-response-frame}
 
