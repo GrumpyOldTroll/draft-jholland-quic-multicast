@@ -161,11 +161,48 @@ The client tells its server about some restrictions on resources that it is capa
 The server asks the client to join channels with MC_CHANNEL_JOIN ({{channel-join-frame}}) frames and to leave channels with MC_CHANNEL_LEAVE ({{channel-leave-frame}}) frames.
 
 The server uses MC_CHANNEL_ANNOUNCE ({{channel-announce-frame}}) and MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the keys necessary to decode packets in the channel.
+{{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
 When the server has asked the client to join a channel, it also sends MC_CHANNEL_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
 A client MUST NOT decode packets for a channel for which it has not received an applicable set of MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames containing the full set of data required, or for which it has not received a matching packet hash in an MC_CHANNEL_INTEGRITY ({{channel-integrity-frame}}) frame.
 
 The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_CLIENT_LIMITS ({{client-limits-frame}}) frame the server received.
+
+~~~
+                                                   o
+                                                   | Receive MC_CHANNEL_ANNOUNCE
+                                                   | Initialize new channel
+                                                   v
+                                            +-------------+
+                                            | initialized | Receive MC_CHANNEL_RETIRE
+                                            |             |------------------------------------
+                                            +-------------+                                   |
+                                                   |                                          |
+                                                   | Receive MC_CHANNEL_PROPERTIES            |
+                                                   |                                          |
+                                                   v                                          |
+                                            +-------------+                                   |
+                                            |   unjoined  | Receive MC_CHANNEL_RETIRE         |
+  ----------------------------------------->|             |---------------------------------->|
+  |                                         +-------------+                                   |
+  |                                                |                                          |
+  |                                                | Receive MC_CHANNEL_JOIN                  |
+  |                                                | Send MC_CLIENT_CHANNEL_STATE: Joined     |
+  |                                                v                                          |
+  |  Initial timeout exceeded               +-------------+                                   |
+  |  Send MC_CLIENT_CHANNEL_STATE:leave     | attempting  | Receive MC_CHANNEL_RETIRE         |
+  |<----------------------------------------|    join     |---------------------------------->|
+  |                                         +-------------+                                   |
+  |                                                |                                          |
+  |                                                | Received data on channel                 |
+  |                                                | Send MC_CHANNEL_ACK                      |
+  |  Receive MC_CHANNEL_LEAVE or                   v                                          v
+  |  Max idle time exceeded                  +-------------+                            +-------------+
+  |  Send MC_CLIENT_CHANNEL_STATE:leave      |   joined    | Receive MC_CHANNEL_RETIRE  |   retired   |
+  |------------------------------------------|             |--------------------------->|             |
+                                             +-------------+                            +-------------+
+~~~
+{: #fig-client-channel-states title="States a channel from the clients point of view."}
 
 ## Client Response
 
