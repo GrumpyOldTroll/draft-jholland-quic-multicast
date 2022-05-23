@@ -121,7 +121,6 @@ multicast_client_params {
   Capabilities Field (i),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
-  Max Joined Count (i),
   Hash Algorithms Supported (i),
   AEAD Algorithms Supported (i),
   Hash Algorithms List (16 * Hash Algorithms Supported),
@@ -137,7 +136,7 @@ Capabilities Flags is a bit field structured as follows:
 
 A server MUST NOT send MC_CHANNEL_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_CLIENT_LIMITS ({{client-limits-frame}})  frame adds permission for a different address family.
 
-The Capabilities Field, Max Aggregate Rate, Max Channel IDs and Max Joined Count are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
+The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_CLIENT_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
 
 The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send a MC_CHANNEL_JOIN to this client for any channels using unsupported algorithms:
 
@@ -172,9 +171,6 @@ The server ensures that in aggregate, all channels that the client has currently
 
 The client sends back information about how it has responded to the server's requests to join and leave channels in MC_CLIENT_CHANNEL_STATE ({{client-channel-state-frame}}) frames.
 MC_CLIENT_CHANNEL_STATE frames are only sent for channels after the server has requested the client to join the channel, and are thereafter sent any time the state changes.
-
-Clients MUST make sure that they allow enough time for the initial creation of the multicast forwarding tree before determining if reception of data on the multicast channel is possible or not.
-The exact amount of time is implementation and deployment specific, it is RECOMMENDED that clients wait at least two times the unicast connection RTT plus the channel specific idle timeout.
 
 Clients that receive and decode data on a multicast channel send acknowledgements for the data on the unicast connection using MC_CHANNEL_ACK ({{channel-ack-frame}}) frames.
 Channels also will periodically contain PATH_CHALLENGE ({{RFC9000}} Section 19.17) frames, which cause clients to send MC_PATH_RESPONSE ({{path-response-frame}}) frames on the unicast connection in addition to their MC_CHANNEL_ACK frames.
