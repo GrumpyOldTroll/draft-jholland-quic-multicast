@@ -172,7 +172,7 @@ The server ensures that in aggregate, all channels that the client has currently
 The client sends back information about how it has responded to the server's requests to join and leave channels in MC_CLIENT_CHANNEL_STATE ({{client-channel-state-frame}}) frames.
 MC_CLIENT_CHANNEL_STATE frames are only sent for channels after the server has requested the client to join the channel, and are thereafter sent any time the state changes.
 
-Clients that receive and decode data on a multicast channel send acknowledgements for the data on a unicast connection using MC_CHANNEL_ACK ({{channel-ack-frame}}) frames.
+Clients that receive and decode data on a multicast channel send acknowledgements for the data on the unicast connection using MC_CHANNEL_ACK ({{channel-ack-frame}}) frames.
 Channels also will periodically contain PATH_CHALLENGE ({{RFC9000}} Section 19.17) frames, which cause clients to send MC_PATH_RESPONSE ({{path-response-frame}}) frames on the unicast connection in addition to their MC_CHANNEL_ACK frames.
 
 ## Data Carried in Channels
@@ -325,7 +325,7 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
 
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID for the channel associated with this frame.
-  * Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set it is current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.
+  * Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.
   * From Packet Number, Until Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is omitted it indicates the current property values for this channel have no expiration at (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any prior (From,Until) range, it has no applicable channel properties and MUST be dropped.
   * AEAD Algorithm: A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
   * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm.
@@ -453,7 +453,7 @@ MC_CHANNEL_ACK Frame {
 
 ## MC_PATH_RESPONSE {#path-response-frame}
 
-MC_PATH_RESPONSE frames are sent from a client to a server in a unicast connection in response to a PATH_CHALLENGE received in a channel.  Like PATH_RESPONSE but includes a channel id.
+MC_PATH_RESPONSE frames are sent from a client to a server in the unicast connection in response to a PATH_CHALLENGE received in a channel.  Like PATH_RESPONSE but includes a channel id.
 
 MC_PATH_RESPONSE frames are formatted as shown in {{fig-mc-path-response-format}}.
 
@@ -631,7 +631,7 @@ the multicast stream provides a way for the client to validate
 that the unicast stream is authorized to use it for data transport
 via proof they know the private key corresponding to the public
 key that arrived on the multicast channel.
-(Note this doesn't prevent unauthorized receipt of multicast
+Note this doesn't prevent unauthorized receipt of multicast
 data packts, but does prevent a quic server from lying when
 claiming a multicast data channel belongs to it, preventing
 legit receivers from consuming it.
