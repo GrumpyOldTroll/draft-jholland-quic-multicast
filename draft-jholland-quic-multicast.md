@@ -264,6 +264,8 @@ MC_CHANNEL_ANNOUNCE Frame {
   Header AEAD Algorithm (16),
   Header Key Length (i),
   Header Key (..),
+  AEAD Algorithm (16),
+  Integrity Hash Algorithm (16)
 }
 ~~~
 {: #fig-mc-channel-announce title="MC_CHANNEL_ANNOUNCE Frame Format"}
@@ -282,6 +284,12 @@ MC_CHANNEL_ANNOUNCE frames contain the following fields:
   * Header Key Length: Provides the length of the Key field.  It MUST match a valid key length for the Header AEAD Algorithm.
   * Header Key: A key for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in {{RFC9001}}.
       * **Author's Note:** I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
+  * AEAD Algorithm: A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
+  * Integrity Hash Algorithm: The hash algorithm used in integrity frames.
+    * **Author's Note:** Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:
+      - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
+      - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
+      - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
 
 A client MUST NOT use the channel ID included in the MC_CHANNEL_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
 As the server knows which connection IDs are in use by the client, it MUST wait with the sending of a MC_CHANNEL_JOIN frame until the channel ID associated with it has been retired by the client.
@@ -309,13 +317,11 @@ MC_CHANNEL_PROPERTIES Frame {
   Properties Sequence Number (i),
   From Packet Number (i),
   Until Packet Number (i),
-  AEAD Algorithm (16),
   Key Length (i),
   Key (..),
-  Integrity Hash Algorithm (16),
   Max Rate (i),
   Max Idle Time (i),
-  ACK Bundle Size (i),
+  ACK Bundle Size (i)
 }
 ~~~
 {: #fig-mc-channel-properties-format title="MC_CHANNEL_PROPERTIES Frame Format"}
@@ -326,16 +332,10 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID for the channel associated with this frame.
   * Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.
-  * From Packet Number, Until Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is omitted it indicates the current property values for this channel have no expiration at (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any prior (From,Until) range, it has no applicable channel properties and MUST be dropped.
-  * AEAD Algorithm: A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
-  * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm.
+  * From Packet Number, Until Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is zero it indicates the current property values for this channel have no expiration (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any previously received \[From,Until\] range, it has no applicable channel properties and MUST be dropped.
+  * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm from the MC_CHANNEL_ANNOUNCE frame for this channel.
   * Key: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}, with length given by Key Length.
     To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
-  * Integrity Hash Algorithm: The hash algorithm used in integrity frames.
-    * **Author's Note:** Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:
-      - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
-      - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
-      - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
   * Max Rate: The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
   * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
   * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
@@ -429,15 +429,15 @@ See {{packet-hashes}} for a description of the packet hash calculation.
 
 ## MC_CHANNEL_ACK {#channel-ack-frame}
 
-This frame is sent from a client to a server on the unicast connection.
+The MC_CHANNEL_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by {{RFC9000}}. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_CHANNEL_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.
 
-(TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of {{I-D.draft-ietf-quic-multipath}}, defining channel id as the packet number space?  at 2022-04-12 they're identical.)
+(TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of {{I-D.draft-ietf-quic-multipath}}, defining channel id as the packet number space?  at 2022-05 they're identical.)
 
 MC_CHANNEL_ACK frames are formatted as shown in {{fig-mc-channel-ack-format}}.
 
 ~~~
 MC_CHANNEL_ACK Frame {
-  Type (i) = TBD-07 (experiments use 0xff3e807),
+  Type (i) = TBD-06..TBD-07 (experiments use 0xff3e806, 0xff3e807),
   ID Length (8),
   Channel ID (8..160),
   Largest Acknowledged (i),
@@ -449,7 +449,6 @@ MC_CHANNEL_ACK Frame {
 }
 ~~~
 {: #fig-mc-channel-ack-format title="MC_CHANNEL_ACK Frame Format"}
-
 
 ## MC_PATH_RESPONSE {#path-response-frame}
 
