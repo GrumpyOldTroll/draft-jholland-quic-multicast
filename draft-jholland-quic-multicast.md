@@ -190,7 +190,7 @@ The server ensures that in aggregate, all channels that the client has currently
   |                                                | Send MC_CLIENT_CHANNEL_STATE: Joined     |
   |                                                v                                          |
   |  Initial timeout exceeded               +-------------+                                   |
-  |  Send MC_CLIENT_CHANNEL_STATE:leave     | attempting  | Receive MC_CHANNEL_RETIRE         |
+  |  Send MC_CLIENT_CHANNEL_STATE: Left     | attempting  | Receive MC_CHANNEL_RETIRE         |
   |<----------------------------------------|    join     |---------------------------------->|
   |                                         +-------------+                                   |
   |                                                |                                          |
@@ -198,7 +198,7 @@ The server ensures that in aggregate, all channels that the client has currently
   |                                                | Send MC_CHANNEL_ACK                      |
   |  Receive MC_CHANNEL_LEAVE or                   v                                          v
   |  Max idle time exceeded                  +-------------+                            +-------------+
-  |  Send MC_CLIENT_CHANNEL_STATE:leave      |   joined    | Receive MC_CHANNEL_RETIRE  |   retired   |
+  |  Send MC_CLIENT_CHANNEL_STATE: Left      |   joined    | Receive MC_CHANNEL_RETIRE  |   retired   |
   |------------------------------------------|             |--------------------------->|             |
                                              +-------------+                            +-------------+
 ~~~
