@@ -197,6 +197,9 @@ Since clients can join later than a channel began, it is RECOMMENDED that client
 Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see Section 19.11 of {{RFC9000}}) with a high limit.
 Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.
 
+The same stream ID may be used in both one or more multicast channels and the unicast connection.
+If the same stream ID is reused, the bytes of data carried in the stream associated with it MUST be identical at any given offset, independent of the channel or connection they are sent over.
+
 # Flow Control {#flow-control}
 
 The values used for unicast flow control cannot be used to limit the transmission rate of a multicast channel because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that channels responded to each client's limits.
@@ -340,9 +343,9 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
   * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
   * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
 
-From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of {{RFC9000}}) the 1-RTT packets received over which these values are applicable.
+From Packet Number and Until Packet Number are used to indicate the packet numbers (Section 17.1 of {{RFC9000}}) of the 1-RTT packets received for which the values contained in a MC_CHANNELS_PROPERTIES frame are applicable.
 
-A From Packet Number without an Until Packet Number has an unspecified termination.
+If a frame contains a From Packet Number without an Until Packet Number, there is no specified termination to the applicability of its values.
 
 If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to one below the new From Packet Number for all the changed properties.
 
