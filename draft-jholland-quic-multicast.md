@@ -173,34 +173,26 @@ The server ensures that in aggregate, all channels that the client has currently
                                                    | Receive MC_CHANNEL_ANNOUNCE
                                                    | Initialize new channel
                                                    v
-                                            +-------------+
-                                            | initialized | Receive MC_CHANNEL_RETIRE
-                                            |             |------------------------------------
-                                            +-------------+                                   |
-                                                   |                                          |
-                                                   | Receive MC_CHANNEL_PROPERTIES            |
-                                                   |                                          |
-                                                   v                                          |
-                                            +-------------+                                   |
-                                            |   unjoined  | Receive MC_CHANNEL_RETIRE         |
-  ----------------------------------------->|             |---------------------------------->|
-  |                                         +-------------+                                   |
-  |                                                |                                          |
-  |                                                | Receive MC_CHANNEL_JOIN                  |
-  |                                                | Send MC_CLIENT_CHANNEL_STATE: Joined     |
-  |                                                v                                          |
-  |  Initial timeout exceeded               +-------------+                                   |
-  |  Send MC_CLIENT_CHANNEL_STATE: Left     | attempting  | Receive MC_CHANNEL_RETIRE         |
-  |<----------------------------------------|    join     |---------------------------------->|
-  |                                         +-------------+                                   |
-  |                                                |                                          |
-  |                                                | Received data on channel                 |
-  |                                                | Send MC_CHANNEL_ACK                      |
-  |  Receive MC_CHANNEL_LEAVE or                   v                                          v
-  |  Max idle time exceeded                  +-------------+                            +-------------+
-  |  Send MC_CLIENT_CHANNEL_STATE: Left      |   joined    | Receive MC_CHANNEL_RETIRE  |   retired   |
-  |------------------------------------------|             |--------------------------->|             |
-                                             +-------------+                            +-------------+
+                                            +-------------+ Receive MC_CHANNEL_RETIRE
+                                            | initialized | Send MC_CLIENT_CHANNEL_STATE: Retired
+                                            |             |-------------------------------------------------
+                                            +-------------+                                                |
+                                                   |                                                       |
+                                                   | Receive MC_CHANNEL_PROPERTIES                         |
+                                                   |                                                       |
+                                                   v                                                       |
+                                            +-------------+ Receive MC_CHANNEL_RETIRE                      |
+                                            |   unjoined  | Send MC_CLIENT_CHANNEL_STATE: Retired          |
+  ----------------------------------------->|             |----------------------------------------------->|
+  |                                         +-------------+                                                |
+  |                                                |                                                       |
+  |                                                | Receive MC_CHANNEL_JOIN                               |
+  |                                                | Send MC_CLIENT_CHANNEL_STATE: Joined                  |
+  |                                                v                                                       v
+  |  Reveive MC_CHANNEL_LEAVE                +-------------+ Receive MC_CHANNEL_RETIRE              +-------------+
+  |  Send MC_CLIENT_CHANNEL_STATE: Left      |   joined    | Send MC_CLIENT_CHANNEL_STATE: Retired  |   retired   |
+  |------------------------------------------|             |--------------------------------------->|             |
+                                             +-------------+                                        +-------------+
 ~~~
 {: #fig-client-channel-states title="States a channel from the clients point of view."}
 
@@ -543,12 +535,18 @@ MC_CHANNEL_RETIRE frames are formatted as shown in {{fig-mc-channel-retire-forma
 MC_CHANNEL_RETIRE Frame {
   Type (i) = TBD-0a (experiments use 0xff3e80a),
   ID Length (8),
-  Channel ID (8..160)
+  Channel ID (8..160),
+  After Packet Number (i)
 }
 ~~~
 {: #fig-mc-channel-retire-format title="MC_CHANNEL_RETIRE Frame Format"}
 
-Retires a channel by id.  (We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
+Retires a channel by id, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
+If After Packet Number is nonzero, the channel will be retired after receiving that packet or a higher valued number, otherwise it will be retired immediately.
+
+After retiring a channel, the client MUST send a new MC_CLIENT_CHANNEL_STATE frame with reason Retired to the server.
+
+If the client is still joined in the channel that is being retired, it MUST also leave it. If a channel is left this way, it does not need to send an additional MC_CLIENT_CHANNEL_STATE frame with reason Left.
 
 ## MC_CLIENT_CHANNEL_STATE {#client-channel-state-frame}
 
@@ -575,8 +573,9 @@ State has these defined values:
  * 0x1: Left
  * 0x2: Declined Join
  * 0x3: Joined
+ * 0x4: Retired
 
-If State is Joined, the Reason field is absent.
+If State is Joined or Retired, the Reason field is absent.
 
 If State is Left or Declined Join, the Reason field is set to one of:
 
