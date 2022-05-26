@@ -173,11 +173,12 @@ The server ensures that in aggregate, all channels that the client has currently
 The client sends back information about how it has responded to the server's requests to join and leave channels in MC_CLIENT_CHANNEL_STATE ({{client-channel-state-frame}}) frames.
 MC_CLIENT_CHANNEL_STATE frames are only sent for channels after the server has requested the client to join the channel, and are thereafter sent any time the state changes.
 
-Clients MUST make sure that they allow enough time for the initial creation of the multicast forwarding tree before determining if reception of data on the multicast channel is possible or not.
-The exact amount of time is implementation and deployment specific, it is RECOMMENDED that clients wait at least two times the unicast connection RTT plus the channel specific idle timeout.
-
 Clients that receive and decode data on a multicast channel send acknowledgements for the data on the unicast connection using MC_CHANNEL_ACK ({{channel-ack-frame}}) frames.
 Channels also will periodically contain PATH_CHALLENGE ({{RFC9000}} Section 19.17) frames, which cause clients to send MC_PATH_RESPONSE ({{path-response-frame}}) frames on the unicast connection in addition to their MC_CHANNEL_ACK frames.
+
+A server can determine if a client can receive packets on a multicast channel if it receives MC_CHANNEL_ACK frames associated with that channel.
+As such, it is in general up to the server to decide on the time after which it deems a client to be unable to receive packets on a given channel and take appropriate steps, e.g. sending a MC_CHANNEL_LEAVE frame to the client.
+However, a client MAY unilaterally determine that it is unable to receive multicast packets on a channel and indicate this to the server by sending a MC_CLIENT_CHANNEL_STATE frame with state Left and reason No Traffic.
 
 ## Data Carried in Channels
 
@@ -560,6 +561,7 @@ If State is Left or Declined Join, the Reason field is set to one of:
  * 0x13: High Loss
  * 0x14: Spurious Traffic
  * 0x15: Max Streams Exceeded
+ * 0x16: No Traffic
  * 0x1000000-0x3fffffff: Application-specific Reason
 
 A client might receive multicast packets that it can not associate with any channel ID. If these are addressed to an (S,G) that is used for reception in one or more known channels, it MAY leave these channels with reason "Spurious traffic".
