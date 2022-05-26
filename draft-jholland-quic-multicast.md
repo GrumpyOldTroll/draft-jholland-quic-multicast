@@ -183,9 +183,8 @@ MC_CHANNEL_ACK: ID: 50, (...)                  ->
                                                   ...
                                                        <- [MC_CHANNEL_INTEGRITY: ID: 50, (...)]
                                                   ...
-                                                       <- MC_CHANNEL_LEAVE: ID: 50, (...)
-MC_CHANNEL_STATE: ID: 50, State: Left, (...)   ->
-                                                       <- MC_CHANNEL_RETIRE: ID: 50
+                                                       <- MC_CHANNEL_RETIRE: ID: 50, (...)
+MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
 ~~~
 {: #fig-frame-exchange title="Example flow of frames for a channel. Frames in square brackets are sent over multicast."}
 
