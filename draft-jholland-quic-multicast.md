@@ -161,11 +161,40 @@ The client tells its server about some restrictions on resources that it is capa
 The server asks the client to join channels with MC_CHANNEL_JOIN ({{channel-join-frame}}) frames and to leave channels with MC_CHANNEL_LEAVE ({{channel-leave-frame}}) frames.
 
 The server uses MC_CHANNEL_ANNOUNCE ({{channel-announce-frame}}) and MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the keys necessary to decode packets in the channel.
+{{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
 When the server has asked the client to join a channel, it also sends MC_CHANNEL_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
 A client MUST NOT decode packets for a channel for which it has not received an applicable set of MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames containing the full set of data required, or for which it has not received a matching packet hash in an MC_CHANNEL_INTEGRITY ({{channel-integrity-frame}}) frame.
 
 The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_CLIENT_LIMITS ({{client-limits-frame}}) frame the server received.
+
+~~~
+                                                   o
+                                                   | Receive MC_CHANNEL_ANNOUNCE
+                                                   | Initialize new channel
+                                                   v
+                                            +-------------+ Receive MC_CHANNEL_RETIRE
+                                            | initialized | Send MC_CLIENT_CHANNEL_STATE: Retired
+                                            |             |-------------------------------------------------
+                                            +-------------+                                                |
+                                                   |                                                       |
+                                                   | Receive MC_CHANNEL_PROPERTIES                         |
+                                                   |                                                       |
+                                                   v                                                       |
+                                            +-------------+ Receive MC_CHANNEL_RETIRE                      |
+                                            |   unjoined  | Send MC_CLIENT_CHANNEL_STATE: Retired          |
+  ----------------------------------------->|             |----------------------------------------------->|
+  |                                         +-------------+                                                |
+  |                                                |                                                       |
+  |                                                | Receive MC_CHANNEL_JOIN                               |
+  |                                                | Send MC_CLIENT_CHANNEL_STATE: Joined                  |
+  |                                                v                                                       v
+  |  Reveive MC_CHANNEL_LEAVE                +-------------+ Receive MC_CHANNEL_RETIRE              +-------------+
+  |  Send MC_CLIENT_CHANNEL_STATE: Left      |   joined    | Send MC_CLIENT_CHANNEL_STATE: Retired  |   retired   |
+  |------------------------------------------|             |--------------------------------------->|             |
+                                             +-------------+                                        +-------------+
+~~~
+{: #fig-client-channel-states title="States a channel from the clients point of view."}
 
 ## Client Response
 
@@ -506,12 +535,18 @@ MC_CHANNEL_RETIRE frames are formatted as shown in {{fig-mc-channel-retire-forma
 MC_CHANNEL_RETIRE Frame {
   Type (i) = TBD-0a (experiments use 0xff3e80a),
   ID Length (8),
-  Channel ID (8..160)
+  Channel ID (8..160),
+  After Packet Number (i)
 }
 ~~~
 {: #fig-mc-channel-retire-format title="MC_CHANNEL_RETIRE Frame Format"}
 
-Retires a channel by id.  (We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
+Retires a channel by id, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
+If After Packet Number is nonzero, the channel will be retired after receiving that packet or a higher valued number, otherwise it will be retired immediately.
+
+After retiring a channel, the client MUST send a new MC_CLIENT_CHANNEL_STATE frame with reason Retired to the server.
+
+If the client is still joined in the channel that is being retired, it MUST also leave it. If a channel is left this way, it does not need to send an additional MC_CLIENT_CHANNEL_STATE frame with reason Left.
 
 ## MC_CLIENT_CHANNEL_STATE {#client-channel-state-frame}
 
@@ -538,8 +573,9 @@ State has these defined values:
  * 0x1: Left
  * 0x2: Declined Join
  * 0x3: Joined
+ * 0x4: Retired
 
-If State is Joined, the Reason field is absent.
+If State is Joined or Retired, the Reason field is absent.
 
 If State is Left or Declined Join, the Reason field is set to one of:
 
