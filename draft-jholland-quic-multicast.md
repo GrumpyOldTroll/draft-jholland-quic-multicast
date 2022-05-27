@@ -204,6 +204,10 @@ MC_CLIENT_CHANNEL_STATE frames are only sent for channels after the server has r
 Clients that receive and decode data on a multicast channel send acknowledgements for the data on the unicast connection using MC_CHANNEL_ACK ({{channel-ack-frame}}) frames.
 Channels also will periodically contain PATH_CHALLENGE ({{RFC9000}} Section 19.17) frames, which cause clients to send MC_PATH_RESPONSE ({{path-response-frame}}) frames on the unicast connection in addition to their MC_CHANNEL_ACK frames.
 
+A server can determine if a client can receive packets on a multicast channel if it receives MC_CHANNEL_ACK frames associated with that channel.
+As such, it is in general up to the server to decide on the time after which it deems a client to be unable to receive packets on a given channel and take appropriate steps, e.g. sending a MC_CHANNEL_LEAVE frame to the client.
+However, a client MAY unilaterally determine that it is unable to receive multicast packets on a channel and indicate this to the server by sending a MC_CLIENT_CHANNEL_STATE frame with state Left and reason No Traffic.
+
 ## Data Carried in Channels
 
 Data transmitted in a multicast channel is encrypted with symmetric keys so that on-path observers without access to these keys cannot decode the data.
@@ -592,6 +596,7 @@ If State is Left or Declined Join, the Reason field is set to one of:
  * 0x13: High Loss
  * 0x14: Spurious Traffic
  * 0x15: Max Streams Exceeded
+ * 0x16: No Traffic
  * 0x1000000-0x3fffffff: Application-specific Reason
 
 A client might receive multicast packets that it can not associate with any channel ID. If these are addressed to an (S,G) that is used for reception in one or more known channels, it MAY leave these channels with reason "Spurious traffic".
