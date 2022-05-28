@@ -379,7 +379,9 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
 
 From Packet Number and Until Packet Number are used to indicate the packet numbers (Section 17.1 of {{RFC9000}}) of the 1-RTT packets received for which the values contained in a MC_CHANNELS_PROPERTIES frame are applicable.
 
-If a frame contains a From Packet Number without an Until Packet Number, there is no specified termination to the applicability of its values.
+If a frame contains an Until Packet Number of zero, it means the values contained in that frame are applicable to all future packets (starting at the From Packet number) until they are overwritten by a new MC_CHANNEL_PROPERTIES frame.
+
+If a client receives a frame that contains a non-zero Until Packet Number that is smaller than the From Packet Number, it MAY leave the channel and send a MC_CLIENT_CHANNEL_STATE with type Left and Reason Protocol Error to the server.
 
 If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to one below the new From Packet Number for all the changed properties.
 
