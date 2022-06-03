@@ -342,7 +342,7 @@ The MC_CHANNEL_PROPERTIES frame consists of the properties of a channel that are
 
 A server can send an update to a prior MC_CHANNEL_PROPERTIES frame with a new sequence number increased by one.
 
-It is RECOMMENDED that servers set an Until Packet Number and send regular updates to the MC_CHANNEL_PROPERTIES before the packet numbers in the channel exceed that value.
+It is RECOMMENDED that servers send regular updates to the MC_CHANNEL_PROPERTIES.
 
 MC_CHANNEL_PROPERTIES frames are formatted as shown in {{fig-mc-channel-properties-format}}.
 
@@ -353,7 +353,6 @@ MC_CHANNEL_PROPERTIES Frame {
   Channel ID (8..160),
   Properties Sequence Number (i),
   From Packet Number (i),
-  Until Packet Number (i),
   Key Length (i),
   Key (..),
   Max Rate (i),
@@ -369,7 +368,7 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID for the channel associated with this frame.
   * Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.
-  * From Packet Number, Until Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is zero it indicates the current property values for this channel have no expiration (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any previously received \[From,Until\] range, it has no applicable channel properties and MUST be dropped.
+  * From Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_CHANNEL_PROPERTIES frame with a higher From Packet Number. The From Packet Number of the first MC_CHANNEL_PROPERTIES frame sent for a channel MUST be 1.
   * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm from the MC_CHANNEL_ANNOUNCE frame for this channel.
   * Key: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}, with length given by Key Length.
     To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
@@ -377,13 +376,8 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
   * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
   * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
 
-From Packet Number and Until Packet Number are used to indicate the packet numbers (Section 17.1 of {{RFC9000}}) of the 1-RTT packets received for which the values contained in a MC_CHANNELS_PROPERTIES frame are applicable.
-
-If a frame contains an Until Packet Number of zero, it means the values contained in that frame are applicable to all future packets (starting at the From Packet number) until they are overwritten by a new MC_CHANNEL_PROPERTIES frame.
-
-If a client receives a frame that contains a non-zero Until Packet Number that is smaller than the From Packet Number, it MAY leave the channel and send a MC_CLIENT_CHANNEL_STATE with type Left and Reason Protocol Error to the server.
-
-If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to one below the new From Packet Number for all the changed properties.
+The From Packet Number is used to indicate the starting packet number (Section 17.1 of {{RFC9000}}) of the 1-RTT packets received for which the values contained in a MC_CHANNELS_PROPERTIES frame are applicable.
+These values are applicable to all future packets until they are overwritten by a new MC_CHANNEL_PROPERTIES frame.
 
 The properties of a channel MAY change during its lifetime. As such, a server SHOULD NOT send properties for channels except those the client has joined or will be imminently asked to join.
 
