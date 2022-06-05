@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Multicast Extension for QUIC</title>
+<meta content="Jake Holland" name="author">
+<meta content="Lucas Pardue" name="author">
+<meta content="
+       This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections. 
+    " name="description">
+<meta content="xml2rfc 3.12.4" name="generator">
+<meta content="Internet-Draft" name="keyword">
+<meta content="draft-jholland-quic-multicast-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.12.4
+    Python 3.9.7
+    appdirs 1.4.4
+    ConfigArgParse 1.3
+    google-i18n-address 2.5.1
+    html5lib 1.1
+    intervaltree 3.1.0
+    Jinja2 2.11.3
+    kitchen 1.2.6
+    lxml 4.6.5
+    MarkupSafe 2.0.1
+    pycountry 20.7.3
+    pyflakes 2.3.1
+    PyYAML 5.4.1
+    requests 2.26.0
+    setuptools 52.0.0
+    six 1.16.0
+-->
+<link href="draft-jholland-quic-multicast.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Cabin Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Cabin Condensed SemiBold'), local('CabinCondensed-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/cabincondensed-semibold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Cabin Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Cabin Condensed SemiBold'), local('CabinCondensed-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/cabincondensed-semibold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Cabin Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Cabin Condensed SemiBold'), local('CabinCondensed-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/cabincondensed-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Cabin Condensed", sans-serif;
+  font-weight: 600;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1#title {
+  font-size: 32px;
+  line-height: 40px;
+  clear: both;
+}
+h1#title, h1#rfcnum {
+  margin: 1.5em 0 0.2em;
+}
+h1#rfcnum + h1#title {
+  margin: 0.2em 0;
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+}
+#abstract+p code, #abstract+p samp, #abstract+p tt {
+  font-size: 16px;
+  line-height: 0;
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight.art-text {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  padding: 0.5em 1em 0;
+  margin-bottom: 0.5em;
+}
+.alignRight.art-text pre {
+  padding: 0;
+  width: auto;
+}
+.alignRight {
+  margin: 1em 0;
+}
+.alignRight > *:first-child {
+  border: none;
+  margin: 0;
+  float: right;
+  clear: both;
+}
+.alignRight > *:nth-child(2) {
+  clear: both;
+  display: block;
+  border: none;
+}
+svg {
+  display: block;
+}
+/* font-family isn't space-separated, but =~ will have to do */
+svg[font-family~="monospace" i], svg [font-family~="monospace" i] {
+  font-family: var(--font-mono);
+}
+.alignCenter.art-text {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  padding: 0.5em 1em 0;
+  margin-bottom: 0.5em;
+}
+.alignCenter.art-text pre {
+  padding: 0;
+  width: auto;
+}
+.alignCenter {
+  margin: 1em 0;
+}
+.alignCenter > *:first-child {
+  border: none;
+  /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+     support flexbox yet.
+  */
+  display: table;
+  margin: 0 auto;
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+}
+ol ol, ul ul, ol ul, ul ol {
+  margin-left: 1em;
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+.ulCompact li {
+  margin: 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+}
+ul.empty li, .ulEmpty li {
+  margin-top: 0.5em;
+}
+ul.compact, .ulCompact,
+ol.compact, .olCompact {
+  line-height: 100%;
+  margin: 0 0 0 2em;
+}
+
+/* definition lists */
+dl {
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl > dd {
+  margin-bottom: .8em;
+  min-height: 1.3em;
+}
+dl.compact > dd, .dlCompact > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+dd.break {
+  display: none;
+}
+
+/* links */
+a, a[href].selfRef:hover {
+  text-decoration: none;
+}
+a[href].selfRef {
+  color: var(--text-color);
+}
+a[href] {
+  color: var(--link-color);
+}
+a[href]:hover {
+  text-decoration: underline;
+}
+a[href].selfRef:hover {
+  background-color: var(--highlight-color);
+}
+a.xref {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines */
+  line-height: 0;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+}
+figure blockquote {
+  margin: 0.8em 0.4em 0.4em;
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+}
+@media screen {
+  pre, svg {
+    display: inline-block;
+    overflow-x: auto;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  pre + .pilcrow, svg + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+}
+table.right {
+  margin-left: auto;
+}
+table.center {
+  margin-left: auto;
+  margin-right: auto;
+}
+table.left {
+  margin-right: auto;
+}
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+tr:nth-child(2n) > td {
+  background-color: var(--background-color);
+}
+tr:nth-child(2n+1) > td {
+  background-color: var(--highlight-color);
+}
+thead+tbody > tr:nth-child(2n) > td {
+  background-color: var(--highlight-color);
+}
+thead+tbody > tr:nth-child(2n+1) > td {
+  background-color: var(--background-color);
+}
+table caption {
+  margin: 0;
+  padding: 3px 0 3px 1em;
+}
+table p {
+  margin: 0;
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+}
+a.pilcrow[href] { color: var(--pilcrow-weak); }
+a.pilcrow[href]:hover { text-decoration: none; }
+@media not print {
+  :hover > a.pilcrow {
+    opacity: 1;
+  }
+  a.pilcrow[href]:hover {
+    color: var(--pilcrow-strong);
+    background-color: transparent;
+  }
+}
+@media print {
+  a.pilcrow {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+}
+
+.role {
+  font-variant: all-small-caps;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 8em;
+}
+#identifiers dt {
+  width: var(--identifier-width);
+  margin: 0;
+  clear: left;
+  float: left;
+  text-align: right;
+}
+#identifiers dd {
+  margin: 0 0 0 calc(1em + var(--identifier-width));
+  min-width: 5em;
+}
+#identifiers .authors .author {
+  display: inline-block;
+  margin-right: 1.5em;
+}
+#identifiers .authors .org {
+  font-style: italic;
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+}
+.docInfo .prepared {
+  float: left;
+}
+.docInfo .prepared {
+  float: right;
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+}
+#toc nav ul {
+  margin: 0 0.5em 0 0;
+  padding: 0;
+  list-style: none;
+}
+#toc nav li {
+  line-height: 1.3em;
+  margin: 0.75em 0;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+#toc a.xref {
+  white-space: normal;
+}
+/* references */
+.references dt {
+  text-align: right;
+  font-weight: bold;
+  min-width: 7em;
+}
+.references dd {
+  margin-left: 8em;
+  overflow: auto;
+}
+
+.refInstance {
+  margin-bottom: 1.25em;
+}
+
+.references .ascii {
+  margin-bottom: 0.25em;
+}
+
+/* index */
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  margin: 1em 0;
+}
+address.vcard .nameRole {
+  font-weight: 700;
+  margin-left: 0;
+}
+address.vcard .label {
+  margin: 0.5em 0;
+}
+address.vcard .type {
+  display: none;
+}
+.alternative-contact {
+  margin: 1.5em 0 1em;
+}
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses > section {
+    column-count: 2;
+    column-gap: 20px;
+  }
+  #authors-addresses > section > h2 {
+    column-span: all;
+  }
+  /* hack for break-inside: avoid-column */
+  #authors-addresses address {
+    display: inline-block;
+    break-inside: avoid-column;
+  }
+}
+
+.rfcEditorRemove p:first-of-type {
+  font-style: italic;
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+/* alternative layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+  }
+  #toc.active {
+      opacity: 1;
+  }
+  #toc h2 {
+    margin: 0;
+    padding: 2px 0 2px 6px;
+    padding-right: 1em;
+    font-size: 18px;
+    line-height: 24px;
+    min-width: 190px;
+    text-align: right;
+    background-color: #444;
+    color: white;
+    cursor: pointer;
+  }
+  #toc h2::before { /* css hamburger */
+    float: right;
+    position: relative;
+    width: 1em;
+    height: 1px;
+    left: -164px;
+    margin: 8px 0 0 0;
+    background: white none repeat scroll 0 0;
+    box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+    content: "";
+  }
+  #toc nav {
+    display: none;
+    background-color: var(--background-color);
+    padding: 0.5em 1em 1em;
+    overflow: auto;
+    overscroll-behavior: contain;
+    height: calc(100vh - 48px);
+    border-left: 1px solid #ddd;
+  }
+  #toc.active nav {
+    display: block;
+  }
+  /* Make the collapsed ToC header render white on gray also when it's a link */
+  #toc h2 a,
+  #toc h2 a:link,
+  #toc h2 a:focus,
+  #toc h2 a:hover,
+  #toc a.toplink,
+  #toc a.toplink:hover {
+    color: white;
+    background-color: #444;
+    text-decoration: none;
+  }
+  #toc a.toplink {
+    margin-top: 2px;
+  }
+}
+
+/* alternative layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+  }
+  #toc h2 {
+    margin: 0;
+    padding: 0.25em 1em 1em 0;
+  }
+  #toc nav {
+    display: block;
+    height: calc(90vh - 84px);
+    bottom: 0;
+    padding: 0.5em 0 2em;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+  #toc nav > ul  {
+    margin-bottom: 2em;
+  }
+  #toc ul {
+    margin: 0 0 0 4px;
+    font-size: var(--small-font-size);
+  }
+  #toc ul p, #toc ul li {
+    margin: 2px 0;
+    line-height: 22px;
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc, #n-introduction {
+    page-break-before: always;
+  }
+  #toc {
+    border-top: none;
+    padding-top: 0;
+  }
+  figure, pre {
+    page-break-inside: avoid;
+  }
+  figure {
+    overflow: scroll;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  h2+*, h3+*, h4+*, h5+*, h6+* {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Changes introduced to fix issues found during implementation */
+
+/* Separate body from document info even without intervening H1 */
+section {
+  clear: both;
+}
+
+/* Top align author divs, to avoid names without organization dropping level with org names */
+.author {
+  vertical-align: top;
+}
+
+/* Style section numbers with more space between number and title */
+.section-number {
+  padding-right: 0.5em;
+}
+
+/* Add styling for a link in the ToC that points to the top of the document */
+a.toplink {
+  float: right;
+  margin: 8px 0.5em 0;
+}
+
+/* Fix the dl styling to match the RFC 7992 attributes */
+dl > dt,
+dl.dlParallel > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.dlNewline > dt {
+  float: none;
+}
+
+/* Provide styling for table cell text alignment */
+table .text-left, table .text-left {
+  text-align: left;
+}
+table .text-center, table .text-center {
+  text-align: center;
+}
+table .text-right, table .text-right {
+  text-align: right;
+}
+
+/* Make the alternative author contact information look less like just another
+   author, and group it closer with the primary author contact information */
+.alternative-contact {
+  margin: 0.5em 0 0.25em 0;
+}
+address .non-ascii {
+  margin: 0 0 0 2em;
+}
+
+/* With it being possible to set tables with alignment
+  left, center, and right, { width: 100%; } does not make sense */
+table {
+  width: auto;
+}
+
+/* Avoid reference text that sits in a block with very wide left margin,
+   because of a long floating dt label.*/
+.references dd {
+  overflow: visible;
+}
+
+/* Control caption placement */
+caption {
+  caption-side: bottom;
+}
+
+/* Limit the width of the author address vcard, so names in right-to-left
+   script don't end up on the other side of the page. */
+
+address.vcard {
+  max-width: 20em;
+  margin-right: auto;
+}
+
+/* For address alignment dependent on LTR or RTL scripts */
+address div.left {
+  text-align: left;
+}
+address div.right {
+  text-align: right;
+}
+
+/* Give the table caption label the same styling as the figcaption */
+
+@media print {
+  .toplink {
+    display: none;
+  }
+
+  /* avoid overwriting the top border line with the ToC header */
+  #toc {
+    padding-top: 1px;
+  }
+
+  /* Avoid page breaks inside dl and author address entries */
+  dd {
+    page-break-before: avoid;
+  }
+  .vcard {
+    page-break-inside: avoid;
+  }
+
+}
+/* Tweak the bcp14 keyword presentation */
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+/* Trick: a prefix match works because only black and white are allowed */
+svg [stroke="black"], svg [stroke^="#000"] {
+  stroke: var(--text-color);
+}
+svg [stroke="white"], svg [stroke^="#fff"] {
+  stroke: var(--background-color);
+}
+svg [fill="black"], svg [fill^="#000"], svg :not([fill]) {
+  fill: var(--text-color);
+}
+svg [stroke="fill"], svg [fill^="#fff"] {
+  fill: var(--background-color);
+}
+}
+</style>
+
+</head>
+<body>
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Multicast QUIC</td>
+<td class="right">April 2022</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Holland &amp; Pardue</td>
+<td class="center">Expires 30 October 2022</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">QUIC Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2022-04-28" class="published">28 April 2022</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Experimental</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2022-10-30">30 October 2022</time></dd>
+<dt class="label-authors">Authors:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">J. Holland</div>
+<div class="org">Akamai Technologies, Inc.</div>
+</div>
+<div class="author">
+      <div class="author-name">L. Pardue</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Multicast Extension for QUIC</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://GrumpyOldTroll.github.io/draft-jholland-quic-multicast/draft-jholland-quic-multicast.html">https://GrumpyOldTroll.github.io/draft-jholland-quic-multicast/draft-jholland-quic-multicast.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/">https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">
+        Discussion of this document takes place on the
+        QUIC Individual Draft mailing list (<span><a href="mailto:quic@ietf.org">mailto:quic@ietf.org</a></span>),
+        which is archived at <span><a href="https://mailarchive.ietf.org/arch/browse/quic/">https://mailarchive.ietf.org/arch/browse/quic/</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+<p id="section-note.1-4">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast">https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast</a></span>.<a href="#section-note.1-4" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 30 October 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2022 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="xref">1</a>.  <a href="#name-introduction" class="xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="xref">1.1</a>.  <a href="#name-conventions-and-definitions" class="xref">Conventions and Definitions</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="xref">2</a>.  <a href="#name-multicast-session" class="xref">Multicast Session</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="xref">3</a>.  <a href="#name-transport-parameter" class="xref">Transport Parameter</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="xref">4</a>.  <a href="#name-extension-overview" class="xref">Extension Overview</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="xref">4.1</a>.  <a href="#name-session-management" class="xref">Session Management</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="xref">4.2</a>.  <a href="#name-client-response" class="xref">Client Response</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="xref">4.3</a>.  <a href="#name-data-carried-in-sessions" class="xref">Data Carried in Sessions</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="xref">4.4</a>.  <a href="#name-stream-processing" class="xref">Stream Processing</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="xref">5</a>.  <a href="#name-flow-control" class="xref">Flow Control</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="xref">6</a>.  <a href="#name-congestion-control" class="xref">Congestion Control</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="xref">7</a>.  <a href="#name-data-integrity" class="xref">Data Integrity</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="xref">7.1</a>.  <a href="#name-packet-hashes" class="xref">Packet Hashes</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="xref">8</a>.  <a href="#name-packet-scheduling" class="xref">Packet Scheduling</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="xref">9</a>.  <a href="#name-implementation-and-operatio" class="xref">Implementation and Operational Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="xref">10</a>. <a href="#name-new-frames" class="xref">New Frames</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="xref">10.1</a>.  <a href="#name-mc_session_properties" class="xref">MC_SESSION_PROPERTIES</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.1">
+                    <p id="section-toc.1-1.10.2.1.2.1.1"><a href="#section-10.1.1" class="xref">10.1.1</a>.  <a href="#name-immutable-properties" class="xref">Immutable Properties</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.2">
+                    <p id="section-toc.1-1.10.2.1.2.2.1"><a href="#section-10.1.2" class="xref">10.1.2</a>.  <a href="#name-mutable-properties" class="xref">Mutable Properties</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="xref">10.2</a>.  <a href="#name-mc_session_join" class="xref">MC_SESSION_JOIN</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="xref">10.3</a>.  <a href="#name-mc_session_leave" class="xref">MC_SESSION_LEAVE</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
+                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="xref">10.4</a>.  <a href="#name-mc_session_integrity" class="xref">MC_SESSION_INTEGRITY</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.5">
+                <p id="section-toc.1-1.10.2.5.1"><a href="#section-10.5" class="xref">10.5</a>.  <a href="#name-mc_session_stream_boundary_" class="xref">MC_SESSION_STREAM_BOUNDARY_OFFSET</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.6">
+                <p id="section-toc.1-1.10.2.6.1"><a href="#section-10.6" class="xref">10.6</a>.  <a href="#name-mc_session_ack" class="xref">MC_SESSION_ACK</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.7">
+                <p id="section-toc.1-1.10.2.7.1"><a href="#section-10.7" class="xref">10.7</a>.  <a href="#name-mc_path_response" class="xref">MC_PATH_RESPONSE</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.8">
+                <p id="section-toc.1-1.10.2.8.1"><a href="#section-10.8" class="xref">10.8</a>.  <a href="#name-mc_client_limits" class="xref">MC_CLIENT_LIMITS</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.9">
+                <p id="section-toc.1-1.10.2.9.1"><a href="#section-10.9" class="xref">10.9</a>.  <a href="#name-mc_session_retire" class="xref">MC_SESSION_RETIRE</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.10">
+                <p id="section-toc.1-1.10.2.10.1"><a href="#section-10.10" class="xref">10.10</a>. <a href="#name-mc_client_session_state" class="xref">MC_CLIENT_SESSION_STATE</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="xref">11</a>. <a href="#name-frames-carried-in-session-p" class="xref">Frames Carried in Session Packets</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="xref">12</a>. <a href="#name-error-codes" class="xref">Error Codes</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="xref">13</a>. <a href="#name-security-considerations" class="xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="xref">14</a>. <a href="#name-iana-considerations" class="xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="xref">15</a>. <a href="#name-normative-references" class="xref">Normative References</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="xref"></a><a href="#name-acknowledgments" class="xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-B" class="xref"></a><a href="#name-authors-addresses" class="xref">Authors' Addresses</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">This document specifies an extension to QUIC version 1 <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> to enable the use of multicast IP transport of identical data packets for use in many individual QUIC connections.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">The multicast data can only be consumed in conjunction with a unicast QUIC connection.
+When support for multicast is negotiated, the server can optionally advertise existence of one or more multicst channels that contain unidirectional data streams from server to client, and the client can optionally join the multicast channel and verify from integrity data the server provides that correct data is being received, then acknowledge the data from the multicast channel(s) over the unicast connection.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">Enabling this can provide large scalability benefits for popular traffic over multicast-capable networks.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document does not define any multicast transport except server to client.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<div id="conventions-and-definitions">
+<section id="section-1.1">
+        <h3 id="name-conventions-and-definitions">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+        </h3>
+<p id="section-1.1-1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
+"MAY", and "OPTIONAL" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="multicast-session">
+<section id="section-2">
+      <h2 id="name-multicast-session">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-multicast-session" class="section-name selfRef">Multicast Session</a>
+      </h2>
+<p id="section-2-1">A QUIC multicast session (or just session) is a one-way network path that a server can use as an alternate path to send QUIC connection data to a client.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Multicast sessions are designed to leverage multicast IP and to be shared by many different connections simultaneously for unidirectional server-initiated data.
+One or more servers can use the same QUIC multicast session to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">QUIC connections are defined in Section 5 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> and are not changed in this document; each connection is a shared state between a client and a server.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-4">Sessions carry only 1-RTT packets.
+Packets associated with a session contain a Session ID in place of a Destination Connection ID.
+(A Session ID cannot be zero length.)
+This adds a layer of indirection to the process described in Section 5.2 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>} for matching packets to connections upon receipt.
+Incoming packets received on the network path associated with a session use the Session ID to associate the packet with a joined session.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-5">A client with a matching joined session always has at least one connection associated with the session.
+If a client has no matching joined session, the packet is discarded.<a href="#section-2-5" class="pilcrow">¶</a></p>
+<p id="section-2-6">Since the network path for a session is unidirectional, packets associated with a session are acknowledged with MC_SESSION_ACK frames <a href="#session-ack-frame" class="xref">Section 10.6</a> instead of with ACK frames.
+Each session has an independent packet number space.<a href="#section-2-6" class="pilcrow">¶</a></p>
+<p id="section-2-7">The use of any particular session is OPTIONAL for both the server and the client.
+It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceeful degradation for endpoints that do not or cannot make use of the multicast functionality.<a href="#section-2-7" class="pilcrow">¶</a></p>
+<p id="section-2-8">The server has access to all data transmitted on any multicast session it uses, and could optionally send this data with unicast instead.<a href="#section-2-8" class="pilcrow">¶</a></p>
+<p id="section-2-9">No special handling of the data is required in a client application that has enabled multicast.
+A datagram or any particular bytes from a server-initiated unidirectional stream can be delivered over the unicast connection or a multicast session transparently to the client.<a href="#section-2-9" class="pilcrow">¶</a></p>
+<p id="section-2-10">Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in <span>[<a href="#I-D.draft-krose-multicast-security" class="xref">I-D.draft-krose-multicast-security</a>]</span>.<a href="#section-2-10" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="transport-parameter">
+<section id="section-3">
+      <h2 id="name-transport-parameter">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-transport-parameter" class="section-name selfRef">Transport Parameter</a>
+      </h2>
+<p id="section-3-1">Support for multicast extesnsions in a client is advertised by means of a QUIC transport parameter:<a href="#section-3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-2.1">name: multicast_client_params (TBD - experiments use 0xff3e800)<a href="#section-3-2.1" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="section-3-3">If a multicast_client_params transport parameter is not included, servers MUST NOT send any frames defined in this document.  (Given that a server never sends any MC_SESSION_JOIN frames, the clients also will never send any frames in this document so only the client-to-server advertisement is necessary.)<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">The multicast_client_params parameter has the structure shown below in <a href="#fig-transport-parameter-format" class="xref">Figure 1</a>.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<span id="name-multicast_client_params-for"></span><div id="fig-transport-parameter-format">
+<figure id="figure-1">
+        <div class="alignLeft art-text artwork" id="section-3-5.1">
+<pre>
+multicast_client_params {
+  Permit IPv4 (1),
+  Permit IPv6 (1),
+  Reserved (6),
+  Max Aggregate Rate (i),
+  Max Session IDs (i),
+  Hash Algorithms Supported (i),
+  AEAD Algorithms Supported (i),
+  Hash Algorithms List (16 * Hash Algorithms Supported),
+  AEAD Algorithms List (16 * AEAD Algorithms Supported)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<a href="#name-multicast_client_params-for" class="selfRef">multicast_client_params Format</a>
+        </figcaption></figure>
+</div>
+<p id="section-3-6">The Permit IPv4, Permit IPv6, Max Aggregate Rate, and Max Session IDs fields are the same as in MC_CLIENT_LIMITS frames (<a href="#client-limits-frame" class="xref">Section 10.8</a>) and provide the initial client values.<a href="#section-3-6" class="pilcrow">¶</a></p>
+<p id="section-3-7">The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast sessions, and the server MUST NOT send a MC_SESSION_JOIN to this client for any sessions using unsupported algorithms:<a href="#section-3-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-8.1">
+          <a href="https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml">https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml</a><a href="#section-3-8.1" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="section-3-9">The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from this registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast sessions, and the server MUST NOT send a MC_SESSION_JOIN to this client for any sessions using unsupported algorithms:<a href="#section-3-9" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-10.1">
+          <a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-3-10.1" class="pilcrow">¶</a>
+</li>
+      </ul>
+</section>
+</div>
+<div id="extension-overview">
+<section id="section-4">
+      <h2 id="name-extension-overview">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-extension-overview" class="section-name selfRef">Extension Overview</a>
+      </h2>
+<p id="section-4-1">A client has the option of refusal and the power to impose upper bound maxima on several resources (see <a href="#flow-control" class="xref">Section 5</a>), but otherwise its join status for all multicast sessions is entirely managed by the server.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-2.1">A client MUST NOT join a session without receiving instructions from a server to do so<a href="#section-4-2.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-4-2.2">A client MUST leave joined sessions when instructed by the server to do so<a href="#section-4-2.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-4-2.3">A client MAY leave sessions or refuse to join sessions, regardless of instructions from the server<a href="#section-4-2.3" class="pilcrow">¶</a>
+</li>
+      </ul>
+<div id="session-management">
+<section id="section-4.1">
+        <h3 id="name-session-management">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-session-management" class="section-name selfRef">Session Management</a>
+        </h3>
+<p id="section-4.1-1">The client tells its server about some restrictions on resources that it is capable of processing with the initial values in the multicast_client_params transport parameter (<a href="#transport-parameter" class="xref">Section 3</a>) and later can update these limits with MC_CLIENT_LIMITS <a href="#client-limits-frame" class="xref">Section 10.8</a> frames. Servers ensure the set of sessions the client is currently requested to join remains within these advertised client limits as covered in <a href="#flow-control" class="xref">Section 5</a>.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The server asks the client to join sessions with MC_SESSION_JOIN (<a href="#session-join-frame" class="xref">Section 10.2</a>) frames and to leave sessions with MC_SESSION_LEAVE (<a href="#session-leave-frame" class="xref">Section 10.3</a>) frames.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+<p id="section-4.1-3">The server uses MC_SESSION_PROPERTIES (<a href="#session-properties-frame" class="xref">Section 10.1</a>) frames before any join or leave frames for the session to describe the session properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the keys necessary to decode packets in the session.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">When the server has asked the client to join a session, it also sends MC_SESSION_INTEGRITY frames (<a href="#session-integrity-frame" class="xref">Section 10.4</a>) to enable the client to verify packet integrity before processing the packet.
+A client MUST NOT decode packets for a session for which it has not received an applicable set of MC_SESSION_PROPERTIES (<a href="#session-properties-frame" class="xref">Section 10.1</a>) frames containing the full set of data required, or for which it has not received a matching packet hash in an MC_SESSION_INTEGRITY (<a href="#session-integrity-frame" class="xref">Section 10.4</a>) frame.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.1-5">The server ensures that in aggregate, all sessions that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_CLIENT_LIMITS (<a href="#client-limits-frame" class="xref">Section 10.8</a>) frame the server received.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="client-response">
+<section id="section-4.2">
+        <h3 id="name-client-response">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-client-response" class="section-name selfRef">Client Response</a>
+        </h3>
+<p id="section-4.2-1">The client sends back information about how it has responded to the server's requests to join and leave sessions in MC_CLIENT_SESSION_STATE (<a href="#client-session-state-frame" class="xref">Section 10.10</a>) frames.
+MC_CLIENT_SESSION_STATE frames are only sent for sessions after the server has requested the client to join the session, and are thereafter sent any time the state changes.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">Clients that receive and decode data on a multicast session send acknowledgements for the data on a unicast connection using MC_SESSION_ACK (<a href="#session-ack-frame" class="xref">Section 10.6</a>) frames.
+Sessions also will periodically contain PATH_CHALLENGE (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.17) frames, which cause clients to send MC_PATH_RESPONSE (<a href="#path-response-frame" class="xref">Section 10.7</a>) frames on the unicast connection in addition to their MC_SESSION_ACK frames.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="data-carried-in-sessions">
+<section id="section-4.3">
+        <h3 id="name-data-carried-in-sessions">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-data-carried-in-sessions" class="section-name selfRef">Data Carried in Sessions</a>
+        </h3>
+<p id="section-4.3-1">Data transmitted in a multicast session is encrypted with symmetric keys so that on-path observers without access to these keys cannot decode the data.
+However, since potentially many receivers receive identical packets and identical keys for the multicast session and some receivers might be malicious, the packets are also protected by MC_SESSION_INTEGRITY (<a href="#session-integrity-frame" class="xref">Section 10.4</a>) frames transmitted over a separate integrity-protected path.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-2">A client MUST NOT decode packets on a multicast session for which it has not received a matching hash in an MC_SESSION_INTEGRITY frame over a different integrity-protected communication path.
+The different path can be either the unicast connection or another multicast session with packets that were verified with an earlier MC_SESSION_INTEGRITY frame.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stream-processing">
+<section id="section-4.4">
+        <h3 id="name-stream-processing">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-stream-processing" class="section-name selfRef">Stream Processing</a>
+        </h3>
+<p id="section-4.4-1">Stream IDs in sessions are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 2.1).<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<p id="section-4.4-2">Since a server has access to all data in sessions it uses, a server can always avoid stream ID collisions with the stream IDs carried in sessions, and can usually (depending on the timing) avoid allowing sessions to exceed the client's max_streams_uni by requesting that clients leave sessions before their limits would be exceeded.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+<p id="section-4.4-3">However, since clients can join later than a session began, clients supporting the multicast extensions to QUIC should be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a session in progress the stream id count might have been increasing for a long time.
+Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see Section 19.11 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) with a high limit.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
+<p id="section-4.4-4">MC_SESSION_PROPERTIES can provide a recommended value for max_streams_uni to allow for uninterrupted transport using the multicast session.<a href="#section-4.4-4" class="pilcrow">¶</a></p>
+<p id="section-4.4-5">Servers also can send MC_SESSION_STREAM_BOUNDARY_OFFSET (<a href="#session-stream-boundary-offset-frame" class="xref">Section 10.5</a>) frames to indicate an application-layer boundary in a stream carried inside a session.
+These frames enable new clients joining a session to start receiving application data from the indicated stream as though the stream data at that offset had an offset of 0.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="flow-control">
+<section id="section-5">
+      <h2 id="name-flow-control">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-flow-control" class="section-name selfRef">Flow Control</a>
+      </h2>
+<p id="section-5-1">The values used for unicast flow control cannot be used to limit the transmission rate of a multicast session because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that sessions responded to each client's limits.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS (<a href="#client-limits-frame" class="xref">Section 10.8</a>) frames and their initial values from the transport parameter (<a href="#transport-parameter" class="xref">Section 3</a>).
+The server advertises the expected maxima of the values that can contribute toward client resource limits within a session in MC_SESSION_PROPERTIES (<a href="#session-properties-frame" class="xref">Section 10.1</a>) frames.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">If the server asks the client to join a session that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client shoud send back a MC_CLIENT_SESSION_STATE with "Declined Join" and reason "Protocol Violation".
+If the server asks the client to join a session that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Session Property Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
+If the actual contents sent in the session exceed the advertised limits from the MC_SESSION_PROPERTY, clients SHOULD leave the stream with a PROTOCOL_ERROR/Limit Violated state change.<a href="#section-5-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="congestion-control">
+<section id="section-6">
+      <h2 id="name-congestion-control">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-congestion-control" class="section-name selfRef">Congestion Control</a>
+      </h2>
+<p id="section-6-1">The server maintains a full view of the traffic received by the client via the ACK frames coupled with the MC_SESSION_ACK (<a href="#session-ack-frame" class="xref">Section 10.6</a>) frames.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">Under sustained persistent loss, the server SHOULD instruct the client such that the aggregate rate of joined sessions remains under the data rate successfully received by the client in the recent past.<a href="#section-6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="data-integrity">
+<section id="section-7">
+      <h2 id="name-data-integrity">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-data-integrity" class="section-name selfRef">Data Integrity</a>
+      </h2>
+<p id="section-7-1">TODO: import the <span>[<a href="#I-D.draft-krose-multicast-security" class="xref">I-D.draft-krose-multicast-security</a>]</span> explanation for why extra integrity protection is necessary (many client have the shared key, so AEAD doesn't provide authentication against other valid clients on its own).<a href="#section-7-1" class="pilcrow">¶</a></p>
+<div id="packet-hashes">
+<section id="section-7.1">
+        <h3 id="name-packet-hashes">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-packet-hashes" class="section-name selfRef">Packet Hashes</a>
+        </h3>
+<p id="section-7.1-1">TODO: explanation and example for how to calculate the packet hash.
+Note that the hash is on the unencrypted packet because it checks against a specific packet number, which is protected by AEAD.
+(This approach also may help make better use of crypto hardware offload.)<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="packet-scheduling">
+<section id="section-8">
+      <h2 id="name-packet-scheduling">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-packet-scheduling" class="section-name selfRef">Packet Scheduling</a>
+    </h2>
+</section>
+</div>
+<div id="implementation-and-operational-considerations">
+<section id="section-9">
+      <h2 id="name-implementation-and-operatio">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-implementation-and-operatio" class="section-name selfRef">Implementation and Operational Considerations</a>
+    </h2>
+</section>
+</div>
+<div id="new-frames">
+<section id="section-10">
+      <h2 id="name-new-frames">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-new-frames" class="section-name selfRef">New Frames</a>
+      </h2>
+<div id="session-properties-frame">
+<section id="section-10.1">
+        <h3 id="name-mc_session_properties">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-mc_session_properties" class="section-name selfRef">MC_SESSION_PROPERTIES</a>
+        </h3>
+<p id="section-10.1-1">An MC_SESSION_PROPERTIES frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast session.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">A server can send an update to a prior MC_SESSION_PROPERTIES with a new sequence number increased by one.
+Any values omitted by not setting the corresponding Selector bit remain unchanged from their last value.
+It is RECOMMENDED that servers set an Until Packet Number and send regular updates to the MC_SESSION_PROPERTIES before the packet numbers in the session exceed that value.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+<p id="section-10.1-3">A client cannot join a multicast session without first receiving a set of MC_SESSION_PROPERTIES frames that set each of the values for the session.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+<p id="section-10.1-4">MC_SESSION_PROPERTIES frames are formatted as shown in <a href="#fig-mc-session-properties-format" class="xref">Figure 2</a>.<a href="#section-10.1-4" class="pilcrow">¶</a></p>
+<span id="name-mc_session_properties-frame"></span><div id="fig-mc-session-properties-format">
+<figure id="figure-2">
+          <div class="alignLeft art-text artwork" id="section-10.1-5.1">
+<pre>
+MC_SESSION_PROPERTIES Frame {
+  Type (i) = TBD-01 (experiments use 0xff3e801),
+  Session ID (i),
+  Properties Sequence Number (i),
+  From Packet Number (i),
+  Selectors (10) {
+    Has Until Packet Number (1),
+    Has Addresses (1)
+    Has SSM (1),
+    Has Header Key (1),
+    Has Key (1),
+    Has Hash Algorithm (1),
+    Has Max Rate (1),
+    Has Max Idle Time (1),
+    Has Max Streams (1),
+    Has ACK Bundle Size (1),
+  },
+  Reserved (4),
+  Key Phase (1),
+  [IP Family] (1),
+  Until Packet Number (0..i),
+  [Source IP] (0..128),
+  [Group IP] (0..128),
+  [UDP Port] (0..16)
+  [Header AEAD Algorithm] (0..16),
+  [Header Key] (...),
+  AEAD Algorithm (0..16),
+  Key (...),
+  Integrity Hash Algorithm (0..8),
+  Max Rate (0..i),
+  Max Idle Time (0..i),
+  Max Streams (0..i),
+  ACK Bundle Size (0..8),
+}
+[] = immutable values
+</pre>
+</div>
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a>:
+<a href="#name-mc_session_properties-frame" class="selfRef">MC_SESSION_PROPERTIES Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.1-6">The 'Has' fields in the Selector determine presence or absence of the corresponding values in the rest of the frame, as described below.
+If a field is not included, it remains unchanged unless a different semantic is explained below.<a href="#section-10.1-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1-7.1">From Packet Number, Until Packet Number: the mutable values in this MC_SESSION_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is omitted it indicates the current property values for this session have no expiration at (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any prior (From,Until) range, it has no applicable session properties and MUST be dropped.<a href="#section-10.1-7.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-7.2">Properties Sequence Number: increases by 1 each time the properties for the session are changed by the server.  For mutable properties, the client tracks the sequence number of the MC_SESSION_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequnce Number is higher.<a href="#section-10.1-7.2" class="pilcrow">¶</a>
+</li>
+        </ul>
+<div id="immutable-properties">
+<section id="section-10.1.1">
+          <h4 id="name-immutable-properties">
+<a href="#section-10.1.1" class="section-number selfRef">10.1.1. </a><a href="#name-immutable-properties" class="section-name selfRef">Immutable Properties</a>
+          </h4>
+<p id="section-10.1.1-1">These values cannot change during the lifetime of the session.  If a new value is received that is not the same as a prior value, the client MUST close the connection with a PROTOCOL_ERROR.<a href="#section-10.1.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.1-2.1">IP Family: Always present, but used only when Has Addresses=1 (ignored otherwise).  0 indicates IPv4, 1 indicates IPv6 for both Source IP (if present) and Group IP.<a href="#section-10.1.1-2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.1-2.2">Source IP: Present if Has Addresses=1 and Has SSM=1.  The IP Address of the source of the (S,G) for the session's channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.<a href="#section-10.1.1-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.1-2.3">Group IP: Present if Has Addresses=1.  The IP Address of the group of the (S,G) for the session's channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.<a href="#section-10.1.1-2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.1-2.4">UDP Port: Present if Has Addressess=1.  The 16-bit UDP Port of traffic for the session's channel.<a href="#section-10.1.1-2.4" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.1-2.5">Header AEAD Algorithm: Present when Has Header Key=1.  a value from <a href="https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml">https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml</a>, used to protect the header fields in the session packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see <a href="#transport-parameter" class="xref">Section 3</a>).<a href="#section-10.1.1-2.5" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.1-2.6">Header Key: Present when Has Header Key=1.  A key with length and semantics determined by the Header AEAD Algorithm.
+&gt; <strong>Author's Note:</strong> I assume it's not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>)<a href="#section-10.1.1-2.6" class="pilcrow">¶</a>
+</li>
+          </ul>
+</section>
+</div>
+<div id="mutable-properties">
+<section id="section-10.1.2">
+          <h4 id="name-mutable-properties">
+<a href="#section-10.1.2" class="section-number selfRef">10.1.2. </a><a href="#name-mutable-properties" class="section-name selfRef">Mutable Properties</a>
+          </h4>
+<p id="section-10.1.2-1">These values MAY change during the lifetime of the session.
+From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) the 1-RTT packets received) over which these values are applicable.
+A From Packet Number without an Until Packet Number has an unspecified termination.
+If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to the new From Packet Number.<a href="#section-10.1.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.2-2.1">Key Phase: Always present, used only if Has Key is set (otherwise ignored).  The key phase value in the 1-RTT packet that will be in use for this key (see Section 6 of <span>[<a href="#RFC9001" class="xref">RFC9001</a>]</span>).<a href="#section-10.1.2-2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.2-2.2">AEAD Algorithm: Present if Has Key is set.  A value from <a href="https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml">https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml</a>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see <a href="#transport-parameter" class="xref">Section 3</a>).<a href="#section-10.1.2-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.2-2.3">Key: present if and only if Has Key is set, with length determined by the AEAD Algorith value.  Used to protect the packet contents of 1-RTT packets for the session as described in <span>[<a href="#RFC9001" class="xref">RFC9001</a>]</span>.<a href="#section-10.1.2-2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.2-2.4">
+              <p id="section-10.1.2-2.4.1">Integrity Hash Algorithm: the hash algorithm used in integrity frames
+&gt; <strong>Author's Note:</strong> Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values:<a href="#section-10.1.2-2.4.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.2-2.4.2.1">
+                  <a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-10.1.2-2.4.2.1" class="pilcrow">¶</a>
+</li>
+                <li class="normal" id="section-10.1.2-2.4.2.2">
+                  <a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18</a><a href="#section-10.1.2-2.4.2.2" class="pilcrow">¶</a>
+</li>
+                <li class="normal" id="section-10.1.2-2.4.2.3">(text-only): <a href="https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml">https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml</a><a href="#section-10.1.2-2.4.2.3" class="pilcrow">¶</a>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-10.1.2-2.5">Max Rate: The maximum rate in Kibps of the payload data for this session.Session data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the session with reason Max Rate Exceeded.<a href="#section-10.1.2-2.5" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.2-2.6">Max Idle Time: The maximum expected idle time of the session.  If this amount of time passes in a joined session without data received, clients SHOULD leave the session with reason Max Idle Time Exceeded.<a href="#section-10.1.2-2.6" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.2-2.7">Max Streams: The maximum stream ID that might appear in the session.  If a client joined to this session can raise its Max Streams limit up to or above this value it SHOULD do so, otherwise it SHOULD leave or decline join for the session with Max Streams Exceeded.<a href="#section-10.1.2-2.7" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-10.1.2-2.8">ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_SESSION_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. The Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the session as interrupted.<a href="#section-10.1.2-2.8" class="pilcrow">¶</a>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="session-join-frame">
+<section id="section-10.2">
+        <h3 id="name-mc_session_join">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-mc_session_join" class="section-name selfRef">MC_SESSION_JOIN</a>
+        </h3>
+<p id="section-10.2-1">An MC_SESSION_JOIN frame (type TBD-02) is sent from server to client and requests that a client join the given transport addresses and ports and process packets with the given Session ID according to the corresponding MC_SESSION_PROPERTIES.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">MC_SESSION_JOIN frames are formatted as shown in <a href="#fig-mc-session-join-format" class="xref">Figure 3</a>.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<span id="name-mc_session_join-frame-forma"></span><div id="fig-mc-session-join-format">
+<figure id="figure-3">
+          <div class="alignLeft art-text artwork" id="section-10.2-3.1">
+<pre>
+MC_SESSION_JOIN Frame {
+  Type (i) = TBD-02 (experiments use 0xff3e802),
+  Session ID (i),
+  MC_CLIENT_LIMITS Sequence Number (i),
+  MC_CLIENT_SESSION_STATE Sequence Number (i),
+  MC_SESSION_PROPERTIES Sequence Number (i)
+</pre>
+</div>
+<figcaption><a href="#figure-3" class="selfRef">Figure 3</a>:
+<a href="#name-mc_session_join-frame-forma" class="selfRef">MC_SESSION_JOIN Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.2-4">The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_SESSION_PROPERTIES not yet received by the client or one or more missing updates to MC_CLIENT_LIMITS or MC_CLIENT_SESSION_STATE not yet received by the server).<a href="#section-10.2-4" class="pilcrow">¶</a></p>
+<p id="section-10.2-5">A client SHOULD perform the join if it has the sequence number of the corresponding sesssion properties and the client's limits will not be exceeded, even if the client sequence numbers are not up to date.
+If the client does not join, it MUST send a MC_CLIENT_SESSION_STATE with "Declined Join" and a reason.<a href="#section-10.2-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="session-leave-frame">
+<section id="section-10.3">
+        <h3 id="name-mc_session_leave">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-mc_session_leave" class="section-name selfRef">MC_SESSION_LEAVE</a>
+        </h3>
+<p id="section-10.3-1">An MC_SESSION_LEAVE frame (type=TBD-03) is sent from server to client
+Server-to-client in unicast connection or inside session.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10.3-2">MC_SESSION_LEAVE frames are formatted as shown in <a href="#fig-mc-session-leave-format" class="xref">Figure 4</a>.<a href="#section-10.3-2" class="pilcrow">¶</a></p>
+<span id="name-mc_session_leave-frame-form"></span><div id="fig-mc-session-leave-format">
+<figure id="figure-4">
+          <div class="alignLeft art-text artwork" id="section-10.3-3.1">
+<pre>
+MC_SESSION_LEAVE Frame {
+  Type (i) = TBD-03 (experiments use 0xff3e803),
+  Session ID (i),
+  After Packet Number (i)
+</pre>
+</div>
+<figcaption><a href="#figure-4" class="selfRef">Figure 4</a>:
+<a href="#name-mc_session_leave-frame-form" class="selfRef">MC_SESSION_LEAVE Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.3-4">If After Packet Number is nonzero, wait until receiving that packet or a higher valued number before leaving.<a href="#section-10.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="session-integrity-frame">
+<section id="section-10.4">
+        <h3 id="name-mc_session_integrity">
+<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-mc_session_integrity" class="section-name selfRef">MC_SESSION_INTEGRITY</a>
+        </h3>
+<p id="section-10.4-1">MC_SESSION_INTEGRITY frames are sent from server to client and are used to convey packet hashes for validating the integrity of packets received over the multicast session as described in <a href="#packet-hashes" class="xref">Section 7.1</a>.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
+<p id="section-10.4-2">MC_SESSION_INTEGRITY frames are formatted as shown in <a href="#fig-mc-session-integrity-format" class="xref">Figure 5</a>.<a href="#section-10.4-2" class="pilcrow">¶</a></p>
+<span id="name-mc_session_integrity-frame-"></span><div id="fig-mc-session-integrity-format">
+<figure id="figure-5">
+          <div class="alignLeft art-text artwork" id="section-10.4-3.1">
+<pre>
+MC_SESSION_INTEGRITY Frame {
+  Type (i) = TBD-04..TBD-05 (experiments use 0xff3e804/0xff3e805),
+  Session ID (i),
+  Packet Number Start (i),
+  [Length (i)],
+  Packet Hashes (..)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-5" class="selfRef">Figure 5</a>:
+<a href="#name-mc_session_integrity-frame-" class="selfRef">MC_SESSION_INTEGRITY Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.4-4">For type TBD-05, Length is present and is a count of packet hashes.  For TBD-04, Length is not present and the packet hashes extend to the end of the packet.<a href="#section-10.4-4" class="pilcrow">¶</a></p>
+<p id="section-10.4-5">The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Session ID equal to the Session ID in the MC_SESSION_INTEGRITY frame and packet number equal to the Packet Number Start field.
+Subsequent hashes refer to the packets for the session with packet numbers increasing by 1.<a href="#section-10.4-5" class="pilcrow">¶</a></p>
+<p id="section-10.4-6">Packet hashes MUST have length with an integer multiple of the length indicated by the Hash Algorithm from the Session Properties.<a href="#section-10.4-6" class="pilcrow">¶</a></p>
+<p id="section-10.4-7">See <a href="#packet-hashes" class="xref">Section 7.1</a> for a description of the packet hash calculation.<a href="#section-10.4-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="session-stream-boundary-offset-frame">
+<section id="section-10.5">
+        <h3 id="name-mc_session_stream_boundary_">
+<a href="#section-10.5" class="section-number selfRef">10.5. </a><a href="#name-mc_session_stream_boundary_" class="section-name selfRef">MC_SESSION_STREAM_BOUNDARY_OFFSET</a>
+        </h3>
+<p id="section-10.5-1">MC_SESSION_STREAM_BOUNDARY_OFFSET frames are formatted as shown in <a href="#fig-mc-session-stream-boundary-offset-format" class="xref">Figure 6</a>.<a href="#section-10.5-1" class="pilcrow">¶</a></p>
+<span id="name-mc_session_stream_boundary_o"></span><div id="fig-mc-session-stream-boundary-offset-format">
+<figure id="figure-6">
+          <div class="alignLeft art-text artwork" id="section-10.5-2.1">
+<pre>
+MC_SESSION_STREAM_BOUNDARY_OFFSET Frame {
+  Type (i) = TBD-06 (experiments use 0xff3e806),
+  Session ID (i),
+  Stream ID (i),
+  Stream Offset (i)
+</pre>
+</div>
+<figcaption><a href="#figure-6" class="selfRef">Figure 6</a>:
+<a href="#name-mc_session_stream_boundary_o" class="selfRef">MC_SESSION_STREAM_BOUNDARY_OFFSET Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.5-3">Client must discard data before Stream Offset, and should start accepting stream data at Stream Offset as though it's a new stream with offset 0.<a href="#section-10.5-3" class="pilcrow">¶</a></p>
+<p id="section-10.5-4">A server must ensure that data beginning at the given stream offsets could equivalently begin a new stream, and are safe for clients to start processing in order to use this.  (Well-suited for boundaries of http server push objects, for example, which otherwise would need to start a new stream per object in order to be usable by late joiners.)<a href="#section-10.5-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="session-ack-frame">
+<section id="section-10.6">
+        <h3 id="name-mc_session_ack">
+<a href="#section-10.6" class="section-number selfRef">10.6. </a><a href="#name-mc_session_ack" class="section-name selfRef">MC_SESSION_ACK</a>
+        </h3>
+<p id="section-10.6-1">Client-&gt;Server on unicast connection.<a href="#section-10.6-1" class="pilcrow">¶</a></p>
+<p id="section-10.6-2">(TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of <span>[<a href="#I-D.draft-ietf-quic-multipath" class="xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining session id as the packet number space?  at 2022-04-12 they're identical.)<a href="#section-10.6-2" class="pilcrow">¶</a></p>
+<p id="section-10.6-3">MC_SESSION_ACK frames are formatted as shown in <a href="#fig-mc-session-ack-format" class="xref">Figure 7</a>.<a href="#section-10.6-3" class="pilcrow">¶</a></p>
+<span id="name-mc_session_ack-frame-format"></span><div id="fig-mc-session-ack-format">
+<figure id="figure-7">
+          <div class="alignLeft art-text artwork" id="section-10.6-4.1">
+<pre>
+  MC_SESSION_ACK Frame {
+    Type (i) = TBD-07 (experiments use 0xff3e807),
+    Session ID (i),
+    Largest Acknowledged (i),
+    ACK Delay (i),
+    ACK Range Count (i),
+    First ACK Range (i),
+    ACK Range (..) ...,
+    [ECN Counts (..)],
+  }
+</pre>
+</div>
+<figcaption><a href="#figure-7" class="selfRef">Figure 7</a>:
+<a href="#name-mc_session_ack-frame-format" class="selfRef">MC_SESSION_ACK Frame Format</a>
+          </figcaption></figure>
+</div>
+</section>
+</div>
+<div id="path-response-frame">
+<section id="section-10.7">
+        <h3 id="name-mc_path_response">
+<a href="#section-10.7" class="section-number selfRef">10.7. </a><a href="#name-mc_path_response" class="section-name selfRef">MC_PATH_RESPONSE</a>
+        </h3>
+<p id="section-10.7-1">MC_PATH_RESPONSE frames are sent from client to server in a unicast connection in response to an PATH_CHALLENGE received in a session.  Like PATH_RESPONSE but includes a session id.<a href="#section-10.7-1" class="pilcrow">¶</a></p>
+<p id="section-10.7-2">MC_PATH_RESPONSE frames are formatted as shown in <a href="#fig-mc-path-response-format" class="xref">Figure 8</a>.<a href="#section-10.7-2" class="pilcrow">¶</a></p>
+<span id="name-mc_path_response-frame-form"></span><div id="fig-mc-path-response-format">
+<figure id="figure-8">
+          <div class="alignLeft art-text artwork" id="section-10.7-3.1">
+<pre>
+MC_PATH_RESPONSE Frame {
+  Type (i) = TBD-08 (experiments use 0xffe38008)
+  Session ID (i),
+  Data (64)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-8" class="selfRef">Figure 8</a>:
+<a href="#name-mc_path_response-frame-form" class="selfRef">MC_PATH_RESPONSE Frame Format</a>
+          </figcaption></figure>
+</div>
+</section>
+</div>
+<div id="client-limits-frame">
+<section id="section-10.8">
+        <h3 id="name-mc_client_limits">
+<a href="#section-10.8" class="section-number selfRef">10.8. </a><a href="#name-mc_client_limits" class="section-name selfRef">MC_CLIENT_LIMITS</a>
+        </h3>
+<p id="section-10.8-1">MC_CLIENT_LIMITS frames are formatted as shown in <a href="#fig-mc-client-limits-format" class="xref">Figure 9</a>.<a href="#section-10.8-1" class="pilcrow">¶</a></p>
+<span id="name-mc_client_limits-frame-form"></span><div id="fig-mc-client-limits-format">
+<figure id="figure-9">
+          <div class="alignLeft art-text artwork" id="section-10.8-2.1">
+<pre>
+MC_CLIENT_LIMITS Frame {
+  Type (i) = TBD-09 (experiments use 0xff3e809),
+  Client Limits Sequence Number (i),
+  Permit IPv4 (1),
+  Permit IPv6 (1),
+  Reserved (6),
+  Max Aggregate Rate (i),
+  Max Session IDs (i)
+</pre>
+</div>
+<figcaption><a href="#figure-9" class="selfRef">Figure 9</a>:
+<a href="#name-mc_client_limits-frame-form" class="selfRef">MC_CLIENT_LIMITS Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.8-3">The sequence number is implicitly 0 before the first MC_CLIENT_LIMITS frame from the client, and increases by 1 each new frame that's sent.
+Newer frames override older ones.<a href="#section-10.8-3" class="pilcrow">¶</a></p>
+<p id="section-10.8-4">Max Aggregate Rate allowed across all joined sessions is in Kibps.<a href="#section-10.8-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="session-retire-frame">
+<section id="section-10.9">
+        <h3 id="name-mc_session_retire">
+<a href="#section-10.9" class="section-number selfRef">10.9. </a><a href="#name-mc_session_retire" class="section-name selfRef">MC_SESSION_RETIRE</a>
+        </h3>
+<p id="section-10.9-1">MC_SESSION_RETIRE frames are formatted as shown in <a href="#fig-mc-session-retire-format" class="xref">Figure 10</a>.<a href="#section-10.9-1" class="pilcrow">¶</a></p>
+<span id="name-mc_session_retire-frame-for"></span><div id="fig-mc-session-retire-format">
+<figure id="figure-10">
+          <div class="alignLeft art-text artwork" id="section-10.9-2.1">
+<pre>
+MC_SESSION_RETIRE Frame {
+  Type (i) = TBD-0a (experiments use 0xff3e80a),
+  Session IDs (i)
+</pre>
+</div>
+<figcaption><a href="#figure-10" class="selfRef">Figure 10</a>:
+<a href="#name-mc_session_retire-frame-for" class="selfRef">MC_SESSION_RETIRE Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.9-3">Retires a session by id.  (We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)<a href="#section-10.9-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="client-session-state-frame">
+<section id="section-10.10">
+        <h3 id="name-mc_client_session_state">
+<a href="#section-10.10" class="section-number selfRef">10.10. </a><a href="#name-mc_client_session_state" class="section-name selfRef">MC_CLIENT_SESSION_STATE</a>
+        </h3>
+<p id="section-10.10-1">MC_CLIENT_SESSION_STATE frames are formatted as shown in <a href="#fig-mc-client-session-state-format" class="xref">Figure 11</a>.<a href="#section-10.10-1" class="pilcrow">¶</a></p>
+<span id="name-mc_client_session_state-fra"></span><div id="fig-mc-client-session-state-format">
+<figure id="figure-11">
+          <div class="alignLeft art-text artwork" id="section-10.10-2.1">
+<pre>
+MC_CLIENT_SESSION_STATE Frame {
+  Type (i) = TBD-0b (experiments use 0xff3e80b),
+  Client Session State Sequence Number (i),
+  State (i),
+  Reason (0..i)
+</pre>
+</div>
+<figcaption><a href="#figure-11" class="selfRef">Figure 11</a>:
+<a href="#name-mc_client_session_state-fra" class="selfRef">MC_CLIENT_SESSION_STATE Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.10-3">State has possible values:<a href="#section-10.10-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.10-4.1">0x0: Left<a href="#section-10.10-4.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.10-4.2">0x1: Declined Join<a href="#section-10.10-4.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.10-4.3">0x2: Joined<a href="#section-10.10-4.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.10-5">For Left, Reason must be set to one of:<a href="#section-10.10-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.10-6.1">0x0: Left as requested by server<a href="#section-10.10-6.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.10-6.2">0x1: Protocol Error<a href="#section-10.10-6.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.10-6.3">0x2: Property Violation<a href="#section-10.10-6.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.10-6.4">0x3: High Loss<a href="#section-10.10-6.4" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.10-6.5">0x4: Exceeded max idle time<a href="#section-10.10-6.5" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.10-6.6">0x5: Administrative change<a href="#section-10.10-6.6" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.10-6.7">0x6: other<a href="#section-10.10-6.7" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.10-7">For Declined Join, Reason must be set to one of:<a href="#section-10.10-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.10-8.1">Protocol Violation (limits exceeded, unsupported ciphersuite, etc)<a href="#section-10.10-8.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.10-8.2">held-down (prior session failures, administrative block)<a href="#section-10.10-8.2" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.10-9">(TODO: Should we include a loggable string in this?)<a href="#section-10.10-9" class="pilcrow">¶</a></p>
+<p id="section-10.10-10">(TODO: Or should we try to reuse PATH_ABANDON and/or PATH_STATUS?  I don't think they're sufficient, but maybe?):
+  - <span>[<a href="#I-D.draft-ietf-quic-multipath" class="xref">I-D.draft-ietf-quic-multipath</a>]</span>
+  - <a href="https://datatracker.ietf.org/doc/html/draft-liu-multipath-quic-04#section-9.1">https://datatracker.ietf.org/doc/html/draft-liu-multipath-quic-04#section-9.1</a><a href="#section-10.10-10" class="pilcrow">¶</a></p>
+<p id="section-10.10-11">The things server needs to know for state changes <em>could</em> maybe be inferred from ack responses but explicit seems better, allowing for a more proactive response under strain?<a href="#section-10.10-11" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="frames-carried-in-session-packets">
+<section id="section-11">
+      <h2 id="name-frames-carried-in-session-p">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-frames-carried-in-session-p" class="section-name selfRef">Frames Carried in Session Packets</a>
+      </h2>
+<p id="section-11-1">MC Sessions will contain normal quic 1-rtt data packets (see Section 17.3.1 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) except using the Session ID instead of a Connection ID.  The packets are protected with the keys from MC_SESSION_PROPERTIES for the corresponding session.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">Data packet hashes will also be sent in MC_SESSION_INTEGRITY frames, as keys cannot be trusted for integrity due to giving them to too many receivers, as in <span>[<a href="#I-D.draft-krose-multicast-security" class="xref">I-D.draft-krose-multicast-security</a>]</span>.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">The 1-rtt packets in multicast sessions will have a restricted set of frames.
+Since the session is strictly 1-way server to client, the general principle is that broadcastable shared server-&gt;client data frames can be sent, but frames that make sense only for individualized connections cannot.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">Permitted:<a href="#section-11-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-5.1">PADDING Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.1)<a href="#section-11-5.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.2">PING Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.2)<a href="#section-11-5.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.3">RESET_STREAM Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.4)<a href="#section-11-5.3" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.4">STREAM Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.8)<a href="#section-11-5.4" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.5">DATAGRAM Frames (both types) (<span>[<a href="#RFC9221" class="xref">RFC9221</a>]</span> Section 4)<a href="#section-11-5.5" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.6">PATH_CHALLENGE Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.17)<a href="#section-11-5.6" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.7">MC_SESSION_PROPERTIES<a href="#section-11-5.7" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.8">MC_SESSION_LEAVE (however, join must come over unicast?)<a href="#section-11-5.8" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.9">MC_SESSION_INTEGRITY (not for this session, only for another)<a href="#section-11-5.9" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.10">MC_STREAM_BOUNDARY_OFFSET<a href="#section-11-5.10" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.11">MC_SESSION_RETIRE<a href="#section-11-5.11" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="section-11-6">Not permitted:<a href="#section-11-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-7.1">19.3.  ACK Frames<a href="#section-11-7.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.2">19.6.  CRYPTO Frames (crypto handshake does not happen on mc sessions)<a href="#section-11-7.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.3">19.7.  NEW_TOKEN Frames<a href="#section-11-7.3" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.4">
+          <p id="section-11-7.4.1">Flow control is different:<a href="#section-11-7.4.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-7.4.2.1">19.5.  STOP_SENDING Frames<a href="#section-11-7.4.2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.2">19.9.  MAX_DATA Frames  (flow control for mc sessions is by rate)<a href="#section-11-7.4.2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.3">19.10. MAX_STREAM_DATA Frames<a href="#section-11-7.4.2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.4">19.11. MAX_STREAMS Frames<a href="#section-11-7.4.2.4" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.5">19.12. DATA_BLOCKED Frames<a href="#section-11-7.4.2.5" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.6">19.13. STREAM_DATA_BLOCKED Frames<a href="#section-11-7.4.2.6" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.7">19.14. STREAMS_BLOCKED Frames<a href="#section-11-7.4.2.7" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-11-7.5">
+          <p id="section-11-7.5.1">Session ID Migration can't use the "prior to" concept, not 0-starting<a href="#section-11-7.5.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-7.5.2.1">19.15. NEW_CONNECTION_ID Frames<a href="#section-11-7.5.2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.5.2.2">19.16. RETIRE_CONNECTION_ID Frames<a href="#section-11-7.5.2.2" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-11-7.6">19.18. PATH_RESPONSE Frames<a href="#section-11-7.6" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.7">19.19. CONNECTION_CLOSE Frames<a href="#section-11-7.7" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.8">19.20. HANDSHAKE_DONE Frames<a href="#section-11-7.8" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.9">MC_PATH_RESPONSE<a href="#section-11-7.9" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.10">MC_CLIENT_LIMITS<a href="#section-11-7.10" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.11">MC_CLIENT_SESSION_STATE<a href="#section-11-7.11" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.12">MC_SESSION_ACK<a href="#section-11-7.12" class="pilcrow">¶</a>
+</li>
+      </ul>
+</section>
+</div>
+<div id="error-codes">
+<section id="section-12">
+      <h2 id="name-error-codes">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-error-codes" class="section-name selfRef">Error Codes</a>
+    </h2>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-13">
+      <h2 id="name-security-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-13-1">Mostly incorporate <span>[<a href="#I-D.draft-krose-multicast-security" class="xref">I-D.draft-krose-multicast-security</a>]</span>.  Anything else?<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-2">e.g. if a different legitimate quic connection says someone
+else's quic multicast stream is theirs, that's maybe a problem
+worth protecting against.  Maybe we need a periodic asymmetric
+challenge?  I'm thinking send a public key on the multicast
+channel and in the unicast channels send an individualized MAC
+signed with the private key and verify it with the public key,
+so that in addition to validating that the unicast server knows
+the contents of the multicast packets via the hashes it supplies,
+the multicast stream provides a way for the client to validate
+that the unicast stream is authorized to use it for data transport
+via proof they know the private key corresponding to the public
+key that arrived on the multicast session.
+(Note this doesn't prevent unauthorized receipt of multicast
+data packts, but does prevent a quic server from lying when
+claiming a multicast data channel belongs to it, preventing
+legit receivers from consuming it.)<a href="#section-13-2" class="pilcrow">¶</a></p>
+<p id="section-13-3">(alternatively, can the multicast channel just periodically say
+what domain name is expected for the quic connection and get the
+same crypto guarantee of a proper sender via the domain's cert,
+which was already checked on the unicast channel?)<a href="#section-13-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-14">
+      <h2 id="name-iana-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-14-1">TODO: lots<a href="#section-14-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<section id="section-15">
+      <h2 id="name-normative-references">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+      </h2>
+<dl class="references">
+<dt id="I-D.draft-ietf-quic-multipath">[I-D.draft-ietf-quic-multipath]</dt>
+      <dd>
+<span class="refAuthor">Liu, Y.</span>, <span class="refAuthor">Ma, Y.</span>, <span class="refAuthor">Coninck, Q. D.</span>, <span class="refAuthor">Bonaventure, O.</span>, <span class="refAuthor">Huitema, C.</span>, and <span class="refAuthor">M. Kuehlewind</span>, <span class="refTitle">"Multipath Extension for QUIC"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-quic-multipath-01</span>, <time datetime="2022-03-07" class="refDate">7 March 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-01">https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-krose-multicast-security">[I-D.draft-krose-multicast-security]</dt>
+      <dd>
+<span class="refAuthor">Rose, K.</span> and <span class="refAuthor">J. Holland</span>, <span class="refTitle">"Security and Privacy Considerations for Multicast Transports"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-krose-multicast-security-02</span>, <time datetime="2022-01-31" class="refDate">31 January 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-krose-multicast-security-02">https://datatracker.ietf.org/doc/html/draft-krose-multicast-security-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+      <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+      <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9000">[RFC9000]</dt>
+      <dd>
+<span class="refAuthor">Iyengar, J., Ed.</span> and <span class="refAuthor">M. Thomson, Ed.</span>, <span class="refTitle">"QUIC: A UDP-Based Multiplexed and Secure Transport"</span>, <span class="seriesInfo">RFC 9000</span>, <span class="seriesInfo">DOI 10.17487/RFC9000</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9000">https://www.rfc-editor.org/rfc/rfc9000</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9001">[RFC9001]</dt>
+      <dd>
+<span class="refAuthor">Thomson, M., Ed.</span> and <span class="refAuthor">S. Turner, Ed.</span>, <span class="refTitle">"Using TLS to Secure QUIC"</span>, <span class="seriesInfo">RFC 9001</span>, <span class="seriesInfo">DOI 10.17487/RFC9001</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9001">https://www.rfc-editor.org/rfc/rfc9001</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9221">[RFC9221]</dt>
+    <dd>
+<span class="refAuthor">Pauly, T.</span>, <span class="refAuthor">Kinnear, E.</span>, and <span class="refAuthor">D. Schinazi</span>, <span class="refTitle">"An Unreliable Datagram Extension to QUIC"</span>, <span class="seriesInfo">RFC 9221</span>, <span class="seriesInfo">DOI 10.17487/RFC9221</span>, <time datetime="2022-03" class="refDate">March 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9221">https://www.rfc-editor.org/rfc/rfc9221</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">TODO acknowledge.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-addresses">
+<a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Jake Holland</span></div>
+<div dir="auto" class="left"><span class="org">Akamai Technologies, Inc.</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:jakeholland.net@gmail.com" class="email">jakeholland.net@gmail.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Lucas Pardue</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:lucaspardue.24.7@gmail.com" class="email">lucaspardue.24.7@gmail.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
