@@ -196,6 +196,35 @@ The server ensures that in aggregate, all channels that the client has currently
 ~~~
 {: #fig-client-channel-states title="States a channel from the clients point of view."}
 
+{{fig-frame-exchange}} shows the frames that are being exchanged over the lifetime of an example channel.
+
+~~~
+Client                                                                      Server
+
+                                                            <- MC_CHANNEL_ANNOUNCE: ID: 50, (...)
+                                                      ...
+                                                            <- MC_CHANNEL_PROPERTIES: ID: 50, (...)
+                                                            <- MC_CHANNEL_JOIN: ID: 50, (...)
+MC_CHANNEL_STATE: ID: 50, State: Joined, (...)    ->
+                                                            <- MC_CHANNEL_INTEGRITY: ID: 50, (...)
+                                                            <- [STREAM: (...)]
+MC_CHANNEL_ACK: ID: 50, (...)                     ->
+                                                      ...
+                                                           <- {[MC_CHANNEL_INTEGRITY: ID: 50, (...)]}
+                                                      ...
+                                                           <- {[MC_CHANNEL_PROPERTIES: ID: 50, (...)]}
+                                                      ...
+                                                           <- {[MC_CHANNEL_LEAVE: ID: 50, (...)]}
+{MC_CHANNEL_STATE: ID: 50, State: Left, (...)}    ->
+                                                      ...
+                                                           <- {MC_CHANNEL_JOIN: ID: 50, (...)}
+{MC_CHANNEL_STATE: ID: 50, State: Joined, (...)}  ->
+                                                      ...
+                                                           <- [MC_CHANNEL_RETIRE: ID: 50, (...)]
+MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
+~~~
+{: #fig-frame-exchange title="Example flow of frames for a channel. Frames in square brackets are optionally sent over multicast while frames in curly brackets are optional."}
+
 ## Client Response
 
 The client sends back information about how it has responded to the server's requests to join and leave channels in MC_CLIENT_CHANNEL_STATE ({{client-channel-state-frame}}) frames.
