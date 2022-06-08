@@ -5,10 +5,10 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 28 November 2022                                               
+Expires: 10 December 2022                                               
                                                                M. Franke
                                                                TU Berlin
-                                                             27 May 2022
+                                                             8 June 2022
 
 
                       Multicast Extension for QUIC
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 November 2022.
+   This Internet-Draft will expire on 10 December 2022.
 
 Copyright Notice
 
@@ -349,6 +349,37 @@ Table of Contents
 
       Figure 2: States a channel from the clients point of view.
 
+   Figure 3 shows the frames that are being exchanged over the lifetime
+   of an example channel.
+
+Client                                                                      Server
+
+                                                            <- MC_CHANNEL_ANNOUNCE: ID: 50, (...)
+                                                      ...
+                                                            <- MC_CHANNEL_PROPERTIES: ID: 50, (...)
+                                                            <- MC_CHANNEL_JOIN: ID: 50, (...)
+MC_CHANNEL_STATE: ID: 50, State: Joined, (...)    ->
+                                                            <- MC_CHANNEL_INTEGRITY: ID: 50, (...)
+                                                            <- [STREAM: (...)]
+MC_CHANNEL_ACK: ID: 50, (...)                     ->
+                                                      ...
+                                                           <- {[MC_CHANNEL_INTEGRITY: ID: 50, (...)]}
+                                                      ...
+                                                           <- {[MC_CHANNEL_PROPERTIES: ID: 50, (...)]}
+                                                      ...
+                                                           <- {[MC_CHANNEL_LEAVE: ID: 50, (...)]}
+{MC_CHANNEL_STATE: ID: 50, State: Left, (...)}    ->
+                                                      ...
+                                                           <- {MC_CHANNEL_JOIN: ID: 50, (...)}
+{MC_CHANNEL_STATE: ID: 50, State: Joined, (...)}  ->
+                                                      ...
+                                                           <- [MC_CHANNEL_RETIRE: ID: 50, (...)]
+MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
+
+  Figure 3: Example flow of frames for a channel.  Frames in square
+  brackets are optionally sent over multicast while frames in curly
+                        brackets are optional.
+
 4.2.  Client Response
 
    The client sends back information about how it has responded to the
@@ -522,7 +553,7 @@ Table of Contents
    static properties of a channel that do not change during its
    lifetime.
 
-   MC_CHANNEL_ANNOUNCE frames are formatted as shown in Figure 3.
+   MC_CHANNEL_ANNOUNCE frames are formatted as shown in Figure 4.
 
    MC_CHANNEL_ANNOUNCE Frame {
      Type (i) = TBD-11..TBD-12 (experiments use 0xff3e811/0xff3e812),
@@ -538,7 +569,7 @@ Table of Contents
      Integrity Hash Algorithm (16)
    }
 
-                 Figure 3: MC_CHANNEL_ANNOUNCE Frame Format
+                 Figure 4: MC_CHANNEL_ANNOUNCE Frame Format
 
    Frames of type TBD-10 are used for IPv4 and both Source and Group
    address are 32 bits long.  Frames of type TBD-11 are used for IPv6
@@ -647,7 +678,7 @@ Table of Contents
    regular updates to the MC_CHANNEL_PROPERTIES before the packet
    numbers in the channel exceed that value.
 
-   MC_CHANNEL_PROPERTIES frames are formatted as shown in Figure 4.
+   MC_CHANNEL_PROPERTIES frames are formatted as shown in Figure 5.
 
    MC_CHANNEL_PROPERTIES Frame {
      Type (i) = TBD-01 (experiments use 0xff3e801),
@@ -663,7 +694,7 @@ Table of Contents
      ACK Bundle Size (i)
    }
 
-                Figure 4: MC_CHANNEL_PROPERTIES Frame Format
+                Figure 5: MC_CHANNEL_PROPERTIES Frame Format
 
    MC_CHANNEL_PROPERTIES frames contain the following fields:
 
@@ -753,7 +784,7 @@ Table of Contents
    MC_CHANNEL_PROPERTIES and receiving an acknowledgement indicating
    receipt of the MC_CHANNEL_ANNOUNCE.
 
-   MC_CHANNEL_JOIN frames are formatted as shown in Figure 5.
+   MC_CHANNEL_JOIN frames are formatted as shown in Figure 6.
 
    MC_CHANNEL_JOIN Frame {
      Type (i) = TBD-02 (experiments use 0xff3e802),
@@ -764,7 +795,7 @@ Table of Contents
      Channel ID (8..160)
    }
 
-                   Figure 5: MC_CHANNEL_JOIN Frame Format
+                   Figure 6: MC_CHANNEL_JOIN Frame Format
 
    The sequence numbers are the most recently processed sequence number
    by the server from the respective frame type.  They are present to
@@ -797,7 +828,7 @@ Table of Contents
    MC_CLIENT_CHANNEL_STATE frame with reason Left as requested by
    server.
 
-   MC_CHANNEL_LEAVE frames are formatted as shown in Figure 6.
+   MC_CHANNEL_LEAVE frames are formatted as shown in Figure 7.
 
    MC_CHANNEL_LEAVE Frame {
      Type (i) = TBD-03 (experiments use 0xff3e803),
@@ -807,7 +838,7 @@ Table of Contents
      After Packet Number (i)
    }
 
-                  Figure 6: MC_CHANNEL_LEAVE Frame Format
+                  Figure 7: MC_CHANNEL_LEAVE Frame Format
 
    If After Packet Number is nonzero, wait until receiving that packet
    or a higher valued number before leaving.
@@ -818,7 +849,7 @@ Table of Contents
    used to convey packet hashes for validating the integrity of packets
    received over the multicast channel as described in Section 7.1.
 
-   MC_CHANNEL_INTEGRITY frames are formatted as shown in Figure 7.
+   MC_CHANNEL_INTEGRITY frames are formatted as shown in Figure 8.
 
    MC_CHANNEL_INTEGRITY Frame {
      Type (i) = TBD-04..TBD-05 (experiments use 0xff3e804/0xff3e805),
@@ -829,7 +860,7 @@ Table of Contents
      Packet Hashes (..)
    }
 
-                Figure 7: MC_CHANNEL_INTEGRITY Frame Format
+                Figure 8: MC_CHANNEL_INTEGRITY Frame Format
 
    For type TBD-05, Length is present and is a count of packet hashes.
    For TBD-04, Length is not present and the packet hashes extend to the
@@ -860,7 +891,7 @@ Table of Contents
    [I-D.draft-ietf-quic-multipath], defining channel id as the packet
    number space?  at 2022-05 they're identical.)
 
-   MC_CHANNEL_ACK frames are formatted as shown in Figure 8.
+   MC_CHANNEL_ACK frames are formatted as shown in Figure 9.
 
    MC_CHANNEL_ACK Frame {
      Type (i) = TBD-06..TBD-07 (experiments use 0xff3e806, 0xff3e807),
@@ -874,7 +905,7 @@ Table of Contents
      [ECN Counts (..)],
    }
 
-                   Figure 8: MC_CHANNEL_ACK Frame Format
+                   Figure 9: MC_CHANNEL_ACK Frame Format
 
 11.7.  MC_PATH_RESPONSE
 
@@ -882,7 +913,7 @@ Table of Contents
    unicast connection in response to a PATH_CHALLENGE received in a
    channel.  Like PATH_RESPONSE but includes a channel id.
 
-   MC_PATH_RESPONSE frames are formatted as shown in Figure 9.
+   MC_PATH_RESPONSE frames are formatted as shown in Figure 10.
 
    MC_PATH_RESPONSE Frame {
      Type (i) = TBD-08 (experiments use 0xffe38008),
@@ -891,11 +922,11 @@ Table of Contents
      Data (64)
    }
 
-                  Figure 9: MC_PATH_RESPONSE Frame Format
+                  Figure 10: MC_PATH_RESPONSE Frame Format
 
 11.8.  MC_CLIENT_LIMITS
 
-   MC_CLIENT_LIMITS frames are formatted as shown in Figure 10.
+   MC_CLIENT_LIMITS frames are formatted as shown in Figure 11.
 
    MC_CLIENT_LIMITS Frame {
      Type (i) = TBD-09 (experiments use 0xff3e809),
@@ -906,7 +937,7 @@ Table of Contents
      Max Joined Count (i),
    }
 
-                  Figure 10: MC_CLIENT_LIMITS Frame Format
+                  Figure 11: MC_CLIENT_LIMITS Frame Format
 
    The sequence number is implicitly 0 before the first MC_CLIENT_LIMITS
    frame from the client, and increases by 1 each new frame that's sent.
@@ -931,7 +962,7 @@ Table of Contents
 
 11.9.  MC_CHANNEL_RETIRE
 
-   MC_CHANNEL_RETIRE frames are formatted as shown in Figure 11.
+   MC_CHANNEL_RETIRE frames are formatted as shown in Figure 12.
 
    MC_CHANNEL_RETIRE Frame {
      Type (i) = TBD-0a (experiments use 0xff3e80a),
@@ -940,7 +971,7 @@ Table of Contents
      After Packet Number (i)
    }
 
-                 Figure 11: MC_CHANNEL_RETIRE Frame Format
+                 Figure 12: MC_CHANNEL_RETIRE Frame Format
 
    Retires a channel by id, discarding any state associated with it.
    (Author comment: We can't use RETIRE_CONNECTION_ID because we don't
@@ -965,7 +996,7 @@ Table of Contents
    that a client join a channel and the client declines the join, even
    though no join occurs on the network.
 
-   MC_CLIENT_CHANNEL_STATE frames are formatted as shown in Figure 12.
+   MC_CLIENT_CHANNEL_STATE frames are formatted as shown in Figure 13.
 
    MC_CLIENT_CHANNEL_STATE Frame {
      Type (i) = TBD-0b (experiments use 0xff3e80b),
@@ -976,7 +1007,7 @@ Table of Contents
      Reason (0..i)
    }
 
-              Figure 12: MC_CLIENT_CHANNEL_STATE Frame Format
+              Figure 13: MC_CLIENT_CHANNEL_STATE Frame Format
 
    State has these defined values:
 

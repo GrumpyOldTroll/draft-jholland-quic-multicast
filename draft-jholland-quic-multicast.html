@@ -11,26 +11,26 @@
 <meta content="
        This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections. 
     " name="description">
-<meta content="xml2rfc 3.12.7" name="generator">
+<meta content="xml2rfc 3.12.10" name="generator">
 <meta content="Internet-Draft" name="keyword">
 <meta content="draft-jholland-quic-multicast-latest" name="ietf.draft">
 <!-- Generator version information:
-  xml2rfc 3.12.7
-    Python 3.9.7
+  xml2rfc 3.12.10
+    Python 3.10.4
     appdirs 1.4.4
-    ConfigArgParse 1.3
+    ConfigArgParse 1.5.3
     google-i18n-address 2.5.1
     html5lib 1.1
     intervaltree 3.1.0
     Jinja2 2.11.3
     kitchen 1.2.6
-    lxml 4.6.5
+    lxml 4.8.0
     MarkupSafe 2.0.1
     pycountry 20.7.3
-    pyflakes 2.3.1
-    PyYAML 5.4.1
-    requests 2.26.0
-    setuptools 52.0.0
+    pyflakes 2.4.0
+    PyYAML 6.0
+    requests 2.27.1
+    setuptools 59.4.0
     six 1.16.0
 -->
 <link href="draft-jholland-quic-multicast.xml" rel="alternate" type="application/rfc+xml">
@@ -155,6 +155,14 @@
   font-weight: 700;
   font-display: swap;
   src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
@@ -338,7 +346,7 @@ ol, ul {
   padding: 0;
   margin: 0 0 0.5em 2em;
 }
-ol ol, ul ul, ol ul, ul ol {
+:is(ol, ul) :is(ol, ul) {
   margin-left: 1em;
 }
 li {
@@ -353,8 +361,7 @@ ul.empty, .ulEmpty {
 ul.empty li, .ulEmpty li {
   margin-top: 0.5em;
 }
-ul.compact, .ulCompact,
-ol.compact, .olCompact {
+:is(ul, ol).compact, .ulCompact, .olCompact {
   line-height: 100%;
   margin: 0 0 0 2em;
 }
@@ -370,7 +377,7 @@ dl > dd {
   margin-bottom: .8em;
   min-height: 1.3em;
 }
-dl.compact > dd, .dlCompact > dd {
+:is(dl.compact, .dlCompact) > dd {
   margin-bottom: 0em;
 }
 dl > dd > dl {
@@ -412,6 +419,9 @@ tt, code {
      remove leading to avoid altering the final height of lines */
   line-height: 0;
 }
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
 pre {
   border: 1px solid var(--line-color);
   font-size: 13.5px;
@@ -436,6 +446,19 @@ figcaption, caption {
   text-align: left;
 }
 @media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) p {
+    margin: -2px 0;
+    max-height: 0;
+    transition: max-height 2s ease, margin 0.5s ease 0.5s;
+    overflow: hidden;
+  }
+  :is(#status-of-memo, #copyright):hover p,
+  :is(#status-of-memo, #copyright) h2:target ~ p {
+    margin: 0.5em 0;
+    max-height: 500px;
+    overflow: auto;
+  }
   pre, svg {
     display: inline-block;
     overflow-x: auto;
@@ -451,7 +474,7 @@ figcaption, caption {
     display: block;
     width: calc(100% - 25px);
   }
-  pre + .pilcrow, svg + .pilcrow {
+  :is(pre, svg) + .pilcrow {
     display: inline-block;
     vertical-align: text-bottom;
     padding-bottom: 8px;
@@ -500,17 +523,11 @@ th, td {
 th {
   background-color: var(--line-color);
 }
-tr:nth-child(2n) > td {
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
   background-color: var(--background-color);
 }
-tr:nth-child(2n+1) > td {
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
   background-color: var(--highlight-color);
-}
-thead+tbody > tr:nth-child(2n) > td {
-  background-color: var(--highlight-color);
-}
-thead+tbody > tr:nth-child(2n+1) > td {
-  background-color: var(--background-color);
 }
 table caption {
   margin: 0;
@@ -550,8 +567,9 @@ hr {
 }
 .bcp14 {
   font-variant: small-caps;
+  font-weight: 600;
+  font-size: 14.5px;
 }
-
 .role {
   font-variant: all-small-caps;
 }
@@ -790,7 +808,7 @@ hr.addr {
     margin: 0 0 0 4px;
     font-size: var(--small-font-size);
   }
-  #toc ul p, #toc ul li {
+  #toc ul :is(p, li) {
     margin: 2px 0;
     line-height: 22px;
   }
@@ -900,13 +918,13 @@ dl.dlNewline > dt {
 }
 
 /* Provide styling for table cell text alignment */
-table .text-left, table .text-left {
+table .text-left {
   text-align: left;
 }
-table .text-center, table .text-center {
+table .text-center {
   text-align: center;
 }
-table .text-right, table .text-right {
+table .text-right {
   text-align: right;
 }
 
@@ -973,12 +991,6 @@ address div.right {
   }
 
 }
-/* Tweak the bcp14 keyword presentation */
-.bcp14 {
-  font-variant: small-caps;
-  font-weight: bold;
-  font-size: 0.9em;
-}
 
 /* Dark mode. */
 @media (prefers-color-scheme: dark) {
@@ -993,19 +1005,20 @@ address div.right {
   --pilcrow-strong: #666;
   scrollbar-color: #777 #333;
 }
-/* Trick: a prefix match works because only black and white are allowed */
-svg [stroke="black"], svg [stroke^="#000"] {
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg :is([stroke="black"], [stroke^="#000"]) {
   stroke: var(--text-color);
 }
-svg [stroke="white"], svg [stroke^="#fff"] {
+svg :is([stroke="white"], [stroke^="#fff"]) {
   stroke: var(--background-color);
 }
-svg [fill="black"], svg [fill^="#000"], svg :not([fill]) {
+svg :is([fill="black"], [fill^="#000"], :not([fill])) {
   fill: var(--text-color);
 }
-svg [stroke="fill"], svg [fill^="#fff"] {
+svg :is([stroke="fill"], [fill^="#fff"]) {
   fill: var(--background-color);
-}
 }
 </style>
 
@@ -1015,11 +1028,11 @@ svg [stroke="fill"], svg [fill^="#fff"] {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Multicast QUIC</td>
-<td class="right">May 2022</td>
+<td class="right">June 2022</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Holland, et al.</td>
-<td class="center">Expires 28 November 2022</td>
+<td class="center">Expires 10 December 2022</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1032,12 +1045,12 @@ svg [stroke="fill"], svg [fill^="#fff"] {
 <dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2022-05-27" class="published">27 May 2022</time>
+<time datetime="2022-06-08" class="published">8 June 2022</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2022-11-28">28 November 2022</time></dd>
+<dd class="expires"><time datetime="2022-12-10">10 December 2022</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1093,7 +1106,7 @@ svg [stroke="fill"], svg [fill^="#fff"] {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 28 November 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 10 December 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1417,6 +1430,40 @@ A client MUST NOT decode packets for a channel for which it has not received an 
 <a href="#name-states-a-channel-from-the-c" class="selfRef">States a channel from the clients point of view.</a>
           </figcaption></figure>
 </div>
+<p id="section-4.1-7"><a href="#fig-frame-exchange" class="xref">Figure 3</a> shows the frames that are being exchanged over the lifetime of an example channel.<a href="#section-4.1-7" class="pilcrow">¶</a></p>
+<span id="name-example-flow-of-frames-for-"></span><div id="fig-frame-exchange">
+<figure id="figure-3">
+          <div class="alignLeft art-text artwork" id="section-4.1-8.1">
+<pre>
+Client                                                                      Server
+
+                                                            &lt;- MC_CHANNEL_ANNOUNCE: ID: 50, (...)
+                                                      ...
+                                                            &lt;- MC_CHANNEL_PROPERTIES: ID: 50, (...)
+                                                            &lt;- MC_CHANNEL_JOIN: ID: 50, (...)
+MC_CHANNEL_STATE: ID: 50, State: Joined, (...)    -&gt;
+                                                            &lt;- MC_CHANNEL_INTEGRITY: ID: 50, (...)
+                                                            &lt;- [STREAM: (...)]
+MC_CHANNEL_ACK: ID: 50, (...)                     -&gt;
+                                                      ...
+                                                           &lt;- {[MC_CHANNEL_INTEGRITY: ID: 50, (...)]}
+                                                      ...
+                                                           &lt;- {[MC_CHANNEL_PROPERTIES: ID: 50, (...)]}
+                                                      ...
+                                                           &lt;- {[MC_CHANNEL_LEAVE: ID: 50, (...)]}
+{MC_CHANNEL_STATE: ID: 50, State: Left, (...)}    -&gt;
+                                                      ...
+                                                           &lt;- {MC_CHANNEL_JOIN: ID: 50, (...)}
+{MC_CHANNEL_STATE: ID: 50, State: Joined, (...)}  -&gt;
+                                                      ...
+                                                           &lt;- [MC_CHANNEL_RETIRE: ID: 50, (...)]
+MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   -&gt;
+</pre>
+</div>
+<figcaption><a href="#figure-3" class="selfRef">Figure 3</a>:
+<a href="#name-example-flow-of-frames-for-" class="selfRef">Example flow of frames for a channel. Frames in square brackets are optionally sent over multicast while frames in curly brackets are optional.</a>
+          </figcaption></figure>
+</div>
 </section>
 </div>
 <div id="client-response">
@@ -1551,9 +1598,9 @@ it MAY take the necessary steps to prevent the reception of further such packets
         </h3>
 <p id="section-11.1-1">Once a server learns that a client supports multicast through its transport parameters, it can send one or multiple MC_CHANNEL_ANNOUNCE frames (type=TBD-11..TBD-22) to share information about available channels with the client.
 The MC_CHANNEL_ANNOUNCE frame contains the static properties of a channel that do not change during its lifetime.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
-<p id="section-11.1-2">MC_CHANNEL_ANNOUNCE frames are formatted as shown in <a href="#fig-mc-channel-announce" class="xref">Figure 3</a>.<a href="#section-11.1-2" class="pilcrow">¶</a></p>
+<p id="section-11.1-2">MC_CHANNEL_ANNOUNCE frames are formatted as shown in <a href="#fig-mc-channel-announce" class="xref">Figure 4</a>.<a href="#section-11.1-2" class="pilcrow">¶</a></p>
 <span id="name-mc_channel_announce-frame-f"></span><div id="fig-mc-channel-announce">
-<figure id="figure-3">
+<figure id="figure-4">
           <div class="alignLeft art-text artwork" id="section-11.1-3.1">
 <pre>
 MC_CHANNEL_ANNOUNCE Frame {
@@ -1571,7 +1618,7 @@ MC_CHANNEL_ANNOUNCE Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-3" class="selfRef">Figure 3</a>:
+<figcaption><a href="#figure-4" class="selfRef">Figure 4</a>:
 <a href="#name-mc_channel_announce-frame-f" class="selfRef">MC_CHANNEL_ANNOUNCE Frame Format</a>
           </figcaption></figure>
 </div>
@@ -1638,9 +1685,9 @@ As the server knows which connection IDs are in use by the client, it MUST wait 
 The MC_CHANNEL_PROPERTIES frame consists of the properties of a channel that are mutable and might change during the course of its lifetime.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 <p id="section-11.2-2">A server can send an update to a prior MC_CHANNEL_PROPERTIES frame with a new sequence number increased by one.<a href="#section-11.2-2" class="pilcrow">¶</a></p>
 <p id="section-11.2-3">It is RECOMMENDED that servers set an Until Packet Number and send regular updates to the MC_CHANNEL_PROPERTIES before the packet numbers in the channel exceed that value.<a href="#section-11.2-3" class="pilcrow">¶</a></p>
-<p id="section-11.2-4">MC_CHANNEL_PROPERTIES frames are formatted as shown in <a href="#fig-mc-channel-properties-format" class="xref">Figure 4</a>.<a href="#section-11.2-4" class="pilcrow">¶</a></p>
+<p id="section-11.2-4">MC_CHANNEL_PROPERTIES frames are formatted as shown in <a href="#fig-mc-channel-properties-format" class="xref">Figure 5</a>.<a href="#section-11.2-4" class="pilcrow">¶</a></p>
 <span id="name-mc_channel_properties-frame"></span><div id="fig-mc-channel-properties-format">
-<figure id="figure-4">
+<figure id="figure-5">
           <div class="alignLeft art-text artwork" id="section-11.2-5.1">
 <pre>
 MC_CHANNEL_PROPERTIES Frame {
@@ -1658,7 +1705,7 @@ MC_CHANNEL_PROPERTIES Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-4" class="selfRef">Figure 4</a>:
+<figcaption><a href="#figure-5" class="selfRef">Figure 5</a>:
 <a href="#name-mc_channel_properties-frame" class="selfRef">MC_CHANNEL_PROPERTIES Frame Format</a>
           </figcaption></figure>
 </div>
@@ -1698,9 +1745,9 @@ To maintain forward secrecy and prevent malicious clients from decrypting packet
 <p id="section-11.3-1">An MC_CHANNEL_JOIN frame (type TBD-02) is sent from server to client and requests that a client join the given transport addresses and ports and process packets with the given Channel ID according to the corresponding MC_CHANNEL_PROPERTIES.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 <p id="section-11.3-2">A client cannot join a multicast channel without first receiving a MC_CHANNEL_ANNOUNCE and MC_CHANNEL_PROPERTIES frame which together set all the values for a channel.<a href="#section-11.3-2" class="pilcrow">¶</a></p>
 <p id="section-11.3-3">If a client receives a MC_CHANNEL_JOIN for a channel for which it has not received both, it MUST respond with a MC_CLIENT_CHANNEL_STATE with State "Declined Join" and reason "Missing Properties". The server MAY send another MC_CHANNEL_JOIN after retransmitting the MC_CHANNEL_PROPERTIES and receiving an acknowledgement indicating receipt of the MC_CHANNEL_ANNOUNCE.<a href="#section-11.3-3" class="pilcrow">¶</a></p>
-<p id="section-11.3-4">MC_CHANNEL_JOIN frames are formatted as shown in <a href="#fig-mc-channel-join-format" class="xref">Figure 5</a>.<a href="#section-11.3-4" class="pilcrow">¶</a></p>
+<p id="section-11.3-4">MC_CHANNEL_JOIN frames are formatted as shown in <a href="#fig-mc-channel-join-format" class="xref">Figure 6</a>.<a href="#section-11.3-4" class="pilcrow">¶</a></p>
 <span id="name-mc_channel_join-frame-forma"></span><div id="fig-mc-channel-join-format">
-<figure id="figure-5">
+<figure id="figure-6">
           <div class="alignLeft art-text artwork" id="section-11.3-5.1">
 <pre>
 MC_CHANNEL_JOIN Frame {
@@ -1713,7 +1760,7 @@ MC_CHANNEL_JOIN Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-5" class="selfRef">Figure 5</a>:
+<figcaption><a href="#figure-6" class="selfRef">Figure 6</a>:
 <a href="#name-mc_channel_join-frame-forma" class="selfRef">MC_CHANNEL_JOIN Frame Format</a>
           </figcaption></figure>
 </div>
@@ -1731,9 +1778,9 @@ If the client does not join, it MUST send a MC_CLIENT_CHANNEL_STATE with "Declin
 <p id="section-11.4-2">If the client has already left or declined to join the channel, the MC_CHANNEL_LEAVE is ignored.<a href="#section-11.4-2" class="pilcrow">¶</a></p>
 <p id="section-11.4-3">If a MC_CHANNEL_JOIN or an MC_CHANNEL_LEAVE with the same Channel ID and a higher MC_CLIENT_CHANNEL_STATE Sequence number has previously been received, the MC_CHANNEL_LEAVE is ignored.<a href="#section-11.4-3" class="pilcrow">¶</a></p>
 <p id="section-11.4-4">Otherwise, the client MUST leave the channel and send a new MC_CLIENT_CHANNEL_STATE frame with reason Left as requested by server.<a href="#section-11.4-4" class="pilcrow">¶</a></p>
-<p id="section-11.4-5">MC_CHANNEL_LEAVE frames are formatted as shown in <a href="#fig-mc-channel-leave-format" class="xref">Figure 6</a>.<a href="#section-11.4-5" class="pilcrow">¶</a></p>
+<p id="section-11.4-5">MC_CHANNEL_LEAVE frames are formatted as shown in <a href="#fig-mc-channel-leave-format" class="xref">Figure 7</a>.<a href="#section-11.4-5" class="pilcrow">¶</a></p>
 <span id="name-mc_channel_leave-frame-form"></span><div id="fig-mc-channel-leave-format">
-<figure id="figure-6">
+<figure id="figure-7">
           <div class="alignLeft art-text artwork" id="section-11.4-6.1">
 <pre>
 MC_CHANNEL_LEAVE Frame {
@@ -1745,7 +1792,7 @@ MC_CHANNEL_LEAVE Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-6" class="selfRef">Figure 6</a>:
+<figcaption><a href="#figure-7" class="selfRef">Figure 7</a>:
 <a href="#name-mc_channel_leave-frame-form" class="selfRef">MC_CHANNEL_LEAVE Frame Format</a>
           </figcaption></figure>
 </div>
@@ -1758,9 +1805,9 @@ MC_CHANNEL_LEAVE Frame {
 <a href="#section-11.5" class="section-number selfRef">11.5. </a><a href="#name-mc_channel_integrity" class="section-name selfRef">MC_CHANNEL_INTEGRITY</a>
         </h3>
 <p id="section-11.5-1">MC_CHANNEL_INTEGRITY frames are sent from server to client and are used to convey packet hashes for validating the integrity of packets received over the multicast channel as described in <a href="#packet-hashes" class="xref">Section 7.1</a>.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
-<p id="section-11.5-2">MC_CHANNEL_INTEGRITY frames are formatted as shown in <a href="#fig-mc-channel-integrity-format" class="xref">Figure 7</a>.<a href="#section-11.5-2" class="pilcrow">¶</a></p>
+<p id="section-11.5-2">MC_CHANNEL_INTEGRITY frames are formatted as shown in <a href="#fig-mc-channel-integrity-format" class="xref">Figure 8</a>.<a href="#section-11.5-2" class="pilcrow">¶</a></p>
 <span id="name-mc_channel_integrity-frame-"></span><div id="fig-mc-channel-integrity-format">
-<figure id="figure-7">
+<figure id="figure-8">
           <div class="alignLeft art-text artwork" id="section-11.5-3.1">
 <pre>
 MC_CHANNEL_INTEGRITY Frame {
@@ -1773,7 +1820,7 @@ MC_CHANNEL_INTEGRITY Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-7" class="selfRef">Figure 7</a>:
+<figcaption><a href="#figure-8" class="selfRef">Figure 8</a>:
 <a href="#name-mc_channel_integrity-frame-" class="selfRef">MC_CHANNEL_INTEGRITY Frame Format</a>
           </figcaption></figure>
 </div>
@@ -1791,9 +1838,9 @@ Subsequent hashes refer to the packets for the channel with packet numbers incre
         </h3>
 <p id="section-11.6-1">The MC_CHANNEL_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_CHANNEL_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.<a href="#section-11.6-1" class="pilcrow">¶</a></p>
 <p id="section-11.6-2">(TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of <span>[<a href="#I-D.draft-ietf-quic-multipath" class="xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel id as the packet number space?  at 2022-05 they're identical.)<a href="#section-11.6-2" class="pilcrow">¶</a></p>
-<p id="section-11.6-3">MC_CHANNEL_ACK frames are formatted as shown in <a href="#fig-mc-channel-ack-format" class="xref">Figure 8</a>.<a href="#section-11.6-3" class="pilcrow">¶</a></p>
+<p id="section-11.6-3">MC_CHANNEL_ACK frames are formatted as shown in <a href="#fig-mc-channel-ack-format" class="xref">Figure 9</a>.<a href="#section-11.6-3" class="pilcrow">¶</a></p>
 <span id="name-mc_channel_ack-frame-format"></span><div id="fig-mc-channel-ack-format">
-<figure id="figure-8">
+<figure id="figure-9">
           <div class="alignLeft art-text artwork" id="section-11.6-4.1">
 <pre>
 MC_CHANNEL_ACK Frame {
@@ -1809,7 +1856,7 @@ MC_CHANNEL_ACK Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-8" class="selfRef">Figure 8</a>:
+<figcaption><a href="#figure-9" class="selfRef">Figure 9</a>:
 <a href="#name-mc_channel_ack-frame-format" class="selfRef">MC_CHANNEL_ACK Frame Format</a>
           </figcaption></figure>
 </div>
@@ -1821,9 +1868,9 @@ MC_CHANNEL_ACK Frame {
 <a href="#section-11.7" class="section-number selfRef">11.7. </a><a href="#name-mc_path_response" class="section-name selfRef">MC_PATH_RESPONSE</a>
         </h3>
 <p id="section-11.7-1">MC_PATH_RESPONSE frames are sent from a client to a server in the unicast connection in response to a PATH_CHALLENGE received in a channel.  Like PATH_RESPONSE but includes a channel id.<a href="#section-11.7-1" class="pilcrow">¶</a></p>
-<p id="section-11.7-2">MC_PATH_RESPONSE frames are formatted as shown in <a href="#fig-mc-path-response-format" class="xref">Figure 9</a>.<a href="#section-11.7-2" class="pilcrow">¶</a></p>
+<p id="section-11.7-2">MC_PATH_RESPONSE frames are formatted as shown in <a href="#fig-mc-path-response-format" class="xref">Figure 10</a>.<a href="#section-11.7-2" class="pilcrow">¶</a></p>
 <span id="name-mc_path_response-frame-form"></span><div id="fig-mc-path-response-format">
-<figure id="figure-9">
+<figure id="figure-10">
           <div class="alignLeft art-text artwork" id="section-11.7-3.1">
 <pre>
 MC_PATH_RESPONSE Frame {
@@ -1834,7 +1881,7 @@ MC_PATH_RESPONSE Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-9" class="selfRef">Figure 9</a>:
+<figcaption><a href="#figure-10" class="selfRef">Figure 10</a>:
 <a href="#name-mc_path_response-frame-form" class="selfRef">MC_PATH_RESPONSE Frame Format</a>
           </figcaption></figure>
 </div>
@@ -1845,9 +1892,9 @@ MC_PATH_RESPONSE Frame {
         <h3 id="name-mc_client_limits">
 <a href="#section-11.8" class="section-number selfRef">11.8. </a><a href="#name-mc_client_limits" class="section-name selfRef">MC_CLIENT_LIMITS</a>
         </h3>
-<p id="section-11.8-1">MC_CLIENT_LIMITS frames are formatted as shown in <a href="#fig-mc-client-limits-format" class="xref">Figure 10</a>.<a href="#section-11.8-1" class="pilcrow">¶</a></p>
+<p id="section-11.8-1">MC_CLIENT_LIMITS frames are formatted as shown in <a href="#fig-mc-client-limits-format" class="xref">Figure 11</a>.<a href="#section-11.8-1" class="pilcrow">¶</a></p>
 <span id="name-mc_client_limits-frame-form"></span><div id="fig-mc-client-limits-format">
-<figure id="figure-10">
+<figure id="figure-11">
           <div class="alignLeft art-text artwork" id="section-11.8-2.1">
 <pre>
 MC_CLIENT_LIMITS Frame {
@@ -1860,7 +1907,7 @@ MC_CLIENT_LIMITS Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-10" class="selfRef">Figure 10</a>:
+<figcaption><a href="#figure-11" class="selfRef">Figure 11</a>:
 <a href="#name-mc_client_limits-frame-form" class="selfRef">MC_CLIENT_LIMITS Frame Format</a>
           </figcaption></figure>
 </div>
@@ -1884,9 +1931,9 @@ Newer frames override older ones.<a href="#section-11.8-3" class="pilcrow">¶</a
         <h3 id="name-mc_channel_retire">
 <a href="#section-11.9" class="section-number selfRef">11.9. </a><a href="#name-mc_channel_retire" class="section-name selfRef">MC_CHANNEL_RETIRE</a>
         </h3>
-<p id="section-11.9-1">MC_CHANNEL_RETIRE frames are formatted as shown in <a href="#fig-mc-channel-retire-format" class="xref">Figure 11</a>.<a href="#section-11.9-1" class="pilcrow">¶</a></p>
+<p id="section-11.9-1">MC_CHANNEL_RETIRE frames are formatted as shown in <a href="#fig-mc-channel-retire-format" class="xref">Figure 12</a>.<a href="#section-11.9-1" class="pilcrow">¶</a></p>
 <span id="name-mc_channel_retire-frame-for"></span><div id="fig-mc-channel-retire-format">
-<figure id="figure-11">
+<figure id="figure-12">
           <div class="alignLeft art-text artwork" id="section-11.9-2.1">
 <pre>
 MC_CHANNEL_RETIRE Frame {
@@ -1897,7 +1944,7 @@ MC_CHANNEL_RETIRE Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-11" class="selfRef">Figure 11</a>:
+<figcaption><a href="#figure-12" class="selfRef">Figure 12</a>:
 <a href="#name-mc_channel_retire-frame-for" class="selfRef">MC_CHANNEL_RETIRE Frame Format</a>
           </figcaption></figure>
 </div>
@@ -1915,9 +1962,9 @@ If After Packet Number is nonzero, the channel will be retired after receiving t
 <p id="section-11.10-1">MC_CLIENT_CHANNEL_STATE frames are sent from client to server to report changes in the client's channel state.
 Each time the channel state changes, the Client Channel State Sequence number is increased by one.
 It is a state change to the channel if the server requests that a client join a channel and the client declines the join, even though no join occurs on the network.<a href="#section-11.10-1" class="pilcrow">¶</a></p>
-<p id="section-11.10-2">MC_CLIENT_CHANNEL_STATE frames are formatted as shown in <a href="#fig-mc-client-channel-state-format" class="xref">Figure 12</a>.<a href="#section-11.10-2" class="pilcrow">¶</a></p>
+<p id="section-11.10-2">MC_CLIENT_CHANNEL_STATE frames are formatted as shown in <a href="#fig-mc-client-channel-state-format" class="xref">Figure 13</a>.<a href="#section-11.10-2" class="pilcrow">¶</a></p>
 <span id="name-mc_client_channel_state-fra"></span><div id="fig-mc-client-channel-state-format">
-<figure id="figure-12">
+<figure id="figure-13">
           <div class="alignLeft art-text artwork" id="section-11.10-3.1">
 <pre>
 MC_CLIENT_CHANNEL_STATE Frame {
@@ -1930,7 +1977,7 @@ MC_CLIENT_CHANNEL_STATE Frame {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-12" class="selfRef">Figure 12</a>:
+<figcaption><a href="#figure-13" class="selfRef">Figure 13</a>:
 <a href="#name-mc_client_channel_state-fra" class="selfRef">MC_CLIENT_CHANNEL_STATE Frame Format</a>
           </figcaption></figure>
 </div>
