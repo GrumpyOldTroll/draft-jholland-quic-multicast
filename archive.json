@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-06-05T00:34:33.543924+00:00",
+  "timestamp": "2022-06-09T00:31:04.187882+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -1041,7 +1041,7 @@
       "id": "I_kwDOG6NyZs5KIqL_",
       "title": "Add flow diagrams",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/51",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "GrumpyOldTroll",
       "authorAssociation": "OWNER",
       "assignees": [
@@ -1050,8 +1050,8 @@
       "labels": [],
       "body": "Flow diagrams like these should show the important parts for channel use examples and who they're sent by:\r\n- https://www.rfc-editor.org/rfc/rfc9000#fig-auth-cid\r\n- https://www.rfc-editor.org/rfc/rfc9000#figure-5\r\n",
       "createdAt": "2022-05-20T23:23:42Z",
-      "updatedAt": "2022-05-23T16:35:12Z",
-      "closedAt": null,
+      "updatedAt": "2022-06-08T18:28:45Z",
+      "closedAt": "2022-06-08T18:28:45Z",
       "comments": []
     },
     {
@@ -1132,9 +1132,9 @@
       "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
-      "body": "Depending on size might also be a separate ID.\r\n- Include reference to CBACC\r\n- Include fan out/ deployment strategies\r\n- Graceful degradation (#44)\r\n- Pool/ Channel management on the server side\r\n- ...",
+      "body": "Depending on size might also be a separate ID.\r\n- Include reference to CBACC\r\n- Include fan out/ deployment strategies\r\n- Graceful degradation (#44)\r\n- Pool/ Channel management on the server side\r\n- Reusing the same S,G for multiple channels might have implications for the rate on the network\r\n- ...",
       "createdAt": "2022-05-25T18:28:29Z",
-      "updatedAt": "2022-05-29T22:29:08Z",
+      "updatedAt": "2022-06-08T18:57:59Z",
       "closedAt": null,
       "comments": []
     },
@@ -1170,6 +1170,50 @@
       "createdAt": "2022-06-03T21:44:41Z",
       "updatedAt": "2022-06-03T21:44:41Z",
       "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 64,
+      "id": "I_kwDOG6NyZs5LaMW-",
+      "title": "Ordering of Announce, properties and Join",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/64",
+      "state": "OPEN",
+      "author": "MaxF12",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "MaxF12"
+      ],
+      "labels": [],
+      "body": "Client's have no way to communicate to the server if a properties frame arrives after an announce frame. In this case, it might take them until they receive a join for the server to notice that the properties are missing. ",
+      "createdAt": "2022-06-08T18:50:37Z",
+      "updatedAt": "2022-06-08T22:22:15Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Solution: Have announce frame include all properties as well, remove all properties except key from properties frame making it exclusively for key updates. Add text that when there are significant changes to any of the (now immutable) properties, a new channel should be created instead of updating the old one. ",
+          "createdAt": "2022-06-08T22:22:13Z",
+          "updatedAt": "2022-06-08T22:22:13Z"
+        }
+      ]
+    },
+    {
+      "number": 65,
+      "id": "I_kwDOG6NyZs5LbBLy",
+      "title": "Move everything other than key to Announce frame",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/65",
+      "state": "CLOSED",
+      "author": "MaxF12",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "MaxF12"
+      ],
+      "labels": [],
+      "body": "",
+      "createdAt": "2022-06-08T22:20:55Z",
+      "updatedAt": "2022-06-08T22:21:07Z",
+      "closedAt": "2022-06-08T22:21:07Z",
       "comments": []
     }
   ],
@@ -2558,24 +2602,26 @@
       "id": "PR_kwDOG6NyZs44Tytw",
       "title": "First version of flow diagram",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/59",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "MaxF12",
       "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "Will maybe require some changes depending on #58.\r\n\r\nNot sure if its best to always include the ID and full frame names (makes it unnecessarily wide) \r\n\r\nCloses #51 ",
       "createdAt": "2022-05-23T17:10:14Z",
-      "updatedAt": "2022-05-28T15:12:32Z",
+      "updatedAt": "2022-06-08T18:28:45Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "6f5cfbea66c732c61a35765e41f9c3591b43f348",
       "headRepository": "MaxF12/draft-jholland-quic-multicast",
       "headRefName": "issue-51",
       "headRefOid": "0f674fce2b408598b471d6c76682f2261000a507",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2022-06-08T18:28:45Z",
+      "mergedAt": "2022-06-08T18:28:44Z",
+      "mergedBy": "GrumpyOldTroll",
+      "mergeCommit": {
+        "oid": "3b57d4f00e95419d4c976bc2081898c1f3423cb0"
+      },
       "comments": [
         {
           "author": "MaxF12",
@@ -2613,13 +2659,13 @@
       "labels": [],
       "body": "Closes #46, #43, and #45 ",
       "createdAt": "2022-05-25T16:52:54Z",
-      "updatedAt": "2022-06-03T21:46:50Z",
+      "updatedAt": "2022-06-08T22:32:34Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "6f5cfbea66c732c61a35765e41f9c3591b43f348",
       "headRepository": "MaxF12/draft-jholland-quic-multicast",
       "headRefName": "mwelzl-comments",
-      "headRefOid": "affd7e04545bd270b6d6af7d062785b0ad3b2123",
+      "headRefOid": "d88143a80e37b2649208c83a7ce8a040e737942e",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,
