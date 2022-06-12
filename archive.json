@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-06-09T00:31:04.187882+00:00",
+  "timestamp": "2022-06-12T00:30:28.824214+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -1186,7 +1186,7 @@
       "labels": [],
       "body": "Client's have no way to communicate to the server if a properties frame arrives after an announce frame. In this case, it might take them until they receive a join for the server to notice that the properties are missing. ",
       "createdAt": "2022-06-08T18:50:37Z",
-      "updatedAt": "2022-06-08T22:22:15Z",
+      "updatedAt": "2022-06-10T20:51:18Z",
       "closedAt": null,
       "comments": [
         {
@@ -1195,6 +1195,20 @@
           "body": "Solution: Have announce frame include all properties as well, remove all properties except key from properties frame making it exclusively for key updates. Add text that when there are significant changes to any of the (now immutable) properties, a new channel should be created instead of updating the old one. ",
           "createdAt": "2022-06-08T22:22:13Z",
           "updatedAt": "2022-06-08T22:22:13Z"
+        },
+        {
+          "author": "squarooticus",
+          "authorAssociation": "NONE",
+          "body": "There's a related race condition in properties frames themselves:\r\n\r\n> Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server. The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.\r\n\r\nIf two are intentionally sent in sequence but the second is received and processed first, the first will never be processed and packets in that range may not be decryptable.",
+          "createdAt": "2022-06-10T18:57:58Z",
+          "updatedAt": "2022-06-10T18:57:58Z"
+        },
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "How about we say say there can\u2019t be any gaps in the sequence numbers then the client would one is missing and could either buffer the higher one until it is received or retroactively apply the key of the lower one once it arrives.",
+          "createdAt": "2022-06-10T20:51:18Z",
+          "updatedAt": "2022-06-10T20:51:18Z"
         }
       ]
     },
@@ -2659,7 +2673,7 @@
       "labels": [],
       "body": "Closes #46, #43, and #45 ",
       "createdAt": "2022-05-25T16:52:54Z",
-      "updatedAt": "2022-06-08T22:32:34Z",
+      "updatedAt": "2022-06-10T14:58:10Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "6f5cfbea66c732c61a35765e41f9c3591b43f348",
@@ -2717,6 +2731,26 @@
               "body": "There is always now an Until Packet Number, but I think the value 0 could be used here to indicate indefinite termination.",
               "createdAt": "2022-05-27T14:44:09Z",
               "updatedAt": "2022-05-27T14:44:25Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs47x018",
+          "commit": {
+            "abbreviatedOid": "d88143a"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-10T14:52:06Z",
+          "updatedAt": "2022-06-10T14:58:10Z",
+          "comments": [
+            {
+              "originalPosition": 13,
+              "body": "Better, but there's still something here bothering me.\r\n\r\nHow about:\r\n\r\n~~~\r\nStream frames for server-initiated streams can be sent on multicast\r\nchannels as well as the unicast connection.  Doing so is only possible\r\nwith stream data that's identical for the same offset and stream ID\r\nacross all receivers on that channel.   Stream data for the same offset\r\nmight also be sent on the unicast channel or on other multicast\r\nchannels.  As described in Section 2.2 of {{RFC9000}}, stream data\r\nreceived multiple times for the same offset MUST be identical;\r\nif it's not identical it MAY be treated as a connection error of type\r\nPROTOCOL_VIOLATION.\r\n~~~\r\n\r\nMaybe that's too wordy, not sure.  The main issues I'm trying to make different in this text:\r\n- I think it's wrong to say it's exactly as in section 2.2 of 9000 because we do differ on flow control, which I think we cover in the next section but also has a MUST in 2.2 of 9000.\r\n- The \"however\" sentence seems strange because handling it when you get the same stream data is already required in 9000 (but is phrased as \"received multiple times\" instead of \"received on multiple channels\").\r\n",
+              "createdAt": "2022-06-10T14:52:06Z",
+              "updatedAt": "2022-06-10T14:58:10Z"
             }
           ]
         }
