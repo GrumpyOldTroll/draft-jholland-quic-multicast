@@ -225,7 +225,6 @@ The client sends back information about how it has responded to the server's req
 MC_CLIENT_CHANNEL_STATE frames are only sent for channels after the server has requested the client to join the channel, and are thereafter sent any time the state changes.
 
 Clients that receive and decode data on a multicast channel send acknowledgements for the data on the unicast connection using MC_CHANNEL_ACK ({{channel-ack-frame}}) frames.
-Channels also will periodically contain PATH_CHALLENGE ({{RFC9000}} Section 19.17) frames, which cause clients to send MC_PATH_RESPONSE ({{path-response-frame}}) frames on the unicast connection in addition to their MC_CHANNEL_ACK frames.
 
 A server can determine if a client can receive packets on a multicast channel if it receives MC_CHANNEL_ACK frames associated with that channel.
 As such, it is in general up to the server to decide on the time after which it deems a client to be unable to receive packets on a given channel and take appropriate steps, e.g. sending a MC_CHANNEL_LEAVE frame to the client.
@@ -510,22 +509,6 @@ MC_CHANNEL_ACK Frame {
 ~~~
 {: #fig-mc-channel-ack-format title="MC_CHANNEL_ACK Frame Format"}
 
-## MC_PATH_RESPONSE {#path-response-frame}
-
-MC_PATH_RESPONSE frames are sent from a client to a server in the unicast connection in response to a PATH_CHALLENGE received in a channel.  Like PATH_RESPONSE but includes a channel id.
-
-MC_PATH_RESPONSE frames are formatted as shown in {{fig-mc-path-response-format}}.
-
-~~~
-MC_PATH_RESPONSE Frame {
-  Type (i) = TBD-08 (experiments use 0xffe38008),
-  ID Length (8),
-  Channel ID (8..160),
-  Data (64)
-}
-~~~
-{: #fig-mc-path-response-format title="MC_PATH_RESPONSE Frame Format"}
-
 ## MC_CLIENT_LIMITS {#client-limits-frame}
 
 MC_CLIENT_LIMITS frames are formatted as shown in {{fig-mc-client-limits-format}}.
@@ -650,7 +633,6 @@ Permitted:
  - RESET_STREAM Frames ({{RFC9000}} Section 19.4)
  - STREAM Frames ({{RFC9000}} Section 19.8)
  - DATAGRAM Frames (both types) ({{RFC9221}} Section 4)
- - PATH_CHALLENGE Frames ({{RFC9000}} Section 19.17)
  - MC_CHANNEL_KEY
  - MC_CHANNEL_LEAVE (however, join must come over unicast?)
  - MC_CHANNEL_INTEGRITY (not for this channel, only for another)
@@ -669,14 +651,15 @@ Not permitted:
    - 19.12. DATA_BLOCKED Frames
    - 19.13. STREAM_DATA_BLOCKED Frames
    - 19.14. STREAMS_BLOCKED Frames
- - Channel ID Migration can't use the "prior to" concept, not 0-starting
+ - Channel ID Migration can't use the "prior to" concept within a channel, not 0-starting
    - 19.15. NEW_CONNECTION_ID Frames
    - 19.16. RETIRE_CONNECTION_ID Frames
- - 19.18. PATH_RESPONSE Frames
+ - Channels don't have the same kind of path validation, as there's a unicast anchor with acks for the multicast packets:
+   - 19.17. PATH_CHALLENGE Frames
+   - 19.18. PATH_RESPONSE Frames
  - 19.19. CONNECTION_CLOSE Frames
  - 19.20. HANDSHAKE_DONE Frames
  - MC_CHANNEL_ANNOUNCE
- - MC_PATH_RESPONSE
  - MC_CLIENT_LIMITS
  - MC_CLIENT_CHANNEL_STATE
  - MC_CHANNEL_ACK
