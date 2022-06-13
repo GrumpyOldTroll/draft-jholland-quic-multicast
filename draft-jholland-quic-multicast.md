@@ -233,6 +233,7 @@ Clients should therefore begin with a high initial_max_streams_uni or send an ea
 Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.
 
 The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in Section 2.2 of {{RFC9000}}, stream data received multiple times for the same offset MUST be identical, even across multiple channels; if it's not identical it MAY be treated as a connection error of type PROTOCOL_VIOLATION.
+
 # Flow Control {#flow-control}
 
 The values used for unicast flow control cannot be used to limit the transmission rate of a multicast channel because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that channels responded to each client's limits.
@@ -240,7 +241,7 @@ The values used for unicast flow control cannot be used to limit the transmissio
 Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
 The server advertises the expected maxima of the values that can contribute toward client resource limits within a channel in MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames.
 
-If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CLIENT_CHANNEL_STATE_CHANGE ({{client-channel-state-frame}}) with "Declined Join" and reason "Property Violation".
+If the server asks the client to join a channel that would flexceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CLIENT_CHANNEL_STATE_CHANGE ({{client-channel-state-frame}}) with "Declined Join" and reason "Property Violation".
 If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Property Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
 If the actual contents sent in the channel exceed the advertised limits from the MC_CHANNEL_PROPERTY, clients SHOULD leave the stream with a PROTOCOL_ERROR/Limit Violated state change.
 
