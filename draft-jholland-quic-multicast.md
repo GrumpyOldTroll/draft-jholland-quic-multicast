@@ -302,7 +302,12 @@ MC_CHANNEL_ANNOUNCE Frame {
   Header Key Length (i),
   Header Key (..),
   AEAD Algorithm (16),
-  Integrity Hash Algorithm (16)
+  Integrity Hash Algorithm (16),
+  AEAD Key Length (i),
+  AEAD Key (..),
+  Max Rate (i),
+  Max Idle Time (i),
+  ACK Bundle Size (i)
 }
 ~~~
 {: #fig-mc-channel-announce title="MC_CHANNEL_ANNOUNCE Frame Format"}
@@ -327,6 +332,13 @@ MC_CHANNEL_ANNOUNCE frames contain the following fields:
       - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
       - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
       - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
+  * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm from the MC_CHANNEL_ANNOUNCE frame for this channel.
+  * Key: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}, with length given by Key Length.
+    To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
+  * Max Rate: The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
+  * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
+  * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
+
 
 A client MUST NOT use the channel ID included in the MC_CHANNEL_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
 As the server knows which connection IDs are in use by the client, it MUST wait with the sending of a MC_CHANNEL_JOIN frame until the channel ID associated with it has been retired by the client.
@@ -337,37 +349,34 @@ A server SHOULD send an MC_CHANNEL_ANNOUNCE frame for a channel before sending a
 
 ## MC_CHANNEL_PROPERTIES {#channel-properties-frame}
 
-An MC_CHANNEL_PROPERTIES frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
-The MC_CHANNEL_PROPERTIES frame consists of the properties of a channel that are mutable and might change during the course of its lifetime.
+An MC_CHANNEL_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
+The MC_CHANNEL_KEY frame contains updates to
 
-A server can send an update to a prior MC_CHANNEL_PROPERTIES frame with a new sequence number increased by one.
+A server can send an update to a prior MC_CHANNEL_KEY frame with a new sequence number increased by one.
 
-It is RECOMMENDED that servers send regular updates to the MC_CHANNEL_PROPERTIES.
+It is RECOMMENDED that servers send regular key updates.
 
-MC_CHANNEL_PROPERTIES frames are formatted as shown in {{fig-mc-channel-properties-format}}.
+MC_CHANNEL_KEY frames are formatted as shown in {{fig-mc-channel-key-format}}.
 
 ~~~
-MC_CHANNEL_PROPERTIES Frame {
+MC_CHANNEL_KEY Frame {
   Type (i) = TBD-01 (experiments use 0xff3e801),
   ID Length (8),
   Channel ID (8..160),
-  Properties Sequence Number (i),
+  Key Sequence Number (i),
   From Packet Number (i),
   Key Length (i),
-  Key (..),
-  Max Rate (i),
-  Max Idle Time (i),
-  ACK Bundle Size (i)
+  Key (..)
 }
 ~~~
-{: #fig-mc-channel-properties-format title="MC_CHANNEL_PROPERTIES Frame Format"}
+{: #fig-mc-channel-key-format title="MC_CHANNEL_KEY Frame Format"}
 
 
 MC_CHANNEL_PROPERTIES frames contain the following fields:
 
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID for the channel associated with this frame.
-  * Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.
+  * Key Sequence Number: Increases by 1 each time the key for the channel is changed by the server.  The client tracks the sequence number of the MC_CHANNEL_KEY frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher. If there is a gap in sequence numbers due to reordering or retransmission of packets, the client MUST apply the key contained in such frames as if they arrived in order.
   * From Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_CHANNEL_PROPERTIES frame with a higher From Packet Number.
   * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm from the MC_CHANNEL_ANNOUNCE frame for this channel.
   * Key: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}, with length given by Key Length.
