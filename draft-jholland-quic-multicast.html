@@ -1032,7 +1032,7 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Holland, et al.</td>
-<td class="center">Expires 10 December 2022</td>
+<td class="center">Expires 15 December 2022</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1045,12 +1045,12 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2022-06-08" class="published">8 June 2022</time>
+<time datetime="2022-06-13" class="published">13 June 2022</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2022-12-10">10 December 2022</time></dd>
+<dd class="expires"><time datetime="2022-12-15">15 December 2022</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1106,7 +1106,7 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 December 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 15 December 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1393,12 +1393,13 @@ multicast_client_params {
 <p id="section-4.1-2">The server asks the client to join channels with MC_CHANNEL_JOIN (<a href="#channel-join-frame" class="xref">Section 11.3</a>) frames and to leave channels with MC_CHANNEL_LEAVE (<a href="#channel-leave-frame" class="xref">Section 11.4</a>) frames.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 <p id="section-4.1-3">The server uses MC_CHANNEL_ANNOUNCE (<a href="#channel-announce-frame" class="xref">Section 11.1</a>) and MC_CHANNEL_PROPERTIES (<a href="#channel-properties-frame" class="xref">Section 11.2</a>) frames before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the keys necessary to decode packets in the channel.
 <a href="#fig-client-channel-states" class="xref">Figure 2</a> shows the states a channel has from the clients point of view.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
-<p id="section-4.1-4">When the server has asked the client to join a channel, it also sends MC_CHANNEL_INTEGRITY frames (<a href="#channel-integrity-frame" class="xref">Section 11.5</a>) to enable the client to verify packet integrity before processing the packet.
-A client MUST NOT decode packets for a channel for which it has not received an applicable set of MC_CHANNEL_PROPERTIES (<a href="#channel-properties-frame" class="xref">Section 11.2</a>) frames containing the full set of data required, or for which it has not received a matching packet hash in an MC_CHANNEL_INTEGRITY (<a href="#channel-integrity-frame" class="xref">Section 11.5</a>) frame.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
-<p id="section-4.1-5">The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_CLIENT_LIMITS (<a href="#client-limits-frame" class="xref">Section 11.8</a>) frame the server received.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">Joining a channel is optional for clients. If a client decides to not join after being asked to do so, it can indicate this decision by sending an MC_CLIENT_CHANNEL_STATE (<a href="#client-channel-state-frame" class="xref">Section 11.10</a>) frame with state Declined Join.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.1-5">When the server has asked the client to join a channel, it also sends MC_CHANNEL_INTEGRITY frames (<a href="#channel-integrity-frame" class="xref">Section 11.5</a>) to enable the client to verify packet integrity before processing the packet.
+A client MUST NOT decode packets for a channel for which it has not received an applicable set of MC_CHANNEL_PROPERTIES (<a href="#channel-properties-frame" class="xref">Section 11.2</a>) frames containing the full set of data required, or for which it has not received a matching packet hash in an MC_CHANNEL_INTEGRITY (<a href="#channel-integrity-frame" class="xref">Section 11.5</a>) frame.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+<p id="section-4.1-6">The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_CLIENT_LIMITS (<a href="#client-limits-frame" class="xref">Section 11.8</a>) frame the server received.<a href="#section-4.1-6" class="pilcrow">¶</a></p>
 <span id="name-states-a-channel-from-the-c"></span><div id="fig-client-channel-states">
 <figure id="figure-2">
-          <div class="alignLeft art-text artwork" id="section-4.1-6.1">
+          <div class="alignLeft art-text artwork" id="section-4.1-7.1">
 <pre>
                                                    o
                                                    | Receive MC_CHANNEL_ANNOUNCE
@@ -1430,10 +1431,10 @@ A client MUST NOT decode packets for a channel for which it has not received an 
 <a href="#name-states-a-channel-from-the-c" class="selfRef">States a channel from the clients point of view.</a>
           </figcaption></figure>
 </div>
-<p id="section-4.1-7"><a href="#fig-frame-exchange" class="xref">Figure 3</a> shows the frames that are being exchanged over the lifetime of an example channel.<a href="#section-4.1-7" class="pilcrow">¶</a></p>
+<p id="section-4.1-8"><a href="#fig-frame-exchange" class="xref">Figure 3</a> shows the frames that are being exchanged over the lifetime of an example channel.<a href="#section-4.1-8" class="pilcrow">¶</a></p>
 <span id="name-example-flow-of-frames-for-"></span><div id="fig-frame-exchange">
 <figure id="figure-3">
-          <div class="alignLeft art-text artwork" id="section-4.1-8.1">
+          <div class="alignLeft art-text artwork" id="section-4.1-9.1">
 <pre>
 Client                                                                      Server
 
@@ -1503,6 +1504,7 @@ The different path can be either the unicast connection or another multicast cha
 <p id="section-4.4-5">Since clients can join later than a channel began, it is RECOMMENDED that clients supporting the multicast extensions to QUIC be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream id count might have been increasing for a long time.
 Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see Section 19.11 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) with a high limit.
 Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
+<p id="section-4.4-6">The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in Section 2.2 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>, stream data received multiple times for the same offset MUST be identical, even across multiple channels; if it's not identical it MAY be treated as a connection error of type PROTOCOL_VIOLATION.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1515,7 +1517,7 @@ Clients MAY use the maximum 2^60 for this high initial limit, but the specific c
 <p id="section-5-1">The values used for unicast flow control cannot be used to limit the transmission rate of a multicast channel because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that channels responded to each client's limits.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS (<a href="#client-limits-frame" class="xref">Section 11.8</a>) frames and their initial values from the transport parameter (<a href="#transport-parameter" class="xref">Section 3</a>).
 The server advertises the expected maxima of the values that can contribute toward client resource limits within a channel in MC_CHANNEL_PROPERTIES (<a href="#channel-properties-frame" class="xref">Section 11.2</a>) frames.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<p id="section-5-3">If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CHANNEL_STATE_CHANGE with "Declined Join" and reason "Property Violation".
+<p id="section-5-3">If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CLIENT_CHANNEL_STATE_CHANGE (<a href="#client-channel-state-frame" class="xref">Section 11.10</a>) with "Declined Join" and reason "Property Violation".
 If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Property Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
 If the actual contents sent in the channel exceed the advertised limits from the MC_CHANNEL_PROPERTY, clients SHOULD leave the stream with a PROTOCOL_ERROR/Limit Violated state change.<a href="#section-5-3" class="pilcrow">¶</a></p>
 </section>
@@ -1684,7 +1686,7 @@ As the server knows which connection IDs are in use by the client, it MUST wait 
 <p id="section-11.2-1">An MC_CHANNEL_PROPERTIES frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
 The MC_CHANNEL_PROPERTIES frame consists of the properties of a channel that are mutable and might change during the course of its lifetime.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 <p id="section-11.2-2">A server can send an update to a prior MC_CHANNEL_PROPERTIES frame with a new sequence number increased by one.<a href="#section-11.2-2" class="pilcrow">¶</a></p>
-<p id="section-11.2-3">It is RECOMMENDED that servers set an Until Packet Number and send regular updates to the MC_CHANNEL_PROPERTIES before the packet numbers in the channel exceed that value.<a href="#section-11.2-3" class="pilcrow">¶</a></p>
+<p id="section-11.2-3">It is RECOMMENDED that servers send regular updates to the MC_CHANNEL_PROPERTIES.<a href="#section-11.2-3" class="pilcrow">¶</a></p>
 <p id="section-11.2-4">MC_CHANNEL_PROPERTIES frames are formatted as shown in <a href="#fig-mc-channel-properties-format" class="xref">Figure 5</a>.<a href="#section-11.2-4" class="pilcrow">¶</a></p>
 <span id="name-mc_channel_properties-frame"></span><div id="fig-mc-channel-properties-format">
 <figure id="figure-5">
@@ -1696,7 +1698,6 @@ MC_CHANNEL_PROPERTIES Frame {
   Channel ID (8..160),
   Properties Sequence Number (i),
   From Packet Number (i),
-  Until Packet Number (i),
   Key Length (i),
   Key (..),
   Max Rate (i),
@@ -1717,7 +1718,7 @@ MC_CHANNEL_PROPERTIES Frame {
 </li>
           <li class="normal" id="section-11.2-7.3">Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.<a href="#section-11.2-7.3" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-11.2-7.4">From Packet Number, Until Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is zero it indicates the current property values for this channel have no expiration (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any previously received [From,Until] range, it has no applicable channel properties and MUST be dropped.<a href="#section-11.2-7.4" class="pilcrow">¶</a>
+          <li class="normal" id="section-11.2-7.4">From Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_CHANNEL_PROPERTIES frame with a higher From Packet Number.<a href="#section-11.2-7.4" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-11.2-7.5">Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm from the MC_CHANNEL_ANNOUNCE frame for this channel.<a href="#section-11.2-7.5" class="pilcrow">¶</a>
 </li>
@@ -1731,10 +1732,9 @@ To maintain forward secrecy and prevent malicious clients from decrypting packet
           <li class="normal" id="section-11.2-7.9">ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.<a href="#section-11.2-7.9" class="pilcrow">¶</a>
 </li>
         </ul>
-<p id="section-11.2-8">From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) the 1-RTT packets received over which these values are applicable.<a href="#section-11.2-8" class="pilcrow">¶</a></p>
-<p id="section-11.2-9">A From Packet Number without an Until Packet Number has an unspecified termination.<a href="#section-11.2-9" class="pilcrow">¶</a></p>
-<p id="section-11.2-10">If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to one below the new From Packet Number for all the changed properties.<a href="#section-11.2-10" class="pilcrow">¶</a></p>
-<p id="section-11.2-11">The properties of a channel MAY change during its lifetime. As such, a server SHOULD NOT send properties for channels except those the client has joined or will be imminently asked to join.<a href="#section-11.2-11" class="pilcrow">¶</a></p>
+<p id="section-11.2-8">The From Packet Number is used to indicate the starting packet number (Section 17.1 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) of the 1-RTT packets received for which the values contained in a MC_CHANNELS_PROPERTIES frame are applicable.
+These values are applicable to all future packets until they are overwritten by a new MC_CHANNEL_PROPERTIES frame.<a href="#section-11.2-8" class="pilcrow">¶</a></p>
+<p id="section-11.2-9">The properties of a channel MAY change during its lifetime. As such, a server SHOULD NOT send properties for channels except those the client has joined or will be imminently asked to join.<a href="#section-11.2-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="channel-join-frame">
