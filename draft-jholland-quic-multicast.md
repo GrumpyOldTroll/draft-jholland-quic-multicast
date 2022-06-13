@@ -163,6 +163,8 @@ The server asks the client to join channels with MC_CHANNEL_JOIN ({{channel-join
 The server uses MC_CHANNEL_ANNOUNCE ({{channel-announce-frame}}) and MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the keys necessary to decode packets in the channel.
 {{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
+Joining a channel is optional for clients. If a client decides to not join after being asked to do so, it can indicate this decision by sending an MC_CLIENT_CHANNEL_STATE ({{client-channel-state-frame}}) frame with state Declined Join.
+
 When the server has asked the client to join a channel, it also sends MC_CHANNEL_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
 A client MUST NOT decode packets for a channel for which it has not received an applicable set of MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames containing the full set of data required, or for which it has not received a matching packet hash in an MC_CHANNEL_INTEGRITY ({{channel-integrity-frame}}) frame.
 
@@ -259,6 +261,8 @@ Since clients can join later than a channel began, it is RECOMMENDED that client
 Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see Section 19.11 of {{RFC9000}}) with a high limit.
 Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.
 
+The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in Section 2.2 of {{RFC9000}}, stream data received multiple times for the same offset MUST be identical, even across multiple channels; if it's not identical it MAY be treated as a connection error of type PROTOCOL_VIOLATION.
+
 # Flow Control {#flow-control}
 
 The values used for unicast flow control cannot be used to limit the transmission rate of a multicast channel because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that channels responded to each client's limits.
@@ -266,7 +270,7 @@ The values used for unicast flow control cannot be used to limit the transmissio
 Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
 The server advertises the expected maxima of the values that can contribute toward client resource limits within a channel in MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames.
 
-If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CHANNEL_STATE_CHANGE with "Declined Join" and reason "Property Violation".
+If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CLIENT_CHANNEL_STATE_CHANGE ({{client-channel-state-frame}}) with "Declined Join" and reason "Property Violation".
 If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Property Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
 If the actual contents sent in the channel exceed the advertised limits from the MC_CHANNEL_PROPERTY, clients SHOULD leave the stream with a PROTOCOL_ERROR/Limit Violated state change.
 
@@ -367,7 +371,7 @@ The MC_CHANNEL_PROPERTIES frame consists of the properties of a channel that are
 
 A server can send an update to a prior MC_CHANNEL_PROPERTIES frame with a new sequence number increased by one.
 
-It is RECOMMENDED that servers set an Until Packet Number and send regular updates to the MC_CHANNEL_PROPERTIES before the packet numbers in the channel exceed that value.
+It is RECOMMENDED that servers send regular updates to the MC_CHANNEL_PROPERTIES.
 
 MC_CHANNEL_PROPERTIES frames are formatted as shown in {{fig-mc-channel-properties-format}}.
 
@@ -378,7 +382,6 @@ MC_CHANNEL_PROPERTIES Frame {
   Channel ID (8..160),
   Properties Sequence Number (i),
   From Packet Number (i),
-  Until Packet Number (i),
   Key Length (i),
   Key (..),
   Max Rate (i),
@@ -394,7 +397,7 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID for the channel associated with this frame.
   * Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server.  The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.
-  * From Packet Number, Until Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing for all packets up to and including Until Packet Number.  If Until Packet Number is zero it indicates the current property values for this channel have no expiration (equivalent to the maximum value for packet numbers, or 2^62-1).  If a packet number is received outside of any previously received \[From,Until\] range, it has no applicable channel properties and MUST be dropped.
+  * From Packet Number: The values in this MC_CHANNEL_PROPERTIES frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_CHANNEL_PROPERTIES frame with a higher From Packet Number.
   * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm from the MC_CHANNEL_ANNOUNCE frame for this channel.
   * Key: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}, with length given by Key Length.
     To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
@@ -402,11 +405,8 @@ MC_CHANNEL_PROPERTIES frames contain the following fields:
   * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
   * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_CHANNEL_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
 
-From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of {{RFC9000}}) the 1-RTT packets received over which these values are applicable.
-
-A From Packet Number without an Until Packet Number has an unspecified termination.
-
-If new property values appear and are different from prior values, the From Packet Number implicitly sets the Until Packet Number of the prior property value equal to one below the new From Packet Number for all the changed properties.
+The From Packet Number is used to indicate the starting packet number (Section 17.1 of {{RFC9000}}) of the 1-RTT packets received for which the values contained in a MC_CHANNELS_PROPERTIES frame are applicable.
+These values are applicable to all future packets until they are overwritten by a new MC_CHANNEL_PROPERTIES frame.
 
 The properties of a channel MAY change during its lifetime. As such, a server SHOULD NOT send properties for channels except those the client has joined or will be imminently asked to join.
 
