@@ -90,15 +90,14 @@ Table of Contents
    10. Implementation and Operational Considerations
    11. New Frames
      11.1.  MC_CHANNEL_ANNOUNCE
-     11.2.  MC_CHANNEL_PROPERTIES
+     11.2.  MC_CHANNEL_KEY
      11.3.  MC_CHANNEL_JOIN
      11.4.  MC_CHANNEL_LEAVE
      11.5.  MC_CHANNEL_INTEGRITY
      11.6.  MC_CHANNEL_ACK
-     11.7.  MC_PATH_RESPONSE
-     11.8.  MC_CLIENT_LIMITS
-     11.9.  MC_CHANNEL_RETIRE
-     11.10. MC_CLIENT_CHANNEL_STATE
+     11.7.  MC_CLIENT_LIMITS
+     11.8.  MC_CHANNEL_RETIRE
+     11.9.  MC_CLIENT_CHANNEL_STATE
    12. Frames Carried in Channel Packets
    13. Error Codes
    14. Security Considerations
@@ -241,11 +240,11 @@ Table of Contents
    A server MUST NOT send MC_CHANNEL_ANNOUNCE (Section 11.1) frames with
    addresses using an IP Family that is not supported according to the
    Capabilities in the multicast_client_params, unless and until a later
-   MC_CLIENT_LIMITS (Section 11.8) frame adds permission for a different
+   MC_CLIENT_LIMITS (Section 11.7) frame adds permission for a different
    address family.
 
    The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are
-   the same as in MC_CLIENT_LIMITS frames (Section 11.8) and provide the
+   the same as in MC_CLIENT_LIMITS frames (Section 11.7) and provide the
    initial client values.
 
    The AEAD Algorithms List field is in order of preference (most
@@ -290,7 +289,7 @@ Table of Contents
    The client tells its server about some restrictions on resources that
    it is capable of processing with the initial values in the
    multicast_client_params transport parameter (Section 3) and later can
-   update these limits with MC_CLIENT_LIMITS Section 11.8 frames.
+   update these limits with MC_CLIENT_LIMITS Section 11.7 frames.
    Servers ensure the set of channels the client is currently requested
    to join remains within these advertised client limits as covered in
    Section 5.
@@ -299,48 +298,39 @@ Table of Contents
    (Section 11.3) frames and to leave channels with MC_CHANNEL_LEAVE
    (Section 11.4) frames.
 
-   The server uses MC_CHANNEL_ANNOUNCE (Section 11.1) and
-   MC_CHANNEL_PROPERTIES (Section 11.2) frames before any join or leave
-   frames for the channel to describe the channel properties to the
-   client, including values the client can use to ensure the server's
-   requests remain within the limits it has sent to the server, as well
-   as the keys necessary to decode packets in the channel.  Figure 2
-   shows the states a channel has from the clients point of view.
+   The server uses the MC_CHANNEL_ANNOUNCE (Section 11.1) frame before
+   any join or leave frames for the channel to describe the channel
+   properties to the client, including values the client can use to
+   ensure the server's requests remain within the limits it has sent to
+   the server, as well as the keys necessary to decode packets in the
+   channel.  Figure 2 shows the states a channel has from the clients
+   point of view.
 
    Joining a channel is optional for clients.  If a client decides to
    not join after being asked to do so, it can indicate this decision by
-   sending an MC_CLIENT_CHANNEL_STATE (Section 11.10) frame with state
+   sending an MC_CLIENT_CHANNEL_STATE (Section 11.9) frame with state
    Declined Join.
 
    When the server has asked the client to join a channel, it also sends
    MC_CHANNEL_INTEGRITY frames (Section 11.5) to enable the client to
    verify packet integrity before processing the packet.  A client MUST
    NOT decode packets for a channel for which it has not received an
-   applicable set of MC_CHANNEL_PROPERTIES (Section 11.2) frames
-   containing the full set of data required, or for which it has not
-   received a matching packet hash in an MC_CHANNEL_INTEGRITY
+   applicable MC_CHANNEL_ANNOUNCE (Section 11.1), or for which it has
+   not received a matching packet hash in an MC_CHANNEL_INTEGRITY
    (Section 11.5) frame.
 
    The server ensures that in aggregate, all channels that the client
    has currently been asked to join and that the client has not left or
    declined to join fit within the limits indicated by the initial
    values in the transport parameter or last MC_CLIENT_LIMITS
-   (Section 11.8) frame the server received.
+   (Section 11.7) frame the server received.
 
                                                    o
                                                    | Receive MC_CHANNEL_ANNOUNCE
                                                    | Initialize new channel
                                                    v
                                             +-------------+ Receive MC_CHANNEL_RETIRE
-                                            | initialized | Send MC_CLIENT_CHANNEL_STATE: Retired
-                                            |             |-------------------------------------------------
-                                            +-------------+                                                |
-                                                   |                                                       |
-                                                   | Receive MC_CHANNEL_PROPERTIES                         |
-                                                   |                                                       |
-                                                   v                                                       |
-                                            +-------------+ Receive MC_CHANNEL_RETIRE                      |
-                                            |   unjoined  | Send MC_CLIENT_CHANNEL_STATE: Retired          |
+                                            |   unjoined  | Send MC_CLIENT_CHANNEL_STATE: Retired
   ----------------------------------------->|             |----------------------------------------------->|
   |                                         +-------------+                                                |
   |                                                |                                                       |
@@ -389,17 +379,14 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
 
    The client sends back information about how it has responded to the
    server's requests to join and leave channels in
-   MC_CLIENT_CHANNEL_STATE (Section 11.10) frames.
+   MC_CLIENT_CHANNEL_STATE (Section 11.9) frames.
    MC_CLIENT_CHANNEL_STATE frames are only sent for channels after the
    server has requested the client to join the channel, and are
    thereafter sent any time the state changes.
 
    Clients that receive and decode data on a multicast channel send
    acknowledgements for the data on the unicast connection using
-   MC_CHANNEL_ACK (Section 11.6) frames.  Channels also will
-   periodically contain PATH_CHALLENGE ([RFC9000] Section 19.17) frames,
-   which cause clients to send MC_PATH_RESPONSE (Section 11.7) frames on
-   the unicast connection in addition to their MC_CHANNEL_ACK frames.
+   MC_CHANNEL_ACK (Section 11.6) frames.
 
    A server can determine if a client can receive packets on a multicast
    channel if it receives MC_CHANNEL_ACK frames associated with that
@@ -475,16 +462,16 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
    that channels responded to each client's limits.
 
    Instead, clients advertise resource limits that the server is
-   responsible for staying within via MC_CLIENT_LIMITS (Section 11.8)
+   responsible for staying within via MC_CLIENT_LIMITS (Section 11.7)
    frames and their initial values from the transport parameter
    (Section 3).  The server advertises the expected maxima of the values
    that can contribute toward client resource limits within a channel in
-   MC_CHANNEL_PROPERTIES (Section 11.2) frames.
+   an MC_CHANNEL_ANNOUNCE (Section 11.1) frame.
 
    If the server asks the client to join a channel that would exceed the
    client's limits with an up-to-date Client Limit Sequence Number, the
    client should send back a MC_CLIENT_CHANNEL_STATE_CHANGE
-   (Section 11.10) with "Declined Join" and reason "Property Violation".
+   (Section 11.9) with "Declined Join" and reason "Property Violation".
    If the server asks the client to join a channel that would exceed the
    client's limits with an out-of-date Client Limit Sequence Number or a
    Channel Property Sequence Number that the client has not yet seen,
@@ -561,10 +548,11 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
 
    Once a server learns that a client supports multicast through its
    transport parameters, it can send one or multiple MC_CHANNEL_ANNOUNCE
-   frames (type=TBD-11..TBD-22) to share information about available
+   frames (type=TBD-11..TBD-12) to share information about available
    channels with the client.  The MC_CHANNEL_ANNOUNCE frame contains the
-   static properties of a channel that do not change during its
-   lifetime.
+   properties of a channel that do not change during its lifetime and
+   the initial AEAD key that is applicable until a new one is received
+   in a MC_CHANNEL_KEY frame.
 
    MC_CHANNEL_ANNOUNCE frames are formatted as shown in Figure 4.
 
@@ -579,7 +567,12 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
      Header Key Length (i),
      Header Key (..),
      AEAD Algorithm (16),
-     Integrity Hash Algorithm (16)
+     Integrity Hash Algorithm (16),
+     AEAD Key Length (i),
+     AEAD Key (..),
+     Max Rate (i),
+     Max Idle Time (i),
+     ACK Bundle Size (i)
    }
 
                  Figure 4: MC_CHANNEL_ANNOUNCE Frame Format
@@ -659,79 +652,12 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
             (https://www.iana.org/assignments/hash-function-text-names/
             hash-function-text-names.xhtml)
 
-   A client MUST NOT use the channel ID included in the
-   MC_CHANNEL_ANNOUNCE frame as a connection ID for the unicast
-   connection.  If it is already in use, the client should retire it as
-   soon as possible.  As the server knows which connection IDs are in
-   use by the client, it MUST wait with the sending of a MC_CHANNEL_JOIN
-   frame until the channel ID associated with it has been retired by the
-   client.
-
-   As the properties in MC_CHANNEL_ANNOUNCE frames are immutable during
-   the lifetime of a channel, a server SHOULD NOT send a
-   MC_CHANNEL_ANNOUNCE frame for the same channel more than once to each
-   client.
-
-   A server SHOULD send an MC_CHANNEL_ANNOUNCE frame for a channel
-   before sending a MC_CHANNEL_PROPERTIES or MC_CHANNEL_JOIN frame for
-   it.
-
-11.2.  MC_CHANNEL_PROPERTIES
-
-   An MC_CHANNEL_PROPERTIES frame (type=TBD-01) is sent from server to
-   client, either with the unicast connection or in an existing joined
-   multicast channel.  The MC_CHANNEL_PROPERTIES frame consists of the
-   properties of a channel that are mutable and might change during the
-   course of its lifetime.
-
-   A server can send an update to a prior MC_CHANNEL_PROPERTIES frame
-   with a new sequence number increased by one.
-
-   It is RECOMMENDED that servers send regular updates to the
-   MC_CHANNEL_PROPERTIES.
-
-   MC_CHANNEL_PROPERTIES frames are formatted as shown in Figure 5.
-
-   MC_CHANNEL_PROPERTIES Frame {
-     Type (i) = TBD-01 (experiments use 0xff3e801),
-     ID Length (8),
-     Channel ID (8..160),
-     Properties Sequence Number (i),
-     From Packet Number (i),
-     Key Length (i),
-     Key (..),
-     Max Rate (i),
-     Max Idle Time (i),
-     ACK Bundle Size (i)
-   }
-
-                Figure 5: MC_CHANNEL_PROPERTIES Frame Format
-
-   MC_CHANNEL_PROPERTIES frames contain the following fields:
-
-   *  ID Length: The length in bytes of the Channel ID field.
-
-   *  Channel ID: The channel ID for the channel associated with this
-      frame.
-
-   *  Properties Sequence Number: Increases by 1 each time the
-      properties for the channel are changed by the server.  The client
-      tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that
-      set its current value, and only updates the value and the packet
-      number range on which it's applicable if the Properties Sequence
-      Number is higher.
-
-   *  From Packet Number: The values in this MC_CHANNEL_PROPERTIES frame
-      apply only to packets starting at From Packet Number and
-      continuing until they are overwritten by a new
-      MC_CHANNEL_PROPERTIES frame with a higher From Packet Number.
-
-   *  Key Length: Provides the length of the Key field.  It MUST match a
-      valid key length for the AEAD Algorithm from the
+   *  AEAD Key Length: Provides the length of the AEAD Key field.  It
+      MUST match a valid key length for the AEAD Algorithm from the
       MC_CHANNEL_ANNOUNCE frame for this channel.
 
-   *  Key: Used to protect the packet contents of 1-RTT packets for the
-      channel as described in [RFC9001], with length given by Key
+   *  AEAD Key: Used to protect the packet contents of 1-RTT packets for
+      the channel as described in [RFC9001], with length given by Key
       Length.  To maintain forward secrecy and prevent malicious clients
       from decrypting packets long after they have left or were removed
       from the unicast connection, servers SHOULD periodically send key
@@ -756,33 +682,108 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
       least once per Max Idle Time to prevent the Server from perceiving
       the channel as interrupted.
 
+   A client MUST NOT use the channel ID included in the
+   MC_CHANNEL_ANNOUNCE frame as a connection ID for the unicast
+   connection.  If it is already in use, the client should retire it as
+   soon as possible.  As the server knows which connection IDs are in
+   use by the client, it MUST wait with the sending of a MC_CHANNEL_JOIN
+   frame until the channel ID associated with it has been retired by the
+   client.
+
+   As all the properties except the AEAD key in MC_CHANNEL_ANNOUNCE
+   frames are immutable during the lifetime of a channel, a server
+   SHOULD NOT send a MC_CHANNEL_ANNOUNCE frame for the same channel more
+   than once to each client.  It SHOULD instead send key updates using
+   the MC_CHANNEL_KEY frame.
+
+   A server SHOULD send an MC_CHANNEL_ANNOUNCE frame for a channel
+   before sending a MC_CHANNEL_KEY or MC_CHANNEL_JOIN frame for it.
+
+11.2.  MC_CHANNEL_KEY
+
+   An MC_CHANNEL_KEY frame (type=TBD-01) is sent from server to client,
+   either with the unicast connection or in an existing joined multicast
+   channel.  The MC_CHANNEL_KEY frame contains an updated AEAD key that
+   is applied to STREAM frames received on the multicast channel.
+
+   A server can send an update to a prior MC_CHANNEL_KEY frame with a
+   new sequence number increased by one.  A server MUST send continuous
+   sequence numbers.
+
+   It is RECOMMENDED that servers send regular key updates.
+
+   MC_CHANNEL_KEY frames are formatted as shown in Figure 5.
+
+   MC_CHANNEL_KEY Frame {
+     Type (i) = TBD-01 (experiments use 0xff3e801),
+     ID Length (8),
+     Channel ID (8..160),
+     Key Sequence Number (i),
+     From Packet Number (i),
+     Key Length (i),
+     Key (..)
+   }
+
+                   Figure 5: MC_CHANNEL_KEY Frame Format
+
+   MC_CHANNEL_KEY frames contain the following fields:
+
+   *  ID Length: The length in bytes of the Channel ID field.
+
+   *  Channel ID: The channel ID for the channel associated with this
+      frame.
+
+   *  Key Sequence Number: Increases by 1 each time the key for the
+      channel is changed by the server.  The client tracks the sequence
+      number of the MC_CHANNEL_KEY frame that set its current value, and
+      only updates the value and the packet number range on which it's
+      applicable if the Properties Sequence Number is higher.  If there
+      is a gap in sequence numbers due to reordering or retransmission
+      of packets, the client MUST apply the key contained in such
+      packets as if they arrived in order.
+
+   *  From Packet Number: The values in this MC_CHANNEL_KEY frame apply
+      only to packets starting at From Packet Number and continuing
+      until they are overwritten by a new MC_CHANNEL_KEY frame with a
+      higher From Packet Number.
+
+   *  Key Length: Provides the length of the Key field.  It MUST match a
+      valid key length for the AEAD Algorithm from the
+      MC_CHANNEL_ANNOUNCE frame for this channel.
+
+   *  Key: Used to protect the packet contents of 1-RTT packets for the
+      channel as described in [RFC9001], with length given by Key
+      Length.  To maintain forward secrecy and prevent malicious clients
+      from decrypting packets long after they have left or were removed
+      from the unicast connection, servers SHOULD periodically send key
+      updates using only unicast.
+
    The From Packet Number is used to indicate the starting packet number
    (Section 17.1 of [RFC9000]) of the 1-RTT packets received for which
-   the values contained in a MC_CHANNELS_PROPERTIES frame are
-   applicable.  These values are applicable to all future packets until
-   they are overwritten by a new MC_CHANNEL_PROPERTIES frame.
+   the key contained in a MC_CHANNELS_KEY frame are applicable.  This
+   key is applicable to all future packets until it is overwritten by a
+   new MC_CHANNEL_KEY frame.
 
-   The properties of a channel MAY change during its lifetime.  As such,
-   a server SHOULD NOT send properties for channels except those the
-   client has joined or will be imminently asked to join.
+   The key of a channel MAY change during its lifetime.  As such, a
+   server SHOULD NOT send keys for channels except those the client has
+   joined or will be imminently asked to join.
 
 11.3.  MC_CHANNEL_JOIN
 
    An MC_CHANNEL_JOIN frame (type TBD-02) is sent from server to client
    and requests that a client join the given transport addresses and
    ports and process packets with the given Channel ID according to the
-   corresponding MC_CHANNEL_PROPERTIES.
+   corresponding MC_CHANNEL_ANNOUNCE.
 
-   A client cannot join a multicast channel without first receiving a
-   MC_CHANNEL_ANNOUNCE and MC_CHANNEL_PROPERTIES frame which together
-   set all the values for a channel.
+   A client cannot join a multicast channel without first receiving an
+   MC_CHANNEL_ANNOUNCE frame which sets all the values for a channel.
 
    If a client receives a MC_CHANNEL_JOIN for a channel for which it has
-   not received both, it MUST respond with a MC_CLIENT_CHANNEL_STATE
-   with State "Declined Join" and reason "Missing Properties".  The
-   server MAY send another MC_CHANNEL_JOIN after retransmitting the
-   MC_CHANNEL_PROPERTIES and receiving an acknowledgement indicating
-   receipt of the MC_CHANNEL_ANNOUNCE.
+   not received an MC_CHANNEL_ANNOUNCE frame, it MUST respond with a
+   MC_CLIENT_CHANNEL_STATE with State "Declined Join" and reason
+   "Missing Properties".  The server MAY send another MC_CHANNEL_JOIN
+   after receiving an acknowledgement indicating receipt of the
+   MC_CHANNEL_ANNOUNCE.
 
    MC_CHANNEL_JOIN frames are formatted as shown in Figure 6.
 
@@ -790,7 +791,7 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
      Type (i) = TBD-02 (experiments use 0xff3e802),
      MC_CLIENT_LIMIT Sequence Number (i),
      MC_CLIENT_CHANNEL_STATE Sequence Number (i),
-     MC_CHANNEL_PROPERTIES Sequence Number (i),
+     MC_CHANNEL_KEY Sequence Number (i),
      ID Length (8),
      Channel ID (8..160)
    }
@@ -802,9 +803,9 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
    allow the client to distinguish between a broken server that has
    performed an illegal action and an instruction that's based on
    updates that are out of sync (either one or more missing updates to
-   MC_CHANNEL_PROPERTIES not yet received by the client or one or more
-   missing updates to MC_CLIENT_LIMITS or MC_CLIENT_CHANNEL_STATE not
-   yet received by the server).
+   MC_CHANNEL_KEY not yet received by the client or one or more missing
+   updates to MC_CLIENT_LIMITS or MC_CLIENT_CHANNEL_STATE not yet
+   received by the server).
 
    A client MAY perform the join if it has the sequence number of the
    corresponding channel properties and the client's limits will not be
@@ -873,7 +874,7 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
    channel with packet numbers increasing by 1.
 
    Packet hashes MUST have length with an integer multiple of the length
-   indicated by the Hash Algorithm from the Channel Properties.
+   indicated by the Hash Algorithm from the MC_CHANNEL_ANNOUNCE frame.
 
    See Section 7.1 for a description of the packet hash calculation.
 
@@ -907,26 +908,9 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
 
                    Figure 9: MC_CHANNEL_ACK Frame Format
 
-11.7.  MC_PATH_RESPONSE
+11.7.  MC_CLIENT_LIMITS
 
-   MC_PATH_RESPONSE frames are sent from a client to a server in the
-   unicast connection in response to a PATH_CHALLENGE received in a
-   channel.  Like PATH_RESPONSE but includes a channel id.
-
-   MC_PATH_RESPONSE frames are formatted as shown in Figure 10.
-
-   MC_PATH_RESPONSE Frame {
-     Type (i) = TBD-08 (experiments use 0xffe38008),
-     ID Length (8),
-     Channel ID (8..160),
-     Data (64)
-   }
-
-                  Figure 10: MC_PATH_RESPONSE Frame Format
-
-11.8.  MC_CLIENT_LIMITS
-
-   MC_CLIENT_LIMITS frames are formatted as shown in Figure 11.
+   MC_CLIENT_LIMITS frames are formatted as shown in Figure 10.
 
    MC_CLIENT_LIMITS Frame {
      Type (i) = TBD-09 (experiments use 0xff3e809),
@@ -937,7 +921,7 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
      Max Joined Count (i),
    }
 
-                  Figure 11: MC_CLIENT_LIMITS Frame Format
+                  Figure 10: MC_CLIENT_LIMITS Frame Format
 
    The sequence number is implicitly 0 before the first MC_CLIENT_LIMITS
    frame from the client, and increases by 1 each new frame that's sent.
@@ -960,9 +944,9 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
    Max Joined Count is the count of channels that are allowed to be
    joined concurrently.
 
-11.9.  MC_CHANNEL_RETIRE
+11.8.  MC_CHANNEL_RETIRE
 
-   MC_CHANNEL_RETIRE frames are formatted as shown in Figure 12.
+   MC_CHANNEL_RETIRE frames are formatted as shown in Figure 11.
 
    MC_CHANNEL_RETIRE Frame {
      Type (i) = TBD-0a (experiments use 0xff3e80a),
@@ -971,7 +955,7 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
      After Packet Number (i)
    }
 
-                 Figure 12: MC_CHANNEL_RETIRE Frame Format
+                 Figure 11: MC_CHANNEL_RETIRE Frame Format
 
    Retires a channel by id, discarding any state associated with it.
    (Author comment: We can't use RETIRE_CONNECTION_ID because we don't
@@ -987,7 +971,7 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
    need to send an additional MC_CLIENT_CHANNEL_STATE frame with reason
    Left.
 
-11.10.  MC_CLIENT_CHANNEL_STATE
+11.9.  MC_CLIENT_CHANNEL_STATE
 
    MC_CLIENT_CHANNEL_STATE frames are sent from client to server to
    report changes in the client's channel state.  Each time the channel
@@ -996,7 +980,7 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
    that a client join a channel and the client declines the join, even
    though no join occurs on the network.
 
-   MC_CLIENT_CHANNEL_STATE frames are formatted as shown in Figure 13.
+   MC_CLIENT_CHANNEL_STATE frames are formatted as shown in Figure 12.
 
    MC_CLIENT_CHANNEL_STATE Frame {
      Type (i) = TBD-0b (experiments use 0xff3e80b),
@@ -1007,7 +991,7 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
      Reason (0..i)
    }
 
-              Figure 13: MC_CLIENT_CHANNEL_STATE Frame Format
+              Figure 12: MC_CLIENT_CHANNEL_STATE Frame Format
 
    State has these defined values:
 
@@ -1074,7 +1058,7 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
    MC Channels will contain normal QUIC 1-rtt data packets (see
    Section 17.3.1 of [RFC9000]) except using the Channel ID instead of a
    Connection ID.  The packets are protected with the keys from
-   MC_CHANNEL_PROPERTIES for the corresponding channel.
+   MC_CHANNEL_KEY frames for the corresponding channel.
 
    Data packet hashes will also be sent in MC_CHANNEL_INTEGRITY frames,
    as keys cannot be trusted for integrity due to giving them to too
@@ -1098,9 +1082,7 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
 
    *  DATAGRAM Frames (both types) ([RFC9221] Section 4)
 
-   *  PATH_CHALLENGE Frames ([RFC9000] Section 19.17)
-
-   *  MC_CHANNEL_PROPERTIES
+   *  MC_CHANNEL_KEY
 
    *  MC_CHANNEL_LEAVE (however, join must come over unicast?)
 
@@ -1134,20 +1116,25 @@ MC_CHANNEL_STATE: ID: 50, State: Retired, (...)   ->
 
       -  19.14.  STREAMS_BLOCKED Frames
 
-   *  Channel ID Migration can't use the "prior to" concept, not
-      0-starting
+   *  Channel ID Migration can't use the "prior to" concept within a
+      channel, not 0-starting
 
       -  19.15.  NEW_CONNECTION_ID Frames
 
       -  19.16.  RETIRE_CONNECTION_ID Frames
 
-   *  19.18.  PATH_RESPONSE Frames
+   *  Channels don't have the same kind of path validation, as there's a
+      unicast anchor with acks for the multicast packets:
+
+      -  19.17.  PATH_CHALLENGE Frames
+
+      -  19.18.  PATH_RESPONSE Frames
 
    *  19.19.  CONNECTION_CLOSE Frames
 
    *  19.20.  HANDSHAKE_DONE Frames
 
-   *  MC_PATH_RESPONSE
+   *  MC_CHANNEL_ANNOUNCE
 
    *  MC_CLIENT_LIMITS
 
