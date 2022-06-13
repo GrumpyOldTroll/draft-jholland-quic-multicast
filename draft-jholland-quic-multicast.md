@@ -241,7 +241,7 @@ The values used for unicast flow control cannot be used to limit the transmissio
 Instead, clients advertise resource limits that the server is responsible for staying within via MC_CLIENT_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
 The server advertises the expected maxima of the values that can contribute toward client resource limits within a channel in MC_CHANNEL_PROPERTIES ({{channel-properties-frame}}) frames.
 
-If the server asks the client to join a channel that would flexceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CLIENT_CHANNEL_STATE_CHANGE ({{client-channel-state-frame}}) with "Declined Join" and reason "Property Violation".
+If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_CLIENT_CHANNEL_STATE_CHANGE ({{client-channel-state-frame}}) with "Declined Join" and reason "Property Violation".
 If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Property Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
 If the actual contents sent in the channel exceed the advertised limits from the MC_CHANNEL_PROPERTY, clients SHOULD leave the stream with a PROTOCOL_ERROR/Limit Violated state change.
 
