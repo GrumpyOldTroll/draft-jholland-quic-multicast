@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-06-12T00:30:28.824214+00:00",
+  "timestamp": "2022-06-14T00:36:13.925613+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -533,7 +533,7 @@
       "id": "I_kwDOG6NyZs5I1HaV",
       "title": "Clarify that joins are optional in the Channel Management section",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/24",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "GrumpyOldTroll",
       "authorAssociation": "OWNER",
       "assignees": [
@@ -542,9 +542,17 @@
       "labels": [],
       "body": "From Sam Hurst:\r\nBe more explicit in the \"Channel Management\" section that the client is not obligated to join the multicast channel once it receives an MC_SESSION_JOIN frame. If it chooses not to, it has the option to send an MC_SESSION_STATE_CHANGE frame with the \"declined join\" reason, but that isn't actually mentioned in the session management section.",
       "createdAt": "2022-04-30T17:42:22Z",
-      "updatedAt": "2022-05-25T18:48:21Z",
-      "closedAt": null,
-      "comments": []
+      "updatedAt": "2022-06-13T20:36:46Z",
+      "closedAt": "2022-06-13T20:36:45Z",
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "fixed by https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/60",
+          "createdAt": "2022-06-13T20:36:45Z",
+          "updatedAt": "2022-06-13T20:36:45Z"
+        }
+      ]
     },
     {
       "number": 26,
@@ -868,7 +876,7 @@
       "id": "I_kwDOG6NyZs5KB8Og",
       "title": "Michaels review - Give more details about the unicast connection ",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/43",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "MaxF12",
       "authorAssociation": "COLLABORATOR",
       "assignees": [
@@ -877,8 +885,8 @@
       "labels": [],
       "body": "> I have a feeling that more should be said about this unicast connection. Some constraints perhaps\u2026 can it migrate? Can it use multiple streams? Can it be used for traffic that\u2019s not bound to the signaling for the multicast stuff here?\r\n> \r\n> Also: here, and in most places, you call it \u201cthe unicast connection\u201d, which makes quite clear that there is one only. That\u2019s good!  But in some places, it says \u201ca unicast connection\u201d which then confuses me. There IS only one which is associated with this multicast stuff, right?\r\n\r\n",
       "createdAt": "2022-05-19T16:22:47Z",
-      "updatedAt": "2022-05-25T16:20:35Z",
-      "closedAt": null,
+      "updatedAt": "2022-06-13T20:38:59Z",
+      "closedAt": "2022-06-13T20:38:59Z",
       "comments": [
         {
           "author": "GrumpyOldTroll",
@@ -886,6 +894,13 @@
           "body": "There is only one, yes.  I agree, \"a unicast connection\" should be changed to \"the unicast connection\".\r\n\r\nI think there are no restrictions on the unicast connection.  It can migrate, it can use multiple streams, it can be used for traffic not bound to the signaling for the multicast stuff.  It can be multipath.\r\n\r\nThe only restriction I know that seems like it has been confusing is the restriction on streams: any byte of data at any offset of a particular stream must be the same no matter where the frame containing that byte of stream data came from.  \r\n\r\nThis might place some operational restrictions on servers that use the same channels, to make sure they individually don't generate any unicast streams that could conflict.  (I think they have several mechanisms they can use to ensure that doesn't happen, but I think it's implementation-specific.)",
           "createdAt": "2022-05-19T17:42:03Z",
           "updatedAt": "2022-05-19T17:42:03Z"
+        },
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Closed by #60 ",
+          "createdAt": "2022-06-13T20:38:59Z",
+          "updatedAt": "2022-06-13T20:38:59Z"
         }
       ]
     },
@@ -918,7 +933,7 @@
       "id": "I_kwDOG6NyZs5KB_3o",
       "title": "Michaels review - Rephrase part of section 11.2",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/45",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "MaxF12",
       "authorAssociation": "COLLABORATOR",
       "assignees": [
@@ -927,16 +942,24 @@
       "labels": [],
       "body": "Regarding this part:\r\n\r\n> From Packet Number and Until Packet Number are used to indicate the packet number (Section 17.1 of [[RFC9000](https://www.ietf.org/archive/id/draft-jholland-quic-multicast-00.html#RFC9000)]) of the 1-RTT packets received over which these values are applicable.\r\n\r\nHis comment is:\r\n\r\n> This is hard to understand, and I think it\u2019s to do with \u201cthese values\u201d. Replace with \u201cthe fields of the MC_CHANNEL_PROPERTIES frame\u201d, perhaps??",
       "createdAt": "2022-05-19T16:36:55Z",
-      "updatedAt": "2022-05-25T16:19:08Z",
-      "closedAt": null,
-      "comments": []
+      "updatedAt": "2022-06-13T20:39:13Z",
+      "closedAt": "2022-06-13T20:39:13Z",
+      "comments": [
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Closed by #60 ",
+          "createdAt": "2022-06-13T20:39:13Z",
+          "updatedAt": "2022-06-13T20:39:13Z"
+        }
+      ]
     },
     {
       "number": 46,
       "id": "I_kwDOG6NyZs5KCAHF",
       "title": "Michaels review - \"unspecified termination\"",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/46",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "MaxF12",
       "authorAssociation": "COLLABORATOR",
       "assignees": [
@@ -945,8 +968,8 @@
       "labels": [],
       "body": "Regarding this part:\r\n\r\n> A From Packet Number without an Until Packet Number has an unspecified termination.\r\n\r\nHis comment is:\r\n\r\n> That also reads strange to me. Why not just say \u201cis not specified\u201d ",
       "createdAt": "2022-05-19T16:37:44Z",
-      "updatedAt": "2022-05-25T16:27:07Z",
-      "closedAt": null,
+      "updatedAt": "2022-06-13T15:31:39Z",
+      "closedAt": "2022-06-13T15:31:39Z",
       "comments": []
     },
     {
@@ -1186,7 +1209,7 @@
       "labels": [],
       "body": "Client's have no way to communicate to the server if a properties frame arrives after an announce frame. In this case, it might take them until they receive a join for the server to notice that the properties are missing. ",
       "createdAt": "2022-06-08T18:50:37Z",
-      "updatedAt": "2022-06-10T20:51:18Z",
+      "updatedAt": "2022-06-13T21:59:11Z",
       "closedAt": null,
       "comments": [
         {
@@ -1209,6 +1232,20 @@
           "body": "How about we say say there can\u2019t be any gaps in the sequence numbers then the client would one is missing and could either buffer the higher one until it is received or retroactively apply the key of the lower one once it arrives.",
           "createdAt": "2022-06-10T20:51:18Z",
           "updatedAt": "2022-06-10T20:51:18Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "\"No gaps\" I think is probably stronger than ideal since it means you can't update over multicast anymore, since a later joiner would need to start at 1.\r\n\r\nSeems to me there's a few properties we might need to talk a little more about:\r\n- the From Packet Number increases with increasing MC_CHANNEL_KEY sequence numbers (the new name for MC_CHANNEL_PROPERTIES).  Maybe client can PROTOCOL_ERROR if not?  I think this gives you an unambiguous decryption key whenever you know you do not have a gap in sequence numbers, and some uncertainty for any packet later than the latest From Packet Number you've seen (in the case that you've missed a MC_CHANNEL_KEY frame) or any space where there's a gap in the sequence numbers.\r\n  - This uncertainty means there are cases you might fail decode due to wrong key if there's a missing update.\r\n- you MUST discard sufficiently old keys, just like for forward secrecy in unicast.  I think probably if you've received all packets up to the next From Packet number, but even if you haven't received them you still discard after a long enough duration (30s?  I dunno...) after receiving a new key frame.  But for old keys, we know when they stopped being valid, so we can keep a packet number before which we should not attempt decodes if we see an old packet.  (Do we need that in the JOIN or the ANNOUNCE or something?)\r\n\r\nAnyway, I'm a little worried now that I think of it we might currently have ambiguity on knowing whether or not we have a key that applies to a particular packet.  Is it harmless (outside of wasted processing) to decode a packet with the wrong key and then discard it due to failed decode, or do we need stronger non-ambiguity?\r\n\r\nNote also that if necessary we could use key phase to notice if we're decoding a packet for which we missed a key update as long as it's not a gap more than 2, which would help a bunch with the ambiguity problem.",
+          "createdAt": "2022-06-13T21:26:59Z",
+          "updatedAt": "2022-06-13T21:26:59Z"
+        },
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I think using the key phase (in the packet header) is actually a very good idea. I don\u2019t think we would even need it in the key frame as the client just needs to know that when it flips there is a new key that is should use and if it doesn\u2019t have one it probably missed a key update. \r\nI am not sure how useful/necessary it is to send the key updates over Multicast now that the frame is so small, the trade off would be to save performance but having strict key sequence numbers without gaps. Also I guess Even if they are send over Multicast they could still be without gaps, new clients would just get an initial sequence number that is larger than 1. ",
+          "createdAt": "2022-06-13T21:59:11Z",
+          "updatedAt": "2022-06-13T21:59:11Z"
         }
       ]
     },
@@ -1229,6 +1266,30 @@
       "updatedAt": "2022-06-08T22:21:07Z",
       "closedAt": "2022-06-08T22:21:07Z",
       "comments": []
+    },
+    {
+      "number": 67,
+      "id": "I_kwDOG6NyZs5LsYKz",
+      "title": "remove MC_PATH_RESPONSE",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/67",
+      "state": "CLOSED",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "We don't need the PATH_CHALLENGE/MC_PATH_RESPONSE logic, I think.  We're anchored by the unicast connection, and we get acks for received packets.",
+      "createdAt": "2022-06-13T20:33:41Z",
+      "updatedAt": "2022-06-13T20:38:37Z",
+      "closedAt": "2022-06-13T20:38:37Z",
+      "comments": [
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Closed by #68 ",
+          "createdAt": "2022-06-13T20:38:37Z",
+          "updatedAt": "2022-06-13T20:38:37Z"
+        }
+      ]
     }
   ],
   "pulls": [
@@ -2666,24 +2727,26 @@
       "id": "PR_kwDOG6NyZs44dd-X",
       "title": "More for Michaels comments",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/60",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "MaxF12",
       "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "Closes #46, #43, and #45 ",
       "createdAt": "2022-05-25T16:52:54Z",
-      "updatedAt": "2022-06-10T14:58:10Z",
+      "updatedAt": "2022-06-13T15:31:39Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "6f5cfbea66c732c61a35765e41f9c3591b43f348",
       "headRepository": "MaxF12/draft-jholland-quic-multicast",
       "headRefName": "mwelzl-comments",
-      "headRefOid": "d88143a80e37b2649208c83a7ce8a040e737942e",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "headRefOid": "e2dd09dfc9995edd0aa4c42a06274595d5cec12e",
+      "closedAt": "2022-06-13T15:31:39Z",
+      "mergedAt": "2022-06-13T15:31:39Z",
+      "mergedBy": "GrumpyOldTroll",
+      "mergeCommit": {
+        "oid": "b012dfd605543b07ef708e1aad77d4fae227f360"
+      },
       "comments": [
         {
           "author": "MaxF12",
@@ -2753,8 +2816,92 @@
               "updatedAt": "2022-06-10T14:58:10Z"
             }
           ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs473-mM",
+          "commit": {
+            "abbreviatedOid": "94513ab"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-13T15:21:35Z",
+          "updatedAt": "2022-06-13T15:21:36Z",
+          "comments": [
+            {
+              "originalPosition": 13,
+              "body": "nit: typo \"flexceed\" -> \"exceed\"",
+              "createdAt": "2022-06-13T15:21:36Z",
+              "updatedAt": "2022-06-13T15:21:36Z"
+            }
+          ]
         }
       ]
+    },
+    {
+      "number": 66,
+      "id": "PR_kwDOG6NyZs45j_ld",
+      "title": "Change MC_CHANNEL_PROPERTIES to MC_CHANNEL_KEY",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/66",
+      "state": "MERGED",
+      "author": "MaxF12",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Branched from the other PR, so better to merge that first to see the diff better. (Tried to avoid merge conflicts going forward)",
+      "createdAt": "2022-06-13T13:30:21Z",
+      "updatedAt": "2022-06-13T15:31:53Z",
+      "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "baseRefName": "main",
+      "baseRefOid": "3b57d4f00e95419d4c976bc2081898c1f3423cb0",
+      "headRepository": "MaxF12/draft-jholland-quic-multicast",
+      "headRefName": "issue-64",
+      "headRefOid": "d905382ca4f991a040abc41288fabf869235121b",
+      "closedAt": "2022-06-13T15:31:53Z",
+      "mergedAt": "2022-06-13T15:31:53Z",
+      "mergedBy": "GrumpyOldTroll",
+      "mergeCommit": {
+        "oid": "ea5edd52abb202287cef93b9d4a87aec0bc423e1"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 68,
+      "id": "PR_kwDOG6NyZs45ln0D",
+      "title": "draft-jholland-quic-multicast.md",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/68",
+      "state": "MERGED",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "fix for #67",
+      "createdAt": "2022-06-13T20:34:48Z",
+      "updatedAt": "2022-06-13T20:38:07Z",
+      "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "baseRefName": "main",
+      "baseRefOid": "ea5edd52abb202287cef93b9d4a87aec0bc423e1",
+      "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "headRefName": "issue-67",
+      "headRefOid": "523807f439b62c7fec3996fcf81803455e498737",
+      "closedAt": "2022-06-13T20:38:07Z",
+      "mergedAt": "2022-06-13T20:38:07Z",
+      "mergedBy": "MaxF12",
+      "mergeCommit": {
+        "oid": "2bb104a691a0097d09452b7b4dc44d50e6a2c269"
+      },
+      "comments": [
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "LGTM",
+          "createdAt": "2022-06-13T20:38:02Z",
+          "updatedAt": "2022-06-13T20:38:02Z"
+        }
+      ],
+      "reviews": []
     }
   ]
 }
