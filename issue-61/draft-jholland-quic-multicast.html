@@ -1,0 +1,2468 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Multicast Extension for QUIC</title>
+<meta content="Jake Holland" name="author">
+<meta content="Lucas Pardue" name="author">
+<meta content="Max Franke" name="author">
+<meta content="
+       This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections. 
+    " name="description">
+<meta content="xml2rfc 3.12.10" name="generator">
+<meta content="Internet-Draft" name="keyword">
+<meta content="draft-jholland-quic-multicast-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.12.10
+    Python 3.10.4
+    appdirs 1.4.4
+    ConfigArgParse 1.5.3
+    google-i18n-address 2.5.1
+    html5lib 1.1
+    intervaltree 3.1.0
+    Jinja2 2.11.3
+    kitchen 1.2.6
+    lxml 4.8.0
+    MarkupSafe 2.0.1
+    pycountry 20.7.3
+    pyflakes 2.4.0
+    PyYAML 6.0
+    requests 2.27.1
+    setuptools 59.4.0
+    six 1.16.0
+-->
+<link href="draft-jholland-quic-multicast.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Cabin Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Cabin Condensed SemiBold'), local('CabinCondensed-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/cabincondensed-semibold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Cabin Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Cabin Condensed SemiBold'), local('CabinCondensed-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/cabincondensed-semibold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Cabin Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Cabin Condensed SemiBold'), local('CabinCondensed-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/cabincondensed-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Cabin Condensed", sans-serif;
+  font-weight: 600;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1#title {
+  font-size: 32px;
+  line-height: 40px;
+  clear: both;
+}
+h1#title, h1#rfcnum {
+  margin: 1.5em 0 0.2em;
+}
+h1#rfcnum + h1#title {
+  margin: 0.2em 0;
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+}
+#abstract+p code, #abstract+p samp, #abstract+p tt {
+  font-size: 16px;
+  line-height: 0;
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight.art-text {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  padding: 0.5em 1em 0;
+  margin-bottom: 0.5em;
+}
+.alignRight.art-text pre {
+  padding: 0;
+  width: auto;
+}
+.alignRight {
+  margin: 1em 0;
+}
+.alignRight > *:first-child {
+  border: none;
+  margin: 0;
+  float: right;
+  clear: both;
+}
+.alignRight > *:nth-child(2) {
+  clear: both;
+  display: block;
+  border: none;
+}
+svg {
+  display: block;
+}
+/* font-family isn't space-separated, but =~ will have to do */
+svg[font-family~="monospace" i], svg [font-family~="monospace" i] {
+  font-family: var(--font-mono);
+}
+.alignCenter.art-text {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  padding: 0.5em 1em 0;
+  margin-bottom: 0.5em;
+}
+.alignCenter.art-text pre {
+  padding: 0;
+  width: auto;
+}
+.alignCenter {
+  margin: 1em 0;
+}
+.alignCenter > *:first-child {
+  border: none;
+  /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+     support flexbox yet.
+  */
+  display: table;
+  margin: 0 auto;
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+}
+:is(ol, ul) :is(ol, ul) {
+  margin-left: 1em;
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+.ulCompact li {
+  margin: 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+}
+ul.empty li, .ulEmpty li {
+  margin-top: 0.5em;
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  line-height: 100%;
+  margin: 0 0 0 2em;
+}
+
+/* definition lists */
+dl {
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl > dd {
+  margin-bottom: .8em;
+  min-height: 1.3em;
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+dd.break {
+  display: none;
+}
+
+/* links */
+a, a[href].selfRef:hover {
+  text-decoration: none;
+}
+a[href].selfRef {
+  color: var(--text-color);
+}
+a[href] {
+  color: var(--link-color);
+}
+a[href]:hover {
+  text-decoration: underline;
+}
+a[href].selfRef:hover {
+  background-color: var(--highlight-color);
+}
+a.xref {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+}
+figure blockquote {
+  margin: 0.8em 0.4em 0.4em;
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) p {
+    margin: -2px 0;
+    max-height: 0;
+    transition: max-height 2s ease, margin 0.5s ease 0.5s;
+    overflow: hidden;
+  }
+  :is(#status-of-memo, #copyright):hover p,
+  :is(#status-of-memo, #copyright) h2:target ~ p {
+    margin: 0.5em 0;
+    max-height: 500px;
+    overflow: auto;
+  }
+  pre, svg {
+    display: inline-block;
+    overflow-x: auto;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+}
+table.right {
+  margin-left: auto;
+}
+table.center {
+  margin-left: auto;
+  margin-right: auto;
+}
+table.left {
+  margin-right: auto;
+}
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+table caption {
+  margin: 0;
+  padding: 3px 0 3px 1em;
+}
+table p {
+  margin: 0;
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+}
+a.pilcrow[href] { color: var(--pilcrow-weak); }
+a.pilcrow[href]:hover { text-decoration: none; }
+@media not print {
+  :hover > a.pilcrow {
+    opacity: 1;
+  }
+  a.pilcrow[href]:hover {
+    color: var(--pilcrow-strong);
+    background-color: transparent;
+  }
+}
+@media print {
+  a.pilcrow {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: 14.5px;
+}
+.role {
+  font-variant: all-small-caps;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 8em;
+}
+#identifiers dt {
+  width: var(--identifier-width);
+  margin: 0;
+  clear: left;
+  float: left;
+  text-align: right;
+}
+#identifiers dd {
+  margin: 0 0 0 calc(1em + var(--identifier-width));
+  min-width: 5em;
+}
+#identifiers .authors .author {
+  display: inline-block;
+  margin-right: 1.5em;
+}
+#identifiers .authors .org {
+  font-style: italic;
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+}
+.docInfo .prepared {
+  float: left;
+}
+.docInfo .prepared {
+  float: right;
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+}
+#toc nav ul {
+  margin: 0 0.5em 0 0;
+  padding: 0;
+  list-style: none;
+}
+#toc nav li {
+  line-height: 1.3em;
+  margin: 0.75em 0;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+#toc a.xref {
+  white-space: normal;
+}
+/* references */
+.references dt {
+  text-align: right;
+  font-weight: bold;
+  min-width: 7em;
+}
+.references dd {
+  margin-left: 8em;
+  overflow: auto;
+}
+
+.refInstance {
+  margin-bottom: 1.25em;
+}
+
+.references .ascii {
+  margin-bottom: 0.25em;
+}
+
+/* index */
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  margin: 1em 0;
+}
+address.vcard .nameRole {
+  font-weight: 700;
+  margin-left: 0;
+}
+address.vcard .label {
+  margin: 0.5em 0;
+}
+address.vcard .type {
+  display: none;
+}
+.alternative-contact {
+  margin: 1.5em 0 1em;
+}
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses > section {
+    column-count: 2;
+    column-gap: 20px;
+  }
+  #authors-addresses > section > h2 {
+    column-span: all;
+  }
+  /* hack for break-inside: avoid-column */
+  #authors-addresses address {
+    display: inline-block;
+    break-inside: avoid-column;
+  }
+}
+
+.rfcEditorRemove p:first-of-type {
+  font-style: italic;
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+/* alternative layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+  }
+  #toc.active {
+      opacity: 1;
+  }
+  #toc h2 {
+    margin: 0;
+    padding: 2px 0 2px 6px;
+    padding-right: 1em;
+    font-size: 18px;
+    line-height: 24px;
+    min-width: 190px;
+    text-align: right;
+    background-color: #444;
+    color: white;
+    cursor: pointer;
+  }
+  #toc h2::before { /* css hamburger */
+    float: right;
+    position: relative;
+    width: 1em;
+    height: 1px;
+    left: -164px;
+    margin: 8px 0 0 0;
+    background: white none repeat scroll 0 0;
+    box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+    content: "";
+  }
+  #toc nav {
+    display: none;
+    background-color: var(--background-color);
+    padding: 0.5em 1em 1em;
+    overflow: auto;
+    overscroll-behavior: contain;
+    height: calc(100vh - 48px);
+    border-left: 1px solid #ddd;
+  }
+  #toc.active nav {
+    display: block;
+  }
+  /* Make the collapsed ToC header render white on gray also when it's a link */
+  #toc h2 a,
+  #toc h2 a:link,
+  #toc h2 a:focus,
+  #toc h2 a:hover,
+  #toc a.toplink,
+  #toc a.toplink:hover {
+    color: white;
+    background-color: #444;
+    text-decoration: none;
+  }
+  #toc a.toplink {
+    margin-top: 2px;
+  }
+}
+
+/* alternative layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+  }
+  #toc h2 {
+    margin: 0;
+    padding: 0.25em 1em 1em 0;
+  }
+  #toc nav {
+    display: block;
+    height: calc(90vh - 84px);
+    bottom: 0;
+    padding: 0.5em 0 2em;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+  #toc nav > ul  {
+    margin-bottom: 2em;
+  }
+  #toc ul {
+    margin: 0 0 0 4px;
+    font-size: var(--small-font-size);
+  }
+  #toc ul :is(p, li) {
+    margin: 2px 0;
+    line-height: 22px;
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc, #n-introduction {
+    page-break-before: always;
+  }
+  #toc {
+    border-top: none;
+    padding-top: 0;
+  }
+  figure, pre {
+    page-break-inside: avoid;
+  }
+  figure {
+    overflow: scroll;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  h2+*, h3+*, h4+*, h5+*, h6+* {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Changes introduced to fix issues found during implementation */
+
+/* Separate body from document info even without intervening H1 */
+section {
+  clear: both;
+}
+
+/* Top align author divs, to avoid names without organization dropping level with org names */
+.author {
+  vertical-align: top;
+}
+
+/* Style section numbers with more space between number and title */
+.section-number {
+  padding-right: 0.5em;
+}
+
+/* Add styling for a link in the ToC that points to the top of the document */
+a.toplink {
+  float: right;
+  margin: 8px 0.5em 0;
+}
+
+/* Fix the dl styling to match the RFC 7992 attributes */
+dl > dt,
+dl.dlParallel > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.dlNewline > dt {
+  float: none;
+}
+
+/* Provide styling for table cell text alignment */
+table .text-left {
+  text-align: left;
+}
+table .text-center {
+  text-align: center;
+}
+table .text-right {
+  text-align: right;
+}
+
+/* Make the alternative author contact information look less like just another
+   author, and group it closer with the primary author contact information */
+.alternative-contact {
+  margin: 0.5em 0 0.25em 0;
+}
+address .non-ascii {
+  margin: 0 0 0 2em;
+}
+
+/* With it being possible to set tables with alignment
+  left, center, and right, { width: 100%; } does not make sense */
+table {
+  width: auto;
+}
+
+/* Avoid reference text that sits in a block with very wide left margin,
+   because of a long floating dt label.*/
+.references dd {
+  overflow: visible;
+}
+
+/* Control caption placement */
+caption {
+  caption-side: bottom;
+}
+
+/* Limit the width of the author address vcard, so names in right-to-left
+   script don't end up on the other side of the page. */
+
+address.vcard {
+  max-width: 20em;
+  margin-right: auto;
+}
+
+/* For address alignment dependent on LTR or RTL scripts */
+address div.left {
+  text-align: left;
+}
+address div.right {
+  text-align: right;
+}
+
+/* Give the table caption label the same styling as the figcaption */
+
+@media print {
+  .toplink {
+    display: none;
+  }
+
+  /* avoid overwriting the top border line with the ToC header */
+  #toc {
+    padding-top: 1px;
+  }
+
+  /* Avoid page breaks inside dl and author address entries */
+  dd {
+    page-break-before: avoid;
+  }
+  .vcard {
+    page-break-inside: avoid;
+  }
+
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg :is([stroke="black"], [stroke^="#000"]) {
+  stroke: var(--text-color);
+}
+svg :is([stroke="white"], [stroke^="#fff"]) {
+  stroke: var(--background-color);
+}
+svg :is([fill="black"], [fill^="#000"], :not([fill])) {
+  fill: var(--text-color);
+}
+svg :is([stroke="fill"], [fill^="#fff"]) {
+  fill: var(--background-color);
+}
+</style>
+
+</head>
+<body>
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Multicast QUIC</td>
+<td class="right">June 2022</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Holland, et al.</td>
+<td class="center">Expires 23 December 2022</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">QUIC Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2022-06-21" class="published">21 June 2022</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Experimental</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2022-12-23">23 December 2022</time></dd>
+<dt class="label-authors">Authors:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">J. Holland</div>
+<div class="org">Akamai Technologies, Inc.</div>
+</div>
+<div class="author">
+      <div class="author-name">L. Pardue</div>
+</div>
+<div class="author">
+      <div class="author-name">M. Franke</div>
+<div class="org">TU Berlin</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Multicast Extension for QUIC</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://GrumpyOldTroll.github.io/draft-jholland-quic-multicast/draft-jholland-quic-multicast.html">https://GrumpyOldTroll.github.io/draft-jholland-quic-multicast/draft-jholland-quic-multicast.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/">https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">
+        Discussion of this document takes place on the
+        QUIC Individual Draft mailing list (<span><a href="mailto:quic@ietf.org">mailto:quic@ietf.org</a></span>),
+        which is archived at <span><a href="https://mailarchive.ietf.org/arch/browse/quic/">https://mailarchive.ietf.org/arch/browse/quic/</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+<p id="section-note.1-4">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast">https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast</a></span>.<a href="#section-note.1-4" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 23 December 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2022 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="xref">1</a>.  <a href="#name-introduction" class="xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="xref">1.1</a>.  <a href="#name-conventions-and-definitions" class="xref">Conventions and Definitions</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="xref">2</a>.  <a href="#name-multicast-channel" class="xref">Multicast Channel</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="xref">3</a>.  <a href="#name-transport-parameter" class="xref">Transport Parameter</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="xref">4</a>.  <a href="#name-extension-overview" class="xref">Extension Overview</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="xref">4.1</a>.  <a href="#name-channel-management" class="xref">Channel Management</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="xref">4.2</a>.  <a href="#name-client-response" class="xref">Client Response</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="xref">4.3</a>.  <a href="#name-data-carried-in-channels" class="xref">Data Carried in Channels</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="xref">4.4</a>.  <a href="#name-stream-processing" class="xref">Stream Processing</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="xref">5</a>.  <a href="#name-flow-control" class="xref">Flow Control</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="xref">6</a>.  <a href="#name-congestion-control" class="xref">Congestion Control</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="xref">7</a>.  <a href="#name-data-integrity" class="xref">Data Integrity</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="xref">7.1</a>.  <a href="#name-packet-hashes" class="xref">Packet Hashes</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="xref">8</a>.  <a href="#name-recovery" class="xref">Recovery</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="xref">9</a>.  <a href="#name-connection-termination" class="xref">Connection Termination</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="xref">9.1</a>.  <a href="#name-stateless-reset" class="xref">Stateless Reset</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="xref">10</a>. <a href="#name-new-frames" class="xref">New Frames</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="xref">10.1</a>.  <a href="#name-mc_announce" class="xref">MC_ANNOUNCE</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="xref">10.2</a>.  <a href="#name-mc_key" class="xref">MC_KEY</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="xref">10.3</a>.  <a href="#name-mc_join" class="xref">MC_JOIN</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
+                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="xref">10.4</a>.  <a href="#name-mc_leave" class="xref">MC_LEAVE</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.5">
+                <p id="section-toc.1-1.10.2.5.1"><a href="#section-10.5" class="xref">10.5</a>.  <a href="#name-mc_integrity" class="xref">MC_INTEGRITY</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.6">
+                <p id="section-toc.1-1.10.2.6.1"><a href="#section-10.6" class="xref">10.6</a>.  <a href="#name-mc_ack" class="xref">MC_ACK</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.7">
+                <p id="section-toc.1-1.10.2.7.1"><a href="#section-10.7" class="xref">10.7</a>.  <a href="#name-mc_limits" class="xref">MC_LIMITS</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.8">
+                <p id="section-toc.1-1.10.2.8.1"><a href="#section-10.8" class="xref">10.8</a>.  <a href="#name-mc_retire" class="xref">MC_RETIRE</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.9">
+                <p id="section-toc.1-1.10.2.9.1"><a href="#section-10.9" class="xref">10.9</a>.  <a href="#name-mc_state" class="xref">MC_STATE</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="xref">11</a>. <a href="#name-frames-carried-in-channel-p" class="xref">Frames Carried in Channel Packets</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="xref">12</a>. <a href="#name-implementation-and-operatio" class="xref">Implementation and Operational Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="xref">12.1</a>.  <a href="#name-use-cases" class="xref">Use Cases</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1.2.1">
+                    <p id="section-toc.1-1.12.2.1.2.1.1"><a href="#section-12.1.1" class="xref">12.1.1</a>.  <a href="#name-http-3-server-push" class="xref">HTTP/3 Server Push</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1.2.2">
+                    <p id="section-toc.1-1.12.2.1.2.2.1"><a href="#section-12.1.2" class="xref">12.1.2</a>.  <a href="#name-http-3-webtransport" class="xref">HTTP/3 WebTransport</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1.2.3">
+                    <p id="section-toc.1-1.12.2.1.2.3.1"><a href="#section-12.1.3" class="xref">12.1.3</a>.  <a href="#name-non-web-applications" class="xref">Non-web Applications</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="xref">12.2</a>.  <a href="#name-graceful-degradation" class="xref">Graceful Degradation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2.2.1">
+                    <p id="section-toc.1-1.12.2.2.2.1.1"><a href="#section-12.2.1" class="xref">12.2.1</a>.  <a href="#name-circuit-breakers" class="xref">Circuit Breakers</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.3">
+                <p id="section-toc.1-1.12.2.3.1"><a href="#section-12.3" class="xref">12.3</a>.  <a href="#name-server-scalability" class="xref">Server Scalability</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.4">
+                <p id="section-toc.1-1.12.2.4.1"><a href="#section-12.4" class="xref">12.4</a>.  <a href="#name-addressing-collisions" class="xref">Addressing Collisions</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="xref">13</a>. <a href="#name-security-considerations" class="xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="xref">14</a>. <a href="#name-iana-considerations" class="xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="xref">15</a>. <a href="#name-references" class="xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="xref">15.1</a>.  <a href="#name-normative-references" class="xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="xref">15.2</a>.  <a href="#name-informative-references" class="xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="xref"></a><a href="#name-acknowledgments" class="xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-B" class="xref"></a><a href="#name-authors-addresses" class="xref">Authors' Addresses</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">This document specifies an extension to QUIC version 1 <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> to enable the use of multicast IP transport of identical data packets for use in many individual QUIC connections.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">The multicast data can only be consumed in conjunction with a unicast QUIC connection.
+When support for multicast is negotiated, the server can optionally advertise the existence of one or more multicast channels that contain unidirectional data streams from server to client, and the client can optionally join the multicast channel and verify from integrity data the server provides that correct data is being received, then acknowledge the data from the multicast channel(s) over the unicast connection.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">Enabling this can provide large scalability benefits for popular traffic over multicast-capable networks.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document does not define any multicast transport except server to client and only includes semantics for source-specific multicast.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<div id="conventions-and-definitions">
+<section id="section-1.1">
+        <h3 id="name-conventions-and-definitions">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+        </h3>
+<p id="section-1.1-1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
+"MAY", and "OPTIONAL" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-2">Commonly used terms in this document are described below.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Term</th>
+              <th class="text-left" rowspan="1" colspan="1">Definition</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">SSM</td>
+              <td class="text-left" rowspan="1" colspan="1">Source-specific multicast, as described in <span>[<a href="#RFC4607" class="xref">RFC4607</a>]</span>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">ASM</td>
+              <td class="text-left" rowspan="1" colspan="1">Any-source multicast, as distinguished from SSM in <span>[<a href="#RFC4607" class="xref">RFC4607</a>]</span>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">(S,G)</td>
+              <td class="text-left" rowspan="1" colspan="1">A tuple of IP addresses (Source IP, Group IP) identifying a source-specific multicast channel as described in <span>[<a href="#RFC4607" class="xref">RFC4607</a>]</span>
+</td>
+            </tr>
+          </tbody>
+        </table>
+</section>
+</div>
+</section>
+</div>
+<div id="multicast-channel">
+<section id="section-2">
+      <h2 id="name-multicast-channel">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-multicast-channel" class="section-name selfRef">Multicast Channel</a>
+      </h2>
+<p id="section-2-1">A QUIC multicast channel (or just channel) is a one-way network path that a server can use as an alternate path to send QUIC connection data to a client.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Multicast channels are designed to leverage multicast IP and to be shared by many different connections simultaneously for unidirectional server-initiated data.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">One or more servers can use the same QUIC multicast channel to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
+(Note that QUIC connections are defined in Section 5 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> and are not changed in this document; each connection is a shared state between a client and a server.)<a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-4">Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels do not support any-source multicast (ASM) semantics.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-5">Channels carry only 1-RTT packets.
+Packets associated with a channel contain a Channel ID in place of a Destination Connection ID.
+(A Channel ID cannot be zero length.)
+This adds a layer of indirection to the process described in Section 5.2 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> for matching packets to connections upon receipt.
+Incoming packets received on the network path associated with a channel use the Channel ID to associate the packet with a joined channel.<a href="#section-2-5" class="pilcrow">¶</a></p>
+<p id="section-2-6">A client with a matching joined channel always has at least one connection associated with the channel.
+If a client has no matching joined channel, the packet is discarded.<a href="#section-2-6" class="pilcrow">¶</a></p>
+<p id="section-2-7">Since the network path for a channel is unidirectional and uses a different path than the unicast part of the connection, packets associated with a channel are acknowledged with MC_ACK frames <a href="#channel-ack-frame" class="xref">Section 10.6</a> instead of ACK frames.
+Each channel has an independent packet number space.<a href="#section-2-7" class="pilcrow">¶</a></p>
+<p id="section-2-8">The use of any particular channel is OPTIONAL for both the server and the client.
+It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceful degradation for endpoints that do not or cannot make use of the multicast functionality (see <a href="#graceful-degradation" class="xref">Section 12.2</a>).<a href="#section-2-8" class="pilcrow">¶</a></p>
+<p id="section-2-9">The server has access to all data transmitted on any multicast channel it uses, and could optionally send this data with unicast instead.<a href="#section-2-9" class="pilcrow">¶</a></p>
+<p id="section-2-10">No special handling of the data is required in a client application that has enabled multicast.
+A datagram or any particular bytes from a server-initiated unidirectional stream can be delivered over the unicast connection or a multicast channel transparently to a client application consuming the stream or datagram.<a href="#section-2-10" class="pilcrow">¶</a></p>
+<p id="section-2-11">Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in <span>[<a href="#I-D.draft-krose-multicast-security" class="xref">I-D.draft-krose-multicast-security</a>]</span>.<a href="#section-2-11" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="transport-parameter">
+<section id="section-3">
+      <h2 id="name-transport-parameter">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-transport-parameter" class="section-name selfRef">Transport Parameter</a>
+      </h2>
+<p id="section-3-1">Support for multicast extensions in a client is advertised by means of a QUIC transport parameter:<a href="#section-3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-2.1">name: multicast_client_params (TBD - experiments use 0xff3e800)<a href="#section-3-2.1" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="section-3-3">If a multicast_client_params transport parameter is not included, servers MUST NOT send any frames defined in this document.  (Given that a server never sends any MC_JOIN frames, the clients also will never send any frames in this document so only the client-to-server advertisement is necessary.)<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">The multicast_client_params parameter has the structure shown below in <a href="#fig-transport-parameter-format" class="xref">Figure 1</a>.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<span id="name-multicast_client_params-for"></span><div id="fig-transport-parameter-format">
+<figure id="figure-1">
+        <div class="alignLeft art-text artwork" id="section-3-5.1">
+<pre>
+multicast_client_params {
+  Capabilities Field (i),
+  Max Aggregate Rate (i),
+  Max Channel IDs (i),
+  Hash Algorithms Supported (i),
+  AEAD Algorithms Supported (i),
+  Hash Algorithms List (16 * Hash Algorithms Supported),
+  AEAD Algorithms List (16 * AEAD Algorithms Supported)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<a href="#name-multicast_client_params-for" class="selfRef">multicast_client_params Format</a>
+        </figcaption></figure>
+</div>
+<p id="section-3-6">Capabilities Flags is a bit field structured as follows:<a href="#section-3-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-7.1">0x1 is set if IPv4 channels are permitted<a href="#section-3-7.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-3-7.2">0x2 is set if IPv6 channels are permitted<a href="#section-3-7.2" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="section-3-8">A server MUST NOT send MC_ANNOUNCE (<a href="#channel-announce-frame" class="xref">Section 10.1</a>) frames with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_LIMITS (<a href="#client-limits-frame" class="xref">Section 10.7</a>) frame adds permission for a different address family.<a href="#section-3-8" class="pilcrow">¶</a></p>
+<p id="section-3-9">The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_LIMITS frames (<a href="#client-limits-frame" class="xref">Section 10.7</a>) and provide the initial client values.<a href="#section-3-9" class="pilcrow">¶</a></p>
+<p id="section-3-10">The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
+If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION.<a href="#section-3-10" class="pilcrow">¶</a></p>
+<p id="section-3-11">The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION:<a href="#section-3-11" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-12.1">
+          <a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-3-12.1" class="pilcrow">¶</a>
+</li>
+      </ul>
+</section>
+</div>
+<div id="extension-overview">
+<section id="section-4">
+      <h2 id="name-extension-overview">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-extension-overview" class="section-name selfRef">Extension Overview</a>
+      </h2>
+<p id="section-4-1">A client has the option of refusal and the power to impose upper bound maxima on several resources (see <a href="#flow-control" class="xref">Section 5</a>), but otherwise its join status for all multicast channels is entirely managed by the server.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-2.1">A client MUST NOT join a channel without receiving instructions from a server to do so.<a href="#section-4-2.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-4-2.2">A client MUST leave joined channels when instructed by the server to do so.<a href="#section-4-2.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-4-2.3">A client MAY leave channels or refuse to join channels, regardless of instructions from the server.<a href="#section-4-2.3" class="pilcrow">¶</a>
+</li>
+      </ul>
+<div id="channel-management">
+<section id="section-4.1">
+        <h3 id="name-channel-management">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-channel-management" class="section-name selfRef">Channel Management</a>
+        </h3>
+<p id="section-4.1-1">The client tells its server about some restrictions on resources that it is capable of processing with the initial values in the multicast_client_params transport parameter (<a href="#transport-parameter" class="xref">Section 3</a>) and later can update these limits with MC_LIMITS <a href="#client-limits-frame" class="xref">Section 10.7</a> frames. Servers ensure the set of channels the client is currently requested to join remains within these advertised client limits as covered in <a href="#flow-control" class="xref">Section 5</a>.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The server asks the client to join channels with MC_JOIN (<a href="#channel-join-frame" class="xref">Section 10.3</a>) frames and to leave channels with MC_LEAVE (<a href="#channel-leave-frame" class="xref">Section 10.4</a>) frames.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+<p id="section-4.1-3">The server uses the MC_ANNOUNCE (<a href="#channel-announce-frame" class="xref">Section 10.1</a>) frame before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the secrets necessary to decode packets in the channel.
+<a href="#fig-client-channel-states" class="xref">Figure 2</a> shows the states a channel has from the clients point of view.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients. If a client decides to not join after being asked to do so, it can indicate this decision by sending an MC_STATE (<a href="#client-channel-state-frame" class="xref">Section 10.9</a>) frame with state Declined Join and an appropriate reason.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.1-5">The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS (<a href="#client-limits-frame" class="xref">Section 10.7</a>) frame the server received.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+<span id="name-states-a-channel-from-the-c"></span><div id="fig-client-channel-states">
+<figure id="figure-2">
+          <div class="alignLeft art-text artwork" id="section-4.1-6.1">
+<pre>
+                            o
+                            |
+-----------------------&gt;|   | Receive MC_ANNOUNCE and/or MC_KEY
+^                       |   |
+|                       |   |
+|  Receive MC_JOIN (and v   v
+|     unable to join) +----------+
+|&lt;--------------------*          |
+                      | unjoined | Receive MC_RETIRE
+---------------------&gt;|          *------------------------&gt;|
+^                     +----*-----+                         |
+|                          | Receive MC_JOIN               |
+|                          |   (and able to join)          |
+|                          |                               |
+|                          v                               v
+|                     +----------+                    +---------+
+|    Receive MC_LEAVE |          |                    |         |
+|     (or error case) |  joined  | Receive MC_RETIRE  | retired |
+|&lt;--------------------*          *-------------------&gt;|         |
+                      +----------+                    +---------+
+
+*: Each transition except the initial receiving of MC_ANNOUNCE
+   and MC_KEY frames causes the client to send an MC_STATE frame
+   describing the state transition (for Left or Declined Join, this
+   includes a reason for the transition).
+
+"able to join" means:
+- Both MC_KEY and MC_ANNOUNCE have been received
+- Result will be within latest advertised client limits
+- Nothing preventing a join is active (e.g. a hold-down timer,
+  administrative blocking, etc.)
+</pre>
+</div>
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a>:
+<a href="#name-states-a-channel-from-the-c" class="selfRef">States a channel from the clients point of view.</a>
+          </figcaption></figure>
+</div>
+<p id="section-4.1-7">When the server has asked the client to join a channel, it also sends MC_INTEGRITY frames (<a href="#channel-integrity-frame" class="xref">Section 10.5</a>) to enable the client to verify packet integrity before processing the packet.
+A client MUST NOT decode packets for a channel for which it has not received an applicable MC_ANNOUNCE (<a href="#channel-announce-frame" class="xref">Section 10.1</a>), or for which it has not received a matching packet hash in an MC_INTEGRITY (<a href="#channel-integrity-frame" class="xref">Section 10.5</a>) frame.<a href="#section-4.1-7" class="pilcrow">¶</a></p>
+<p id="section-4.1-8"><a href="#fig-frame-exchange" class="xref">Figure 3</a> shows the frames that are being exchanged about and over a channel during the lifetime of an example channel.<a href="#section-4.1-8" class="pilcrow">¶</a></p>
+<span id="name-example-flow-of-frames-for-"></span><div id="fig-frame-exchange">
+<figure id="figure-3">
+          <div class="alignLeft art-text artwork" id="section-4.1-9.1">
+<pre>
+Client                                        Server
+
+MC_LIMITS/initial_limits  ---&gt;
+
+                                              MC_ANNOUNCE
+                                              MC_KEY
+                                       &lt;----  MC_JOIN
+
+MC_STATE(Joined)  ---&gt;
+
+                                              MC_INTEGRITY
+                                       &lt;----  [STREAM(...)]
+MC_ACK  ---&gt;                                  ...
+...                                    &lt;----  MC_KEY
+...
+MC_LIMITS  ---&gt;
+
+                                       &lt;----  MC_LEAVE
+
+MC_STATE(Left)  ---&gt;
+
+                                       &lt;----  MC_JOIN
+
+MC_STATE(Joined)  ---&gt;
+
+                                              MC_INTEGRITY
+                                       &lt;----  [STREAM(...)]
+MC_ACK  ---&gt;                                  ...
+...
+
+                                       &lt;----  MC_LEAVE
+
+MC_STATE(Left)  ---&gt;
+
+                                       &lt;----  MC_RETIRE
+
+MC_STATE(Retired)  ---&gt;
+</pre>
+</div>
+<figcaption><a href="#figure-3" class="selfRef">Figure 3</a>:
+<a href="#name-example-flow-of-frames-for-" class="selfRef">Example flow of frames for a channel. Frames in square brackets are sent over multicast.</a>
+          </figcaption></figure>
+</div>
+<p id="section-4.1-10">TODO: incorporate server-side state diagram, latest proposed sketch at <a href="https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/62">https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/62</a><a href="#section-4.1-10" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="client-response">
+<section id="section-4.2">
+        <h3 id="name-client-response">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-client-response" class="section-name selfRef">Client Response</a>
+        </h3>
+<p id="section-4.2-1">The client sends back information about how it has responded to the server's requests to join and leave channels in MC_STATE (<a href="#client-channel-state-frame" class="xref">Section 10.9</a>) frames.
+MC_STATE frames are only sent for channels after the server has requested the client to join the channel, and are thereafter sent any time the state changes.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">Clients that receive and decode data on a multicast channel send acknowledgements for the data on the unicast connection using MC_ACK (<a href="#channel-ack-frame" class="xref">Section 10.6</a>) frames.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.2-3">A server can determine if a client can receive packets on a multicast channel if it receives MC_ACK frames associated with that channel.
+As such, it is in general up to the server to decide on the time after which it deems a client to be unable to receive packets on a given channel and take appropriate steps, e.g. sending an MC_LEAVE frame to the client.
+Note that clients willing to join a channel SHOULD remain joined to the channel even if they receive no channel data for an extended period, to enable multicast-capable networks to perform popularity-based admission control for multicast channels.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="data-carried-in-channels">
+<section id="section-4.3">
+        <h3 id="name-data-carried-in-channels">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-data-carried-in-channels" class="section-name selfRef">Data Carried in Channels</a>
+        </h3>
+<p id="section-4.3-1">Data transmitted in a multicast channel is encrypted with symmetric keys so that on-path observers without access to these keys cannot decode the data.
+However, since potentially many receivers receive identical packets and identical keys for the multicast channel and some receivers might be malicious, the packets are also protected by MC_INTEGRITY (<a href="#channel-integrity-frame" class="xref">Section 10.5</a>) frames transmitted over a separate integrity-protected path.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-2">A client MUST NOT decode packets on a multicast channel for which it has not received a matching hash in an MC_INTEGRITY frame over a different integrity-protected communication path.
+The different path can be either the unicast connection or another multicast channel with packets that were verified with an earlier MC_INTEGRITY frame.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+<p id="section-4.3-3">See <a href="#data-integrity" class="xref">Section 7</a> for a more complete overview of the security issues involved here.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stream-processing">
+<section id="section-4.4">
+        <h3 id="name-stream-processing">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-stream-processing" class="section-name selfRef">Stream Processing</a>
+        </h3>
+<p id="section-4.4-1">Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 2.1).<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<p id="section-4.4-2">When a channel contains streams with ids above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in Sections 4.6 and 19.14 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+<p id="section-4.4-3">If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send an MC_LEAVE frame.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
+<p id="section-4.4-4">If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason Max Streams Exceeded.<a href="#section-4.4-4" class="pilcrow">¶</a></p>
+<p id="section-4.4-5">Since clients can join later than a channel began, it is RECOMMENDED that clients supporting the multicast extensions to QUIC be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream id count might have been increasing for a long time.
+Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see Section 19.11 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) with a high limit.
+Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
+<p id="section-4.4-6">The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in Section 2.2 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>, stream data received multiple times for the same offset MUST be identical, even across multiple channels; if it's not identical it MAY be treated as a connection error of type PROTOCOL_VIOLATION.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="flow-control">
+<section id="section-5">
+      <h2 id="name-flow-control">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-flow-control" class="section-name selfRef">Flow Control</a>
+      </h2>
+<p id="section-5-1">The values used for unicast flow control cannot be used to limit the transmission rate of a multicast channel because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that channels responded to each client's limits.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">Instead, clients advertise resource limits via MC_LIMITS (<a href="#client-limits-frame" class="xref">Section 10.7</a>) frames and their initial values from the transport parameter (<a href="#transport-parameter" class="xref">Section 3</a>).
+The server is responsible for keeping the client within its advertised limits, by ensuring via MC_JOIN and MC_LEAVE frames that the set of channels the client is asked to be joined to will not, in aggregate, exeed the client's advertised limits.
+The server also advertises the expected maxima of the values that can contribute toward client resource limits within a channel in an MC_ANNOUNCE (<a href="#channel-announce-frame" class="xref">Section 10.1</a>) frame, and the client also ensures that the set of channels it's joined to does not exceed its limits, according to the advertised values.
+The client also monitors the packets received to ensure that channels don't exceed their advertised values, and leaves channels that do.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back an MC_STATE (<a href="#client-channel-state-frame" class="xref">Section 10.9</a>) with "Declined Join" and reason "Property Violation".
+If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Key Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
+If the actual contents sent in the channel exceed the advertised limits from the MC_PROPERTY, clients SHOULD leave the stream and send an MC_STATE(Left) frame, using the Limit Violated reason.<a href="#section-5-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="congestion-control">
+<section id="section-6">
+      <h2 id="name-congestion-control">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-congestion-control" class="section-name selfRef">Congestion Control</a>
+      </h2>
+<p id="section-6-1">Both the server and the client perform congestion control operations, so that according to the guidelines in Section 4.1 of <span>[<a href="#RFC8085" class="xref">RFC8085</a>]</span>, mechanisms for both feedback-based and receiver-driven styles of congestion control are present and operational.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">The server maintains a full view of the traffic received by the client via the MC_ACK (<a href="#channel-ack-frame" class="xref">Section 10.6</a>) frames and ACK frames it receives, and can detect loss experienced by the client.
+Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the clients aggregate rate is below its advertised Max Rate.
+Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(Left) frame with the High Loss reason, as well as reducing the Max Rate in MC_LIMITS.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">The unicast congestion control is unaffected.
+However if the client notices congestion from unicast this MAY also drive reductions in the client's Max Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Rate (along with an updated MC_LIMITS frame).<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">Hybrid multicast-unicast congestion control is still an experimental research topic.
+Implementations SHOULD follow the guidelines given in Section 4.1.1 of <span>[<a href="#RFC8085" class="xref">RFC8085</a>]</span> under the assumption that applications using QUIC multicast will operate as Bulk-Transfer applications.<a href="#section-6-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="data-integrity">
+<section id="section-7">
+      <h2 id="name-data-integrity">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-data-integrity" class="section-name selfRef">Data Integrity</a>
+      </h2>
+<p id="section-7-1">TODO: import the <span>[<a href="#I-D.draft-krose-multicast-security" class="xref">I-D.draft-krose-multicast-security</a>]</span> explanation for why extra integrity protection is necessary (many client have the shared key, so AEAD doesn't provide authentication against other valid clients on its own, since the same key is given to multiple clients and as the client count grows so does the chance that at least one client is controlled by an attacker.)<a href="#section-7-1" class="pilcrow">¶</a></p>
+<div id="packet-hashes">
+<section id="section-7.1">
+        <h3 id="name-packet-hashes">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-packet-hashes" class="section-name selfRef">Packet Hashes</a>
+        </h3>
+<p id="section-7.1-1">TODO: explanation and example for how to calculate the packet hash.
+Note that the hash is on the encrypted packet to avoid leaking data about the encrypted contents to those who can see a hash but not the key.
+(This approach also may help make better use of <span>[<a href="#I-D.draft-ietf-mboned-ambi" class="xref">I-D.draft-ietf-mboned-ambi</a>]</span> by making it possible to generate the same hashes for use in both AMBI and QUIC MC_INTEGRITY frames.)<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="recovery">
+<section id="section-8">
+      <h2 id="name-recovery">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-recovery" class="section-name selfRef">Recovery</a>
+      </h2>
+<p id="section-8-1">TODO: Articulate key differences with <span>[<a href="#RFC9002" class="xref">RFC9002</a>]</span>, mainly that the RTT for channel packets uses an estimated send time since the server doesn't necessarily know the exact timing of the send of the packet.<a href="#section-8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="connection-termination">
+<section id="section-9">
+      <h2 id="name-connection-termination">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-connection-termination" class="section-name selfRef">Connection Termination</a>
+      </h2>
+<p id="section-9-1">Termination of the unicast connection behaves as described in Section 10 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>, with the following notable differences:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-2.1">On the client side, termination of the unicast connection means that it MUST leave all multicast channels and discard any state associated with them. Servers MAY stop sending to multicast channels if there are no unicast connections left that are associated with them.<a href="#section-9-2.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-9-2.2">For determining the liveness of a connection, the client MUST only consider packets received on the unicast connection. Any packets received on a multicast channel MUST NOT be used to reset a timer checking if a potentially specified max_idle_timeout has been reached. If the unicast connection becomes idle and the server does not respond to a liveness test, the client MUST terminate the connection as described above.<a href="#section-9-2.2" class="pilcrow">¶</a>
+</li>
+      </ul>
+<div id="stateless-reset">
+<section id="section-9.1">
+        <h3 id="name-stateless-reset">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-stateless-reset" class="section-name selfRef">Stateless Reset</a>
+        </h3>
+<p id="section-9.1-1">As clients can unilaterally stop the delivery of multicast packets by leaving the relevant (S,G), channels do not need stateless reset tokens.
+Clients therefore do not share the stateless reset tokens of channels with the server. Instead, if an endpoint receives packets addressed to an (S,G) that it can not associate with any existing channel,
+it MAY take the necessary steps to prevent the reception of further such packets, without the need to signal to the server that it should stop sending.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-2">If a server or client detect a stateless reset for a channel, they MUST ignore it.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="new-frames">
+<section id="section-10">
+      <h2 id="name-new-frames">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-new-frames" class="section-name selfRef">New Frames</a>
+      </h2>
+<div id="channel-announce-frame">
+<section id="section-10.1">
+        <h3 id="name-mc_announce">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-mc_announce" class="section-name selfRef">MC_ANNOUNCE</a>
+        </h3>
+<p id="section-10.1-1">Once a server learns that a client supports multicast through its transport parameters, it can send one or multiple MC_ANNOUNCE frames (type=TBD-11..TBD-12) to share information about available channels with the client.
+The MC_ANNOUNCE frame contains the properties of a channel that do not change during its lifetime.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">MC_ANNOUNCE frames are formatted as shown in <a href="#fig-mc-channel-announce" class="xref">Figure 4</a>.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+<span id="name-mc_announce-frame-format"></span><div id="fig-mc-channel-announce">
+<figure id="figure-4">
+          <div class="alignLeft art-text artwork" id="section-10.1-3.1">
+<pre>
+MC_ANNOUNCE Frame {
+  Type (i) = TBD-11..TBD-12 (experiments use 0xff3e811/0xff3e812),
+  ID Length (8),
+  Channel ID (8..160),
+  Source IP (32..128),
+  Group IP (32..128),
+  UDP Port (16),
+  Header AEAD Algorithm (16),
+  Header Secret Length (i),
+  Header Secret (..),
+  AEAD Algorithm (16),
+  Integrity Hash Algorithm (16),
+  Max Rate (i),
+  Max ACK Delay (i)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-4" class="selfRef">Figure 4</a>:
+<a href="#name-mc_announce-frame-format" class="selfRef">MC_ANNOUNCE Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.1-4">Frames of type TBD-10 are used for IPv4 and both Source and Group address are 32 bits long. Frames of type TBD-11 are used for IPv6 and both Source and Group address are 128 bits long.<a href="#section-10.1-4" class="pilcrow">¶</a></p>
+<p id="section-10.1-5">MC_ANNOUNCE frames contain the following fields:<a href="#section-10.1-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1-6.1">ID Length: The length in bytes of the Channel ID field.<a href="#section-10.1-6.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.2">Channel ID: The channel ID of the channel that is getting announced.<a href="#section-10.1-6.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.3">IP Family: Unset indicates IPv4, Set indicates IPv6 for both Source IP and Group IP.<a href="#section-10.1-6.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.4">Source IP: The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.<a href="#section-10.1-6.4" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.5">Group IP: The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.<a href="#section-10.1-6.5" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.6">UDP Port: The 16-bit UDP Port of traffic for the channel.<a href="#section-10.1-6.6" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.7">Header AEAD Algorithm: A value from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>), used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see <a href="#transport-parameter" class="xref">Section 3</a>).<a href="#section-10.1-6.7" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.8">Header Secret Length: Provides the length of the Secret field.<a href="#section-10.1-6.8" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.9">Header Secret: A secret for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in <span>[<a href="#RFC9001" class="xref">RFC9001</a>]</span>.<a href="#section-10.1-6.9" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.10">Header Secret: Used to protect the header fields of 1-RTT packets for the channel as described in <span>[<a href="#RFC9001" class="xref">RFC9001</a>]</span>.  The Key and Initial Vector for the application data carried in the 1-RTT packet header fields are derived from this secret as described in Section 7.3 of <span>[<a href="#RFC8446" class="xref">RFC8446</a>]</span>.<a href="#section-10.1-6.10" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.11">AEAD Algorithm: A value from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>), used to protect the payloads in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see <a href="#transport-parameter" class="xref">Section 3</a>).<a href="#section-10.1-6.11" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.12">
+            <p id="section-10.1-6.12.1">Integrity Hash Algorithm: The hash algorithm used in integrity frames.<a href="#section-10.1-6.12.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1-6.12.2.1">
+                <p id="section-10.1-6.12.2.1.1"><strong>Author's Note:</strong> Several candidate IANA registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:<a href="#section-10.1-6.12.2.1.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1-6.12.2.1.2.1">
+                    <a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-10.1-6.12.2.1.2.1" class="pilcrow">¶</a>
+</li>
+                  <li class="normal" id="section-10.1-6.12.2.1.2.2">
+                    <a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18</a><a href="#section-10.1-6.12.2.1.2.2" class="pilcrow">¶</a>
+</li>
+                  <li class="normal" id="section-10.1-6.12.2.1.2.3">(text-only): <a href="https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml">https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml</a><a href="#section-10.1-6.12.2.1.2.3" class="pilcrow">¶</a>
+</li>
+                </ul>
+</li>
+            </ul>
+</li>
+          <li class="normal" id="section-10.1-6.13">Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.<a href="#section-10.1-6.13" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.1-6.14">Max ACK Delay: A value used similarly to max_ack_delay (Section 18.2 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>}) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds, and SHOULD NOT add any delay to the first MC_ACK of data packets for a channel.  As long as they stay inside these limits, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.<a href="#section-10.1-6.14" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.1-7">A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
+As the server knows which connection IDs are in use by the client, it MUST wait with the sending of an MC_JOIN frame until the channel ID associated with it has been retired by the client.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
+<p id="section-10.1-8">As all the properties in MC_ANNOUNCE frames are immutable during the lifetime of a channel, a server SHOULD NOT send an MC_ANNOUNCE frame for the same channel more than once to each client except as needed for recovery.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
+<p id="section-10.1-9">A server SHOULD send an MC_ANNOUNCE frame for a channel before sending an MC_KEY and SHOULD send an MC_KEY frame for a channel before sending an MC_JOIN frame for it.
+Each of these recommended orderings MAY occur within the same packet.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="channel-key-frame">
+<section id="section-10.2">
+        <h3 id="name-mc_key">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-mc_key" class="section-name selfRef">MC_KEY</a>
+        </h3>
+<p id="section-10.2-1">An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
+The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">A server can send a new MC_KEY frame with a sequence number increased by one.
+A server MUST generate continuous sequence numbers, and MAY start at a value higher than 0.
+Note that while not joined, a client will not receive updates to channel secrets, and thus may see jumps in the Key Sequence Number values between MC_KEY frames.
+However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<p id="section-10.2-3">Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Seqence Numbers have a Key Phase of 1 in the 1-RTT packet.
+Secrets with a Key Phase indicating an unknown key SHOULD be discarded without attempting to decrypt them.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+<p id="section-10.2-4">It is RECOMMENDED that servers send regular secret updates.<a href="#section-10.2-4" class="pilcrow">¶</a></p>
+<p id="section-10.2-5">MC_KEY frames are formatted as shown in <a href="#fig-mc-channel-key-format" class="xref">Figure 5</a>.<a href="#section-10.2-5" class="pilcrow">¶</a></p>
+<span id="name-mc_key-frame-format"></span><div id="fig-mc-channel-key-format">
+<figure id="figure-5">
+          <div class="alignLeft art-text artwork" id="section-10.2-6.1">
+<pre>
+MC_KEY Frame {
+  Type (i) = TBD-01 (experiments use 0xff3e801),
+  ID Length (8),
+  Channel ID (8..160),
+  Key Sequence Number (i),
+  From Packet Number (i),
+  Secret Length (i),
+  Secret (..)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-5" class="selfRef">Figure 5</a>:
+<a href="#name-mc_key-frame-format" class="selfRef">MC_KEY Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.2-7">MC_KEY frames contain the following fields:<a href="#section-10.2-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2-8.1">ID Length: The length in bytes of the Channel ID field.<a href="#section-10.2-8.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.2-8.2">Channel ID: The channel ID for the channel associated with this frame.<a href="#section-10.2-8.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.2-8.3">Key Sequence Number: Increases by 1 each time the secret for the channel is changed by the server.  If there is a gap in sequence numbers due to reordering or retransmission of packets, on receipt of the older MC_KEY frame, the client MUST apply the secret contained and the packet numbers on which it applies as if they arrived in order.<a href="#section-10.2-8.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.2-8.4">From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.  The Packet Number MUST never decrease with an increased Key Sequence Number.<a href="#section-10.2-8.4" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.2-8.5">Secret Length: Provides the length of the secret field.<a href="#section-10.2-8.5" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.2-8.6">Secret: Used to protect the packet contents of 1-RTT packets for the channel as described in <span>[<a href="#RFC9001" class="xref">RFC9001</a>]</span>.  The Key and Initial Vector for the application data carried in the 1-RTT packet payloads are derived from the secret as described in Section 7.3 of <span>[<a href="#RFC8446" class="xref">RFC8446</a>]</span>.
+To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.<a href="#section-10.2-8.6" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.2-9">Clients MUST delete old secrets within 10 seconds after receiving a new key, and within 3 seconds after receiving a new key and not receiving any data traffic decrypted with the old key.<a href="#section-10.2-9" class="pilcrow">¶</a></p>
+<p id="section-10.2-10">The From Packet Number is used to indicate the starting packet number (Section 17.1 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) of the 1-RTT packets for which the secret contained in an MC_KEY frame are applicable.
+This secret is applicable to all future packets until it is overwritten by a new MC_KEY frame.<a href="#section-10.2-10" class="pilcrow">¶</a></p>
+<p id="section-10.2-11">A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.<a href="#section-10.2-11" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="channel-join-frame">
+<section id="section-10.3">
+        <h3 id="name-mc_join">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-mc_join" class="section-name selfRef">MC_JOIN</a>
+        </h3>
+<p id="section-10.3-1">An MC_JOIN frame (type TBD-02) is sent from server to client and requests that a client join the given transport addresses and ports and process packets with the given Channel ID according to the corresponding MC_ANNOUNCE.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10.3-2">A client cannot join a multicast channel without first receiving an MC_ANNOUNCE frame which sets all the values for a channel.<a href="#section-10.3-2" class="pilcrow">¶</a></p>
+<p id="section-10.3-3">If a client receives an MC_JOIN for a channel for which it has not received an MC_ANNOUNCE frame, it MUST respond with an MC_STATE with State "Declined Join" and reason "Missing Properties". The server MAY send another MC_JOIN after receiving an acknowledgement indicating receipt of the MC_ANNOUNCE.<a href="#section-10.3-3" class="pilcrow">¶</a></p>
+<p id="section-10.3-4">MC_JOIN frames are formatted as shown in <a href="#fig-mc-channel-join-format" class="xref">Figure 6</a>.<a href="#section-10.3-4" class="pilcrow">¶</a></p>
+<span id="name-mc_join-frame-format"></span><div id="fig-mc-channel-join-format">
+<figure id="figure-6">
+          <div class="alignLeft art-text artwork" id="section-10.3-5.1">
+<pre>
+MC_JOIN Frame {
+  Type (i) = TBD-02 (experiments use 0xff3e802),
+  MC_LIMITS Sequence Number (i),
+  MC_STATE Sequence Number (i),
+  MC_KEY Sequence Number (i),
+  ID Length (8),
+  Channel ID (8..160)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-6" class="selfRef">Figure 6</a>:
+<a href="#name-mc_join-frame-format" class="selfRef">MC_JOIN Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.3-6">The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_KEY not yet received by the client or one or more missing updates to MC_LIMITS or MC_STATE not yet received by the server).<a href="#section-10.3-6" class="pilcrow">¶</a></p>
+<p id="section-10.3-7">A client MAY perform the join if it has the sequence number of the corresponding channel properties and the client's limits will not be exceeded, even if the client sequence numbers are not up-to-date.
+If the client does not join, it MUST send an MC_STATE with "Declined Join" and a reason.<a href="#section-10.3-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="channel-leave-frame">
+<section id="section-10.4">
+        <h3 id="name-mc_leave">
+<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-mc_leave" class="section-name selfRef">MC_LEAVE</a>
+        </h3>
+<p id="section-10.4-1">An MC_LEAVE frame (type=TBD-03) is sent from server to client, and requests that a client leave the given channel.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
+<p id="section-10.4-2">If the client has already left or declined to join the channel, the MC_LEAVE is ignored.<a href="#section-10.4-2" class="pilcrow">¶</a></p>
+<p id="section-10.4-3">If an MC_JOIN or an MC_LEAVE with the same Channel ID and a higher MC_STATE Sequence number has previously been received, the MC_LEAVE is ignored.<a href="#section-10.4-3" class="pilcrow">¶</a></p>
+<p id="section-10.4-4">Otherwise, the client MUST leave the channel and send a new MC_STATE frame with reason Left as requested by server.<a href="#section-10.4-4" class="pilcrow">¶</a></p>
+<p id="section-10.4-5">MC_LEAVE frames are formatted as shown in <a href="#fig-mc-channel-leave-format" class="xref">Figure 7</a>.<a href="#section-10.4-5" class="pilcrow">¶</a></p>
+<span id="name-mc_leave-frame-format"></span><div id="fig-mc-channel-leave-format">
+<figure id="figure-7">
+          <div class="alignLeft art-text artwork" id="section-10.4-6.1">
+<pre>
+MC_LEAVE Frame {
+  Type (i) = TBD-03 (experiments use 0xff3e803),
+  ID Length (8),
+  Channel ID (8..160),
+  MC_STATE Sequence Number (i),
+  After Packet Number (i)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-7" class="selfRef">Figure 7</a>:
+<a href="#name-mc_leave-frame-format" class="selfRef">MC_LEAVE Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.4-7">If After Packet Number is nonzero, wait until receiving that packet or a higher valued number before leaving.<a href="#section-10.4-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="channel-integrity-frame">
+<section id="section-10.5">
+        <h3 id="name-mc_integrity">
+<a href="#section-10.5" class="section-number selfRef">10.5. </a><a href="#name-mc_integrity" class="section-name selfRef">MC_INTEGRITY</a>
+        </h3>
+<p id="section-10.5-1">MC_INTEGRITY frames are sent from server to client and are used to convey packet hashes for validating the integrity of packets received over the multicast channel as described in <a href="#packet-hashes" class="xref">Section 7.1</a>.<a href="#section-10.5-1" class="pilcrow">¶</a></p>
+<p id="section-10.5-2">MC_INTEGRITY frames are formatted as shown in <a href="#fig-mc-channel-integrity-format" class="xref">Figure 8</a>.<a href="#section-10.5-2" class="pilcrow">¶</a></p>
+<span id="name-mc_integrity-frame-format"></span><div id="fig-mc-channel-integrity-format">
+<figure id="figure-8">
+          <div class="alignLeft art-text artwork" id="section-10.5-3.1">
+<pre>
+MC_INTEGRITY Frame {
+  Type (i) = TBD-04..TBD-05 (experiments use 0xff3e804/0xff3e805),
+  ID Length (8),
+  Channel ID (8..160),
+  Packet Number Start (i),
+  [Length (i)],
+  Packet Hashes (..)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-8" class="selfRef">Figure 8</a>:
+<a href="#name-mc_integrity-frame-format" class="selfRef">MC_INTEGRITY Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.5-4">For type TBD-05, Length is present and is a count of packet hashes.  For TBD-04, Length is not present and the packet hashes extend to the end of the packet.<a href="#section-10.5-4" class="pilcrow">¶</a></p>
+<p id="section-10.5-5">The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Channel ID equal to the Channel ID in the MC_INTEGRITY frame and packet number equal to the Packet Number Start field.
+Subsequent hashes refer to the packets for the channel with packet numbers increasing by 1.<a href="#section-10.5-5" class="pilcrow">¶</a></p>
+<p id="section-10.5-6">Packet hashes MUST have length with an integer multiple of the length indicated by the Hash Algorithm from the MC_ANNOUNCE frame.<a href="#section-10.5-6" class="pilcrow">¶</a></p>
+<p id="section-10.5-7">See <a href="#packet-hashes" class="xref">Section 7.1</a> for a description of the packet hash calculation.<a href="#section-10.5-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="channel-ack-frame">
+<section id="section-10.6">
+        <h3 id="name-mc_ack">
+<a href="#section-10.6" class="section-number selfRef">10.6. </a><a href="#name-mc_ack" class="section-name selfRef">MC_ACK</a>
+        </h3>
+<p id="section-10.6-1">The MC_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.<a href="#section-10.6-1" class="pilcrow">¶</a></p>
+<p id="section-10.6-2">(TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of <span>[<a href="#I-D.draft-ietf-quic-multipath" class="xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel id as the packet number space?  at 2022-05 they're identical except the Channel ID.)<a href="#section-10.6-2" class="pilcrow">¶</a></p>
+<p id="section-10.6-3">MC_ACK frames are formatted as shown in <a href="#fig-mc-channel-ack-format" class="xref">Figure 9</a>.<a href="#section-10.6-3" class="pilcrow">¶</a></p>
+<span id="name-mc_ack-frame-format"></span><div id="fig-mc-channel-ack-format">
+<figure id="figure-9">
+          <div class="alignLeft art-text artwork" id="section-10.6-4.1">
+<pre>
+MC_ACK Frame {
+  Type (i) = TBD-06..TBD-07 (experiments use 0xff3e806, 0xff3e807),
+  ID Length (8),
+  Channel ID (8..160),
+  Largest Acknowledged (i),
+  ACK Delay (i),
+  ACK Range Count (i),
+  First ACK Range (i),
+  ACK Range (..) ...,
+  [ECN Counts (..)],
+}
+</pre>
+</div>
+<figcaption><a href="#figure-9" class="selfRef">Figure 9</a>:
+<a href="#name-mc_ack-frame-format" class="selfRef">MC_ACK Frame Format</a>
+          </figcaption></figure>
+</div>
+</section>
+</div>
+<div id="client-limits-frame">
+<section id="section-10.7">
+        <h3 id="name-mc_limits">
+<a href="#section-10.7" class="section-number selfRef">10.7. </a><a href="#name-mc_limits" class="section-name selfRef">MC_LIMITS</a>
+        </h3>
+<p id="section-10.7-1">MC_LIMITS frames are formatted as shown in <a href="#fig-mc-client-limits-format" class="xref">Figure 10</a>.<a href="#section-10.7-1" class="pilcrow">¶</a></p>
+<span id="name-mc_limits-frame-format"></span><div id="fig-mc-client-limits-format">
+<figure id="figure-10">
+          <div class="alignLeft art-text artwork" id="section-10.7-2.1">
+<pre>
+MC_LIMITS Frame {
+  Type (i) = TBD-09 (experiments use 0xff3e809),
+  Client Limits Sequence Number (i),
+  Capabilities Flags(i),
+  Max Aggregate Rate (i),
+  Max Channel IDs (i),
+  Max Joined Count (i),
+}
+</pre>
+</div>
+<figcaption><a href="#figure-10" class="selfRef">Figure 10</a>:
+<a href="#name-mc_limits-frame-format" class="selfRef">MC_LIMITS Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.7-3">The sequence number is implicitly 0 before the first MC_LIMITS frame from the client, and increases by 1 each new frame that's sent.
+Newer frames override older ones.<a href="#section-10.7-3" class="pilcrow">¶</a></p>
+<p id="section-10.7-4">Capabilities Flags is a bit field structured as follows:<a href="#section-10.7-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.7-5.1">0x1 is set if IPv4 channels are permitted<a href="#section-10.7-5.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.7-5.2">0x2 is set if IPv6 channels are permitted<a href="#section-10.7-5.2" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.7-6">For example, a Capabilities Flags value of 3 (0x11) indicates that both IPv4 and IPv6 channels are permitted.<a href="#section-10.7-6" class="pilcrow">¶</a></p>
+<p id="section-10.7-7">Max Aggregate Rate allowed across all joined channels is in Kibps.<a href="#section-10.7-7" class="pilcrow">¶</a></p>
+<p id="section-10.7-8">Max Channel IDs is the count of channel IDs that can be reserved and have properties.  Retired Channel IDs don't count against this value.<a href="#section-10.7-8" class="pilcrow">¶</a></p>
+<p id="section-10.7-9">Max Joined Count is the count of channels that are allowed to be joined concurrently.<a href="#section-10.7-9" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="channel-retire-frame">
+<section id="section-10.8">
+        <h3 id="name-mc_retire">
+<a href="#section-10.8" class="section-number selfRef">10.8. </a><a href="#name-mc_retire" class="section-name selfRef">MC_RETIRE</a>
+        </h3>
+<p id="section-10.8-1">MC_RETIRE frames are formatted as shown in <a href="#fig-mc-channel-retire-format" class="xref">Figure 11</a>.<a href="#section-10.8-1" class="pilcrow">¶</a></p>
+<span id="name-mc_retire-frame-format"></span><div id="fig-mc-channel-retire-format">
+<figure id="figure-11">
+          <div class="alignLeft art-text artwork" id="section-10.8-2.1">
+<pre>
+MC_RETIRE Frame {
+  Type (i) = TBD-0a (experiments use 0xff3e80a),
+  ID Length (8),
+  Channel ID (8..160),
+  After Packet Number (i)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-11" class="selfRef">Figure 11</a>:
+<a href="#name-mc_retire-frame-format" class="selfRef">MC_RETIRE Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.8-3">Retires a channel by id, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
+If After Packet Number is nonzero, the channel will be retired after receiving that packet or a higher valued number, otherwise it will be retired immediately.<a href="#section-10.8-3" class="pilcrow">¶</a></p>
+<p id="section-10.8-4">After retiring a channel, the client MUST send a new MC_STATE frame with reason Retired to the server.<a href="#section-10.8-4" class="pilcrow">¶</a></p>
+<p id="section-10.8-5">If the client is still joined in the channel that is being retired, it MUST also leave it. If a channel is left this way, it does not need to send an additional MC_STATE frame with reason Left.<a href="#section-10.8-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="client-channel-state-frame">
+<section id="section-10.9">
+        <h3 id="name-mc_state">
+<a href="#section-10.9" class="section-number selfRef">10.9. </a><a href="#name-mc_state" class="section-name selfRef">MC_STATE</a>
+        </h3>
+<p id="section-10.9-1">MC_STATE frames are sent from client to server to report changes in the client's channel state.
+Each time the channel state changes, the Client Channel State Sequence number is increased by one.
+It is a state change to the channel if the server requests that a client join a channel and the client declines the join, even though no join occurs on the network.<a href="#section-10.9-1" class="pilcrow">¶</a></p>
+<p id="section-10.9-2">MC_STATE frames are formatted as shown in <a href="#fig-mc-client-channel-state-format" class="xref">Figure 12</a>.<a href="#section-10.9-2" class="pilcrow">¶</a></p>
+<span id="name-mc_state-frame-format"></span><div id="fig-mc-client-channel-state-format">
+<figure id="figure-12">
+          <div class="alignLeft art-text artwork" id="section-10.9-3.1">
+<pre>
+MC_STATE Frame {
+  Type (i) = TBD-0b (experiments use 0xff3e80b),
+  Client Channel State Sequence Number (i),
+  ID Length (8),
+  Channel ID (8..160),
+  State (i),
+  Reason (0..i)
+}
+</pre>
+</div>
+<figcaption><a href="#figure-12" class="selfRef">Figure 12</a>:
+<a href="#name-mc_state-frame-format" class="selfRef">MC_STATE Frame Format</a>
+          </figcaption></figure>
+</div>
+<p id="section-10.9-4">State has these defined values:<a href="#section-10.9-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.9-5.1">0x1: Left<a href="#section-10.9-5.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-5.2">0x2: Declined Join<a href="#section-10.9-5.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-5.3">0x3: Joined<a href="#section-10.9-5.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-5.4">0x4: Retired<a href="#section-10.9-5.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.9-6">If State is Joined or Retired, the Reason field is absent.<a href="#section-10.9-6" class="pilcrow">¶</a></p>
+<p id="section-10.9-7">If State is Left or Declined Join, the Reason field is set to one of:<a href="#section-10.9-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.9-8.1">0x0: Unspecified Other<a href="#section-10.9-8.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.2">0x1: Left as requested by server<a href="#section-10.9-8.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.3">0x2: Administrative Block<a href="#section-10.9-8.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.4">0x3: Protocol Error<a href="#section-10.9-8.4" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.5">0x4: Property Violation<a href="#section-10.9-8.5" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.6">0x5: Unsynchronized Properties<a href="#section-10.9-8.6" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.7">0x6: ID Collision<a href="#section-10.9-8.7" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.8">0x10: Held Down<a href="#section-10.9-8.8" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.9">0x12: Max Rate Exceeded<a href="#section-10.9-8.9" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.10">0x13: High Loss<a href="#section-10.9-8.10" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.11">0x14: Excessive Spurious Traffic<a href="#section-10.9-8.11" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.12">0x15: Max Streams Exceeded<a href="#section-10.9-8.12" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.9-8.13">0x1000000-0x3fffffff: Application-defined Reason<a href="#section-10.9-8.13" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.9-9">A client might receive multicast packets that it can not associate with any channel ID, or that cannot be verified as matching hashes from MC_INTEGRITY frames, or cannot be decrypted.
+This traffic is presumed either to have been corrupted in transit or to have been sent by someone other than the legitimate sender of traffic for the channel, possibly by an attacker or a misconfigured sender in the network.
+If these packets are addressed to an (S,G) that is used for reception in one or more known channels, the client MAY leave these channels with reason "Excessive Spurious traffic".<a href="#section-10.9-9" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="frames-carried-in-channel-packets">
+<section id="section-11">
+      <h2 id="name-frames-carried-in-channel-p">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-frames-carried-in-channel-p" class="section-name selfRef">Frames Carried in Channel Packets</a>
+      </h2>
+<p id="section-11-1">Multicast channels will contain normal QUIC 1-rtt data packets (see Section 17.3.1 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys derived from the secrets in MC_KEY frames for the corresponding channel.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">Data packet hashes will also be sent in MC_INTEGRITY frames, as keys cannot be trusted for integrity due to giving them to too many receivers, as in <span>[<a href="#I-D.draft-krose-multicast-security" class="xref">I-D.draft-krose-multicast-security</a>]</span>.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">The 1-rtt packets in multicast channels will have a restricted set of frames.
+Since the channel is strictly 1-way server to client, the general principle is that broadcastable shared server-&gt;client data frames can be sent, but frames that make sense only for individualized connections cannot.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">Permitted:<a href="#section-11-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-5.1">PADDING Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.1)<a href="#section-11-5.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.2">PING Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.2)<a href="#section-11-5.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.3">RESET_STREAM Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.4)<a href="#section-11-5.3" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.4">STREAM Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.8)<a href="#section-11-5.4" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.5">DATAGRAM Frames (both types) (<span>[<a href="#RFC9221" class="xref">RFC9221</a>]</span> Section 4)<a href="#section-11-5.5" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.6">MC_KEY<a href="#section-11-5.6" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.7">MC_LEAVE (however, join must come over unicast?)<a href="#section-11-5.7" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.8">MC_INTEGRITY (not for this channel, only for another)<a href="#section-11-5.8" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-5.9">MC_RETIRE<a href="#section-11-5.9" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="section-11-6">Not permitted:<a href="#section-11-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-7.1">19.3.  ACK Frames<a href="#section-11-7.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.2">19.6.  CRYPTO Frames (crypto handshake does not happen on mc channels)<a href="#section-11-7.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.3">19.7.  NEW_TOKEN Frames<a href="#section-11-7.3" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.4">
+          <p id="section-11-7.4.1">Flow control is different:<a href="#section-11-7.4.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-7.4.2.1">19.5.  STOP_SENDING Frames<a href="#section-11-7.4.2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.2">19.9.  MAX_DATA Frames  (flow control for mc channels is by rate)<a href="#section-11-7.4.2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.3">19.10. MAX_STREAM_DATA Frames<a href="#section-11-7.4.2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.4">19.11. MAX_STREAMS Frames<a href="#section-11-7.4.2.4" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.5">19.12. DATA_BLOCKED Frames<a href="#section-11-7.4.2.5" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.6">19.13. STREAM_DATA_BLOCKED Frames<a href="#section-11-7.4.2.6" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.4.2.7">19.14. STREAMS_BLOCKED Frames<a href="#section-11-7.4.2.7" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-11-7.5">
+          <p id="section-11-7.5.1">Channel ID Migration can't use the "prior to" concept within a channel, not 0-starting<a href="#section-11-7.5.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-7.5.2.1">19.15. NEW_CONNECTION_ID Frames<a href="#section-11-7.5.2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.5.2.2">19.16. RETIRE_CONNECTION_ID Frames<a href="#section-11-7.5.2.2" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-11-7.6">
+          <p id="section-11-7.6.1">Channels don't have the same kind of path validation, as there's a unicast anchor with acks for the multicast packets:<a href="#section-11-7.6.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-7.6.2.1">19.17. PATH_CHALLENGE Frames<a href="#section-11-7.6.2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-11-7.6.2.2">19.18. PATH_RESPONSE Frames<a href="#section-11-7.6.2.2" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-11-7.7">19.19. CONNECTION_CLOSE Frames<a href="#section-11-7.7" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.8">19.20. HANDSHAKE_DONE Frames<a href="#section-11-7.8" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.9">MC_ANNOUNCE<a href="#section-11-7.9" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.10">MC_LIMITS<a href="#section-11-7.10" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.11">MC_STATE<a href="#section-11-7.11" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-11-7.12">MC_ACK<a href="#section-11-7.12" class="pilcrow">¶</a>
+</li>
+      </ul>
+</section>
+</div>
+<div id="implementation-and-operational-considerations">
+<section id="section-12">
+      <h2 id="name-implementation-and-operatio">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-implementation-and-operatio" class="section-name selfRef">Implementation and Operational Considerations</a>
+      </h2>
+<div id="use-cases">
+<section id="section-12.1">
+        <h3 id="name-use-cases">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-use-cases" class="section-name selfRef">Use Cases</a>
+        </h3>
+<div id="server-push">
+<section id="section-12.1.1">
+          <h4 id="name-http-3-server-push">
+<a href="#section-12.1.1" class="section-number selfRef">12.1.1. </a><a href="#name-http-3-server-push" class="section-name selfRef">HTTP/3 Server Push</a>
+          </h4>
+<p id="section-12.1.1-1">HTTP/3 Server Push is defined in Section 4.6 of <span>[<a href="#RFC9114" class="xref">RFC9114</a>]</span>.<a href="#section-12.1.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.1.1-2">Server push is a good use case for multicast transport because the same data can be pushed to many different receivers on a multicast channel.
+Applications designed to work well with server push can leverage multicast QUIC very effectively with only a few extra considerations.<a href="#section-12.1.1-2" class="pilcrow">¶</a></p>
+<p id="section-12.1.1-3">A QUIC connection using HTTP/3 can use multicast channels to deliver server-initiated streams that implement HTTP/3 Server Push.<a href="#section-12.1.1-3" class="pilcrow">¶</a></p>
+<p id="section-12.1.1-4">Applications expecting to use server push with multicast SHOULD use a high MAX_PUSH_ID in order to work with channels that have been active for a long time already when the connection is first established.
+Servers SHOULD NOT allow clients to remain joined to channels if their MAX_PUSH_ID will be exceeded by push streams that are to be sent imminently.<a href="#section-12.1.1-4" class="pilcrow">¶</a></p>
+<p id="section-12.1.1-5">If a client receives data from a push ID that exceeds its MAX_PUSH_ID causing an H3_ID_ERROR on a multicast channel, it SHOULD leave the channel with reason 0x1000108 (computed by adding the H3_ID_ERROR value 0x0108 to the Application-defined Reason start value 0x1000000).
+This SHOULD NOT cause a close of the whole connection but MAY cause a stream error and reset of the stream.<a href="#section-12.1.1-5" class="pilcrow">¶</a></p>
+<p id="section-12.1.1-6">TODO: flesh out this principle for application-level error code assignment in general for known error code values, and specifically all HTTP/3 ones? (And is it useful?)<a href="#section-12.1.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="webtransport">
+<section id="section-12.1.2">
+          <h4 id="name-http-3-webtransport">
+<a href="#section-12.1.2" class="section-number selfRef">12.1.2. </a><a href="#name-http-3-webtransport" class="section-name selfRef">HTTP/3 WebTransport</a>
+          </h4>
+<p id="section-12.1.2-1">WebTransport over HTTP/3 is defined in <span>[<a href="#I-D.draft-ietf-webtrans-http3" class="xref">I-D.draft-ietf-webtrans-http3</a>]</span>.<a href="#section-12.1.2-1" class="pilcrow">¶</a></p>
+<p id="section-12.1.2-2">Popular data that can be sent with server-initiated streams or server-sent datagrams and carried over WebTransport are good use cases for multicast transport because the same server-to-client data can be pushed to many different receivers on a multicast channel.<a href="#section-12.1.2-2" class="pilcrow">¶</a></p>
+<p id="section-12.1.2-3">A QUIC connection using HTTP/3 and WebTransport can use multicast channels to deliver WebTransport server-initiated streams.
+At the time of this writing (version -02) this comes with the significant penalty that in order to do so, servers would have to run up to 4 multicast channels per shared set of data to send, one for each possible size of the client-chosen Session ID.<a href="#section-12.1.2-3" class="pilcrow">¶</a></p>
+<p id="section-12.1.2-4">Servers can achieve this by sending the initial few bytes of the server-initiated stream, containing the Session ID (currently defined as the Stream ID of the QUIC stream containing the original HTTP/3 request for the WebTransport extended CONNECT request), then sending the rest of the stream data over a multicast channel.<a href="#section-12.1.2-4" class="pilcrow">¶</a></p>
+<p id="section-12.1.2-5">However, since the client-initiated Stream ID used for the Session ID is a variable-length integer with 4 possible sizes (1, 2, 4, or 8 octets), clients will need the shared data in the stream to be at one of 4 different possible stream offsets in order to process it.
+Hence, for WebTransport as currently specified servers would need to run up to 4 separate channels instead of a single channel in order to send the same WebTransport data to many different clients.<a href="#section-12.1.2-5" class="pilcrow">¶</a></p>
+<p id="section-12.1.2-6">WebTransport Datagrams are delivered over HTTP/3 Datagrams as defined in <span>[<a href="#I-D.draft-ietf-masque-h3-datagram" class="xref">I-D.draft-ietf-masque-h3-datagram</a>]</span> and have the same characteristic of relying on the client-chosen Quarter Stream ID value.<a href="#section-12.1.2-6" class="pilcrow">¶</a></p>
+<p id="section-12.1.2-7">While using 4 multicast channels instead of 1 still represents a potentially vast scalability improvement over unicast delivery for popular content, it causes other scalability problems, especially in networks that have small limits on the number of multicast channels that are allowed to be provisioned at the same time.
+The total channel limits have a surprisingly low bound in a lot of multicast-capable networking devices designed for TV services that were expected to support only up to a few tens of popular channels at the same time.<a href="#section-12.1.2-7" class="pilcrow">¶</a></p>
+<p id="section-12.1.2-8">It is therefore hoped that an extension or revision to WebTransport and HTTP/3 Datagrams can be adopted in a future version of their specifications that make it possible to use a single channel for all the shared data.<a href="#section-12.1.2-8" class="pilcrow">¶</a></p>
+<p id="section-12.1.2-9">For example, an extension that permits a server-chosen value to be used as a Session ID.
+Such a value could for instance be sent in an HTTP/3 response header, and as long as it is unique within the connection and avoided collision with any client-initiated stream ID values, could still be used to multiplex data associated with different HTTP/3 traffic and different WebTransport sessions carried on the same connection.
+Then by choosing the same server-chosen session ID for all the connections, it would allow the server to use the same channel to carry the identical data, including the Session ID, to be received by multiple receivers.
+Such a change could either replace the current client-chosen definition for Session ID, or could add new frame types that allow a server-chosen Session ID when the client has advertised support for this extended functionality.<a href="#section-12.1.2-9" class="pilcrow">¶</a></p>
+<p id="section-12.1.2-10">As an alternate example of an extension, a mechanism that allows padding at the beginning of the WebTransport stream before the Session ID, for example with 0 bytes, would at least allow the server to align the client-chosen ID value to end at the same QUIC stream offset, which would allow the shared portion of the stream data (all or most of the data following the Session ID) to be transmitted via the same multicast channel, since it would then be the same at the same stream offset.<a href="#section-12.1.2-10" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="non-web-applications">
+<section id="section-12.1.3">
+          <h4 id="name-non-web-applications">
+<a href="#section-12.1.3" class="section-number selfRef">12.1.3. </a><a href="#name-non-web-applications" class="section-name selfRef">Non-web Applications</a>
+          </h4>
+<p id="section-12.1.3-1">There are also several non-web application protocols that could profitably use multicast QUIC.  A few examples include:<a href="#section-12.1.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.1.3-2.1">
+              <p id="section-12.1.3-2.1.1">Existing multicast-capable applications that are modified to use QUIC datagrams instead of UDP payloads can potentially get improved encryption and congestion feedback, while keeping its existing FEC/error recovery techniques.<a href="#section-12.1.3-2.1.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.1.3-2.1.2.1">An external tunnel could supply this kind of encapsulation without modification to the sender or receiver for some applications, while retaining the benefits of multicast scalability<a href="#section-12.1.3-2.1.2.1" class="pilcrow">¶</a>
+</li>
+                <li class="normal" id="section-12.1.3-2.1.2.2">This could usefully support existing implementations of file-transfer protocols like FLUTE <span>[<a href="#RFC6726" class="xref">RFC6726</a>]</span> or FCAST <span>[<a href="#RFC6968" class="xref">RFC6968</a>]</span>.<a href="#section-12.1.3-2.1.2.2" class="pilcrow">¶</a>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-12.1.3-2.2">Conferencing systems, especially within an enterprise that can deploy multicast network support, often can save significantly on server costs by using multicast<a href="#section-12.1.3-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-12.1.3-2.3">The traditional multicast use case of broadcasting of live sports with a set-top box would benefit from a system that uses the same QUIC receiver code even for customers who installed a non-multicast-capable home router.<a href="#section-12.1.3-2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-12.1.3-2.4">Smart TVs or other video playing in-home devices could interoperate with a standard sender using multicast QUIC, rather than requiring proprietary integrations with TV operators.<a href="#section-12.1.3-2.4" class="pilcrow">¶</a>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="graceful-degradation">
+<section id="section-12.2">
+        <h3 id="name-graceful-degradation">
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-graceful-degradation" class="section-name selfRef">Graceful Degradation</a>
+        </h3>
+<p id="section-12.2-1">Clients with multicast QUIC support can stop accepting multicast for a variety of reasons.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+<p id="section-12.2-2">Applications like live broadcast-scale video that rely on multicast QUIC may benefit from anticipating that clients might stop using multicast and providing data feeds with similar content that can scale even if many clients stop using multicast, for example by ensuring that a lower-bitrate rendition can still be delivered over unicast to all or most of the clients simultaneously, and ensuring that the server has a way to make the client start using the low-bitrate version when it switches to unicast.<a href="#section-12.2-2" class="pilcrow">¶</a></p>
+<p id="section-12.2-3">While some existing Adaptive Bitrate video players might have an easy way to provide this, other video players might need specialized logic to provide the server a way to control what bitrate individual clients consume.
+Although under ideal conditions it may often be possible using features like server push (<a href="#server-push" class="xref">Section 12.1.1</a>) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra devlopment at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.<a href="#section-12.2-3" class="pilcrow">¶</a></p>
+<div id="circuit-breakers">
+<section id="section-12.2.1">
+          <h4 id="name-circuit-breakers">
+<a href="#section-12.2.1" class="section-number selfRef">12.2.1. </a><a href="#name-circuit-breakers" class="section-name selfRef">Circuit Breakers</a>
+          </h4>
+<p id="section-12.2.1-1">Operators of multicast QUIC services should consider that some networks may implement circuit breakers such as the one described in <span>[<a href="#I-D.draft-ietf-mboned-cbacc" class="xref">I-D.draft-ietf-mboned-cbacc</a>]</span>, or similar network-level safety features that might cut off previously operational multicast transport under certain conditions.<a href="#section-12.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.2.1-2">The servers will notice the transport loss from the lack of MC_ACK frames from receivers in a network that cut off multicast transport, but it may be beneficial when possible in a transport cutoff event correlated across many clients to pace the recovery response according to aggregations of the affected clients so that a sudden unicast storm doesn't overload the network further.<a href="#section-12.2.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="server-scalability">
+<section id="section-12.3">
+        <h3 id="name-server-scalability">
+<a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-server-scalability" class="section-name selfRef">Server Scalability</a>
+        </h3>
+<p id="section-12.3-1">Use of QUIC multicast channels can provide large scalability gains, but there still will be significant scaling requiremnts on server operators for a large client footprint.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
+<p id="section-12.3-2">Servers, possibly many of them, still will be required to maintain unicast connections with all the clients and provide for handling MC_ACK frames from the clients, delivering MC_INTEGRITY frames, managing the clients' channel join states, and providing recovery for lost packets.<a href="#section-12.3-2" class="pilcrow">¶</a></p>
+<p id="section-12.3-3">Further, the use of multicast channels likely requires increased coordination between the different servers, relative to services that operate completely independently.<a href="#section-12.3-3" class="pilcrow">¶</a></p>
+<p id="section-12.3-4">For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.<a href="#section-12.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="addressing-collisions">
+<section id="section-12.4">
+        <h3 id="name-addressing-collisions">
+<a href="#section-12.4" class="section-number selfRef">12.4. </a><a href="#name-addressing-collisions" class="section-name selfRef">Addressing Collisions</a>
+        </h3>
+<p id="section-12.4-1">Multicast channels at the network layer are addressed with a source IP, a destination group IP address, and a destination UDP port.<a href="#section-12.4-1" class="pilcrow">¶</a></p>
+<p id="section-12.4-2">These offers a number of potential address collision considerations that are worth mentioning:<a href="#section-12.4-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-12.4-3">
+<li id="section-12.4-3.1">If properties change for the data being used in a channel (for example, new video encoding settings might result in a change to the expected max rate for a video feed), a server might reuse the same network addresses in a new QUIC multicast channel, and might send a join for the new channel and a leave for the old channel to clients that can support the new max rate.  If they arrive together, this could be handled by the client without making a change to the IGMP or MLD membership state, as an optimization that can prevent the need for some recovery, or even by reusing the same UDP socket.  Doing so does not change any requirements for the channel state management at the QUIC layer, and as long as the situation is transient, should not result in leaving due to Excessive Spurious Traffic even if some packets were reordered or may still be in flight.<a href="#section-12.4-3.1" class="pilcrow">¶</a>
+</li>
+          <li id="section-12.4-3.2">As described in Section 6 of <span>[<a href="#RFC4607" class="xref">RFC4607</a>]</span>, link-layer addresses can be linked to the low-order bits of multicast addresses, and may be the same for different group destinations.  Collisions in the link-layer addressing, even with traffic that comes from other sources, can cause congestion or receiver CPU load for colliding channels that might be different from that seen with other channels that were delivered with apparently the same network paths.<a href="#section-12.4-3.2" class="pilcrow">¶</a>
+</li>
+          <li id="section-12.4-3.3">Even though multicast QUIC uses only source-specific multicast, older networks with devices that don't have IGMPv3 or MLDv2 support can propagate the joins as any-source multicast. If there are active senders sending to that destination, this can cause network congestion and CPU load due to discarding packets from the wrong source, even though at the application layer the UDP socket won't receive those packets from the wrong source.<a href="#section-12.4-3.3" class="pilcrow">¶</a>
+</li>
+          <li id="section-12.4-3.4">If different channels use the same (S,G) but different UDP ports, they will share the same multicast forwarding tree in an IP network. This is often useful when the data in the channels are linked, for example if MC_INTEGRITY frames are carried on one channel for packets carried on another channel, because it provides some fate-sharing for the linked data.  However, for data that is not so linked, it would generally be a disadvantage to share the (S,G) because the network link of any receiver joined to one of those channels but not the other would receive both packets and throw away the data for the un-joined port, causing extra congestion and CPU load for the receiving device.<a href="#section-12.4-3.4" class="pilcrow">¶</a>
+</li>
+        </ol>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-13">
+      <h2 id="name-security-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-13-1">(Authors comment: Mostly incorporate <span>[<a href="#I-D.draft-krose-multicast-security" class="xref">I-D.draft-krose-multicast-security</a>]</span>.  Anything else?<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-2">e.g. if a different legitimate quic connection says someone
+else's quic multicast stream is theirs, that's maybe a problem
+worth protecting against.  Maybe we need a periodic asymmetric
+challenge?  I'm thinking send a public key on the multicast
+channel and in the unicast channels send an individualized MAC
+signed with the private key and verify it with the public key,
+so that in addition to validating that the unicast server knows
+the contents of the multicast packets via the hashes it supplies,
+the multicast stream provides a way for the client to validate
+that the unicast stream is authorized to use it for data transport
+via proof they know the private key corresponding to the public
+key that arrived on the multicast channel.
+Note this doesn't prevent unauthorized receipt of multicast
+data packts, but does prevent a quic server from lying when
+claiming a multicast data channel belongs to it, preventing
+legit receivers from consuming it.<a href="#section-13-2" class="pilcrow">¶</a></p>
+<p id="section-13-3">alternatively, can the multicast channel just periodically say
+what domain name is expected for the quic connection and get the
+same crypto guarantee of a proper sender via the domain's cert,
+which was already checked on the unicast channel?)<a href="#section-13-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-14">
+      <h2 id="name-iana-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-14-1">TODO: lots<a href="#section-14-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<section id="section-15">
+      <h2 id="name-references">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<section id="section-15.1">
+        <h3 id="name-normative-references">
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-ietf-mboned-ambi">[I-D.draft-ietf-mboned-ambi]</dt>
+        <dd>
+<span class="refAuthor">Holland, J.</span> and <span class="refAuthor">K. Rose</span>, <span class="refTitle">"Asymmetric Manifest Based Integrity"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-mboned-ambi-03</span>, <time datetime="2022-03-07" class="refDate">7 March 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-mboned-ambi-03">https://datatracker.ietf.org/doc/html/draft-ietf-mboned-ambi-03</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-mboned-cbacc">[I-D.draft-ietf-mboned-cbacc]</dt>
+        <dd>
+<span class="refAuthor">Holland, J.</span>, <span class="refTitle">"Circuit Breaker Assisted Congestion Control"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-mboned-cbacc-04</span>, <time datetime="2022-03-07" class="refDate">7 March 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-mboned-cbacc-04">https://datatracker.ietf.org/doc/html/draft-ietf-mboned-cbacc-04</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-quic-multipath">[I-D.draft-ietf-quic-multipath]</dt>
+        <dd>
+<span class="refAuthor">Liu, Y.</span>, <span class="refAuthor">Ma, Y.</span>, <span class="refAuthor">Coninck, Q. D.</span>, <span class="refAuthor">Bonaventure, O.</span>, <span class="refAuthor">Huitema, C.</span>, and <span class="refAuthor">M. Kuehlewind</span>, <span class="refTitle">"Multipath Extension for QUIC"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-quic-multipath-01</span>, <time datetime="2022-03-07" class="refDate">7 March 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-01">https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-krose-multicast-security">[I-D.draft-krose-multicast-security]</dt>
+        <dd>
+<span class="refAuthor">Rose, K.</span> and <span class="refAuthor">J. Holland</span>, <span class="refTitle">"Security and Privacy Considerations for Multicast Transports"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-krose-multicast-security-02</span>, <time datetime="2022-01-31" class="refDate">31 January 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-krose-multicast-security-02">https://datatracker.ietf.org/doc/html/draft-krose-multicast-security-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8085">[RFC8085]</dt>
+        <dd>
+<span class="refAuthor">Eggert, L.</span>, <span class="refAuthor">Fairhurst, G.</span>, and <span class="refAuthor">G. Shepherd</span>, <span class="refTitle">"UDP Usage Guidelines"</span>, <span class="seriesInfo">BCP 145</span>, <span class="seriesInfo">RFC 8085</span>, <span class="seriesInfo">DOI 10.17487/RFC8085</span>, <time datetime="2017-03" class="refDate">March 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8085">https://www.rfc-editor.org/rfc/rfc8085</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8446">[RFC8446]</dt>
+        <dd>
+<span class="refAuthor">Rescorla, E.</span>, <span class="refTitle">"The Transport Layer Security (TLS) Protocol Version 1.3"</span>, <span class="seriesInfo">RFC 8446</span>, <span class="seriesInfo">DOI 10.17487/RFC8446</span>, <time datetime="2018-08" class="refDate">August 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8446">https://www.rfc-editor.org/rfc/rfc8446</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9000">[RFC9000]</dt>
+        <dd>
+<span class="refAuthor">Iyengar, J., Ed.</span> and <span class="refAuthor">M. Thomson, Ed.</span>, <span class="refTitle">"QUIC: A UDP-Based Multiplexed and Secure Transport"</span>, <span class="seriesInfo">RFC 9000</span>, <span class="seriesInfo">DOI 10.17487/RFC9000</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9000">https://www.rfc-editor.org/rfc/rfc9000</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9001">[RFC9001]</dt>
+        <dd>
+<span class="refAuthor">Thomson, M., Ed.</span> and <span class="refAuthor">S. Turner, Ed.</span>, <span class="refTitle">"Using TLS to Secure QUIC"</span>, <span class="seriesInfo">RFC 9001</span>, <span class="seriesInfo">DOI 10.17487/RFC9001</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9001">https://www.rfc-editor.org/rfc/rfc9001</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9002">[RFC9002]</dt>
+        <dd>
+<span class="refAuthor">Iyengar, J., Ed.</span> and <span class="refAuthor">I. Swett, Ed.</span>, <span class="refTitle">"QUIC Loss Detection and Congestion Control"</span>, <span class="seriesInfo">RFC 9002</span>, <span class="seriesInfo">DOI 10.17487/RFC9002</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9002">https://www.rfc-editor.org/rfc/rfc9002</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9221">[RFC9221]</dt>
+      <dd>
+<span class="refAuthor">Pauly, T.</span>, <span class="refAuthor">Kinnear, E.</span>, and <span class="refAuthor">D. Schinazi</span>, <span class="refTitle">"An Unreliable Datagram Extension to QUIC"</span>, <span class="seriesInfo">RFC 9221</span>, <span class="seriesInfo">DOI 10.17487/RFC9221</span>, <time datetime="2022-03" class="refDate">March 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9221">https://www.rfc-editor.org/rfc/rfc9221</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+<section id="section-15.2">
+        <h3 id="name-informative-references">
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-ietf-masque-h3-datagram">[I-D.draft-ietf-masque-h3-datagram]</dt>
+        <dd>
+<span class="refAuthor">Schinazi, D.</span> and <span class="refAuthor">L. Pardue</span>, <span class="refTitle">"HTTP Datagrams and the Capsule Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-masque-h3-datagram-11</span>, <time datetime="2022-06-17" class="refDate">17 June 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-masque-h3-datagram-11">https://datatracker.ietf.org/doc/html/draft-ietf-masque-h3-datagram-11</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-webtrans-http3">[I-D.draft-ietf-webtrans-http3]</dt>
+        <dd>
+<span class="refAuthor">Frindell, A.</span>, <span class="refAuthor">Kinnear, E.</span>, and <span class="refAuthor">V. Vasiliev</span>, <span class="refTitle">"WebTransport over HTTP/3"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-webtrans-http3-02</span>, <time datetime="2021-10-25" class="refDate">25 October 2021</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-webtrans-http3-02">https://datatracker.ietf.org/doc/html/draft-ietf-webtrans-http3-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC4607">[RFC4607]</dt>
+        <dd>
+<span class="refAuthor">Holbrook, H.</span> and <span class="refAuthor">B. Cain</span>, <span class="refTitle">"Source-Specific Multicast for IP"</span>, <span class="seriesInfo">RFC 4607</span>, <span class="seriesInfo">DOI 10.17487/RFC4607</span>, <time datetime="2006-08" class="refDate">August 2006</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc4607">https://www.rfc-editor.org/rfc/rfc4607</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6726">[RFC6726]</dt>
+        <dd>
+<span class="refAuthor">Paila, T.</span>, <span class="refAuthor">Walsh, R.</span>, <span class="refAuthor">Luby, M.</span>, <span class="refAuthor">Roca, V.</span>, and <span class="refAuthor">R. Lehtonen</span>, <span class="refTitle">"FLUTE - File Delivery over Unidirectional Transport"</span>, <span class="seriesInfo">RFC 6726</span>, <span class="seriesInfo">DOI 10.17487/RFC6726</span>, <time datetime="2012-11" class="refDate">November 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6726">https://www.rfc-editor.org/rfc/rfc6726</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6968">[RFC6968]</dt>
+        <dd>
+<span class="refAuthor">Roca, V.</span> and <span class="refAuthor">B. Adamson</span>, <span class="refTitle">"FCAST: Object Delivery for the Asynchronous Layered Coding (ALC) and NACK-Oriented Reliable Multicast (NORM) Protocols"</span>, <span class="seriesInfo">RFC 6968</span>, <span class="seriesInfo">DOI 10.17487/RFC6968</span>, <time datetime="2013-07" class="refDate">July 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6968">https://www.rfc-editor.org/rfc/rfc6968</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9114">[RFC9114]</dt>
+      <dd>
+<span class="refAuthor">Bishop, M., Ed.</span>, <span class="refTitle">"HTTP/3"</span>, <span class="seriesInfo">RFC 9114</span>, <span class="seriesInfo">DOI 10.17487/RFC9114</span>, <time datetime="2022-06" class="refDate">June 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9114">https://www.rfc-editor.org/rfc/rfc9114</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</section>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">TODO acknowledge.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-addresses">
+<a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Jake Holland</span></div>
+<div dir="auto" class="left"><span class="org">Akamai Technologies, Inc.</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:jakeholland.net@gmail.com" class="email">jakeholland.net@gmail.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Lucas Pardue</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:lucaspardue.24.7@gmail.com" class="email">lucaspardue.24.7@gmail.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Max Franke</span></div>
+<div dir="auto" class="left"><span class="org">TU Berlin</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:mfranke@inet.tu-berlin.de" class="email">mfranke@inet.tu-berlin.de</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
