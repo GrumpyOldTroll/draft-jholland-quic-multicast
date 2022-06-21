@@ -38,14 +38,24 @@ author:
 normative:
 
   I-D.draft-krose-multicast-security:
+  I-D.draft-ietf-mboned-ambi:
+  I-D.draft-ietf-mboned-cbacc:
   I-D.draft-ietf-quic-multipath:
+  RFC8085:
+  RFC8446:
   RFC9000:
   RFC9001:
+  RFC9002:
   RFC9221:
 
 informative:
 
+  I-D.draft-ietf-webtrans-http3:
+  I-D.draft-ietf-masque-h3-datagram:
   RFC4607:
+  RFC6726:
+  RFC6968:
+  RFC9114:
 
 --- abstract
 
@@ -70,19 +80,22 @@ This document does not define any multicast transport except server to client an
 
 Commonly used terms in this document are described below.
 
-(S,G): A tuple of IP addresses identifying a source-specific multicast channel, as described in {{RFC4607}}.
+| Term | Definition |
+|:--------|:-------------------------|
+| SSM | Source-specific multicast, as described in {{RFC4607}} |
+| ASM | Any-source multicast, as distinguished from SSM in {{RFC4607}} |
+| (S,G) | A tuple of IP addresses (Source IP, Group IP) identifying a source-specific multicast channel as described in {{RFC4607}} |
 
 # Multicast Channel
 
 A QUIC multicast channel (or just channel) is a one-way network path that a server can use as an alternate path to send QUIC connection data to a client.
 
 Multicast channels are designed to leverage multicast IP and to be shared by many different connections simultaneously for unidirectional server-initiated data.
+
 One or more servers can use the same QUIC multicast channel to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
+(Note that QUIC connections are defined in Section 5 of {{RFC9000}} and are not changed in this document; each connection is a shared state between a client and a server.)
 
-Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels do not support any-source multicast semantics.
-This however does not impose a requirement on how the underlying network stack has to handle the forwarding and delivery of multicast packets.
-
-QUIC connections are defined in Section 5 of {{RFC9000}} and are not changed in this document; each connection is a shared state between a client and a server.
+Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels do not support any-source multicast (ASM) semantics.
 
 Channels carry only 1-RTT packets.
 Packets associated with a channel contain a Channel ID in place of a Destination Connection ID.
@@ -93,16 +106,16 @@ Incoming packets received on the network path associated with a channel use the 
 A client with a matching joined channel always has at least one connection associated with the channel.
 If a client has no matching joined channel, the packet is discarded.
 
-Since the network path for a channel is unidirectional, packets associated with a channel are acknowledged with MC_ACK frames {{channel-ack-frame}} instead of ACK frames.
 Each channel has an independent packet number space.
+Since the network path for a channel is unidirectional and uses a different packet number space than the unicast part of the connection, packets associated with a channel are acknowledged with MC_ACK frames {{channel-ack-frame}} instead of ACK frames.
 
 The use of any particular channel is OPTIONAL for both the server and the client.
-It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceful degradation for endpoints that do not or cannot make use of the multicast functionality.
+It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceful degradation for endpoints that do not or cannot make use of the multicast functionality (see {{graceful-degradation}}).
 
 The server has access to all data transmitted on any multicast channel it uses, and could optionally send this data with unicast instead.
 
 No special handling of the data is required in a client application that has enabled multicast.
-A datagram or any particular bytes from a server-initiated unidirectional stream can be delivered over the unicast connection or a multicast channel transparently to the client.
+A datagram or any particular bytes from a server-initiated unidirectional stream can be delivered over the unicast connection or a multicast channel transparently to a client application consuming the stream or datagram.
 
 Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in {{I-D.draft-krose-multicast-security}}.
 
@@ -134,15 +147,14 @@ Capabilities Flags is a bit field structured as follows:
  - 0x1 is set if IPv4 channels are permitted
  - 0x2 is set if IPv6 channels are permitted
 
-A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_LIMITS ({{client-limits-frame}})  frame adds permission for a different address family.
+A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_LIMITS ({{client-limits-frame}}) frame adds permission for a different address family.
 
 The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
 
-The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the registry below. It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send a MC_JOIN to this client for any channels using unsupported algorithms:
+The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
+If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION.
 
-  - <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>
-
-The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send a MC_JOIN to this client for any channels using unsupported algorithms:
+The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION:
 
  - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
 
@@ -160,13 +172,10 @@ The client tells its server about some restrictions on resources that it is capa
 
 The server asks the client to join channels with MC_JOIN ({{channel-join-frame}}) frames and to leave channels with MC_LEAVE ({{channel-leave-frame}}) frames.
 
-The server uses the MC_ANNOUNCE ({{channel-announce-frame}}) frame before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the keys necessary to decode packets in the channel.
+The server uses the MC_ANNOUNCE ({{channel-announce-frame}}) frame before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the secrets necessary to decode packets in the channel.
 {{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
-Joining a channel is optional for clients. If a client decides to not join after being asked to do so, it can indicate this decision by sending an MC_STATE ({{client-channel-state-frame}}) frame with state Declined Join.
-
-When the server has asked the client to join a channel, it also sends MC_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
-A client MUST NOT decode packets for a channel for which it has not received an applicable MC_ANNOUNCE ({{channel-announce-frame}}), or for which it has not received a matching packet hash in an MC_INTEGRITY ({{channel-integrity-frame}}) frame.
+Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients. If a client decides to not join after being asked to do so, it can indicate this decision by sending an MC_STATE ({{client-channel-state-frame}}) frame with state Declined Join and an appropriate reason.
 
 The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS ({{client-limits-frame}}) frame the server received.
 
@@ -205,7 +214,10 @@ The server ensures that in aggregate, all channels that the client has currently
 ~~~
 {: #fig-client-channel-states title="States a channel from the clients point of view."}
 
-{{fig-frame-exchange}} shows the frames that are being exchanged over the lifetime of an example channel.
+When the server has asked the client to join a channel, it also sends MC_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
+A client MUST NOT decode packets for a channel for which it has not received an applicable MC_ANNOUNCE ({{channel-announce-frame}}), or for which it has not received a matching packet hash in an MC_INTEGRITY ({{channel-integrity-frame}}) frame.
+
+{{fig-frame-exchange}} shows the frames that are being exchanged about and over a channel during the lifetime of an example channel.
 
 ~~~
 Client                                        Server
@@ -248,6 +260,8 @@ MC_STATE(Retired)  --->
 ~~~
 {: #fig-frame-exchange title="Example flow of frames for a channel. Frames in square brackets are sent over multicast."}
 
+TODO: incorporate server-side state diagram, latest proposed sketch at <https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/62>
+
 ## Client Response
 
 The client sends back information about how it has responded to the server's requests to join and leave channels in MC_STATE ({{client-channel-state-frame}}) frames.
@@ -256,8 +270,8 @@ MC_STATE frames are only sent for channels after the server has requested the cl
 Clients that receive and decode data on a multicast channel send acknowledgements for the data on the unicast connection using MC_ACK ({{channel-ack-frame}}) frames.
 
 A server can determine if a client can receive packets on a multicast channel if it receives MC_ACK frames associated with that channel.
-As such, it is in general up to the server to decide on the time after which it deems a client to be unable to receive packets on a given channel and take appropriate steps, e.g. sending a MC_LEAVE frame to the client.
-However, a client MAY unilaterally determine that it is unable to receive multicast packets on a channel and indicate this to the server by sending a MC_STATE frame with state Left and reason No Traffic.
+As such, it is in general up to the server to decide on the time after which it deems a client to be unable to receive packets on a given channel and take appropriate steps, e.g. sending an MC_LEAVE frame to the client.
+Note that clients willing to join a channel SHOULD remain joined to the channel even if they receive no channel data for an extended period, to enable multicast-capable networks to perform popularity-based admission control for multicast channels.
 
 ## Data Carried in Channels
 
@@ -267,13 +281,15 @@ However, since potentially many receivers receive identical packets and identica
 A client MUST NOT decode packets on a multicast channel for which it has not received a matching hash in an MC_INTEGRITY frame over a different integrity-protected communication path.
 The different path can be either the unicast connection or another multicast channel with packets that were verified with an earlier MC_INTEGRITY frame.
 
+See {{data-integrity}} for a more complete overview of the security issues involved here.
+
 ## Stream Processing
 
 Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see {{RFC9000}} Section 2.1).
 
 When a channel contains streams with ids above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in Sections 4.6 and 19.14 of {{RFC9000}}.
 
-If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send a MC_LEAVE frame.
+If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send an MC_LEAVE frame.
 
 If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason Max Streams Exceeded.
 
@@ -287,33 +303,47 @@ The same stream ID may be used in both one or more multicast channels and the un
 
 The values used for unicast flow control cannot be used to limit the transmission rate of a multicast channel because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that channels responded to each client's limits.
 
-Instead, clients advertise resource limits that the server is responsible for staying within via MC_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
-The server advertises the expected maxima of the values that can contribute toward client resource limits within a channel in an MC_ANNOUNCE ({{channel-announce-frame}}) frame.
+Instead, clients advertise resource limits via MC_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
+The server is responsible for keeping the client within its advertised limits, by ensuring via MC_JOIN and MC_LEAVE frames that the set of channels the client is asked to be joined to will not, in aggregate, exeed the client's advertised limits.
+The server also advertises the expected maxima of the values that can contribute toward client resource limits within a channel in an MC_ANNOUNCE ({{channel-announce-frame}}) frame, and the client also ensures that the set of channels it's joined to does not exceed its limits, according to the advertised values.
+The client also monitors the packets received to ensure that channels don't exceed their advertised values, and leaves channels that do.
 
-If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back a MC_STATE ({{client-channel-state-frame}}) with "Declined Join" and reason "Property Violation".
-If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Property Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
-If the actual contents sent in the channel exceed the advertised limits from the MC_PROPERTY, clients SHOULD leave the stream with a PROTOCOL_ERROR/Limit Violated state change.
+If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back an MC_STATE ({{client-channel-state-frame}}) with "Declined Join" and reason "Property Violation".
+If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Key Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
+If the actual contents sent in the channel exceed the advertised limits from the MC_PROPERTY, clients SHOULD leave the stream and send an MC_STATE(Left) frame, using the Limit Violated reason.
 
-# Congestion Control
+# Congestion Control {#congestion-control}
 
-The server maintains a full view of the traffic received by the client via the ACK frames coupled with the MC_ACK ({{channel-ack-frame}}) frames.
+Both the server and the client perform congestion control operations, so that according to the guidelines in Section 4.1 of {{RFC8085}}, mechanisms for both feedback-based and receiver-driven styles of congestion control are present and operational.
 
-Under sustained persistent loss, the server SHOULD instruct the client such that the aggregate rate of joined channels remains under the data rate successfully received by the client in the recent past.
+The server maintains a full view of the traffic received by the client via the MC_ACK ({{channel-ack-frame}}) frames and ACK frames it receives, and can detect loss experienced by the client.
+Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.
 
-# Data Integrity
+Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the clients aggregate rate is below its advertised Max Rate.
+Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(Left) frame with the High Loss reason, as well as reducing the Max Rate in MC_LIMITS.
 
-TODO: import the {{I-D.draft-krose-multicast-security}} explanation for why extra integrity protection is necessary (many client have the shared key, so AEAD doesn't provide authentication against other valid clients on its own).
+The unicast congestion control is unaffected.
+However if the client notices congestion from unicast this MAY also drive reductions in the client's Max Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Rate (along with an updated MC_LIMITS frame).
+
+Hybrid multicast-unicast congestion control is still an experimental research topic.
+Implementations SHOULD follow the guidelines given in Section 4.1.1 of {{RFC8085}} under the assumption that applications using QUIC multicast will operate as Bulk-Transfer applications.
+
+# Data Integrity {#data-integrity}
+
+TODO: import the {{I-D.draft-krose-multicast-security}} explanation for why extra integrity protection is necessary (many client have the shared key, so AEAD doesn't provide authentication against other valid clients on its own, since the same key is given to multiple clients and as the client count grows so does the chance that at least one client is controlled by an attacker.)
 
 ## Packet Hashes {#packet-hashes}
 
 TODO: explanation and example for how to calculate the packet hash.
-Note that the hash is on the unencrypted packet because it checks against a specific packet number, which is protected by AEAD.
-(This approach also may help make better use of crypto hardware offload.)
+Note that the hash is on the encrypted packet to avoid leaking data about the encrypted contents to those who can see a hash but not the key.
+(This approach also may help make better use of {{I-D.draft-ietf-mboned-ambi}} by making it possible to generate the same hashes for use in both AMBI and QUIC MC_INTEGRITY frames.)
 
-# Packet Scheduling
+# Recovery {#recovery}
 
+TODO: Articulate key differences with {{RFC9002}}, mainly that the RTT for channel packets uses an estimated send time since the server doesn't necessarily know the exact timing of the send of the packet.
 
 # Connection Termination
+
 Termination of the unicast connection behaves as described in Section 10 of {{RFC9000}}, with the following notable differences:
 
 * On the client side, termination of the unicast connection means that it MUST leave all multicast channels and discard any state associated with them. Servers MAY stop sending to multicast channels if there are no unicast connections left that are associated with them.
@@ -321,21 +351,19 @@ Termination of the unicast connection behaves as described in Section 10 of {{RF
 * For determining the liveness of a connection, the client MUST only consider packets received on the unicast connection. Any packets received on a multicast channel MUST NOT be used to reset a timer checking if a potentially specified max_idle_timeout has been reached. If the unicast connection becomes idle and the server does not respond to a liveness test, the client MUST terminate the connection as described above.
 
 ## Stateless Reset
+
 As clients can unilaterally stop the delivery of multicast packets by leaving the relevant (S,G), channels do not need stateless reset tokens.
 Clients therefore do not share the stateless reset tokens of channels with the server. Instead, if an endpoint receives packets addressed to an (S,G) that it can not associate with any existing channel,
 it MAY take the necessary steps to prevent the reception of further such packets, without the need to signal to the server that it should stop sending.
 
-If a server or client somehow still detect a stateless reset for a channel, they MUST ignore it.
-
-
-# Implementation and Operational Considerations
+If a server or client detect a stateless reset for a channel, they MUST ignore it.
 
 # New Frames
 
 ## MC_ANNOUNCE {#channel-announce-frame}
 
 Once a server learns that a client supports multicast through its transport parameters, it can send one or multiple MC_ANNOUNCE frames (type=TBD-11..TBD-12) to share information about available channels with the client.
-The MC_ANNOUNCE frame contains the properties of a channel that do not change during its lifetime and the initial AEAD key that is applicable until a new one is received in a MC_KEY frame.
+The MC_ANNOUNCE frame contains the properties of a channel that do not change during its lifetime.
 
 MC_ANNOUNCE frames are formatted as shown in {{fig-mc-channel-announce}}.
 
@@ -348,12 +376,10 @@ MC_ANNOUNCE Frame {
   Group IP (32..128),
   UDP Port (16),
   Header AEAD Algorithm (16),
-  Header Key Length (i),
-  Header Key (..),
+  Header Secret Length (i),
+  Header Secret (..),
   AEAD Algorithm (16),
   Integrity Hash Algorithm (16),
-  AEAD Key Length (i),
-  AEAD Key (..),
   Max Rate (i),
   Max ACK Delay (i)
 }
@@ -370,37 +396,41 @@ MC_ANNOUNCE frames contain the following fields:
   * Source IP: The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
   * Group IP: The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by IP Family.
   * UDP Port: The 16-bit UDP Port of traffic for the channel.
-  * Header AEAD Algorithm: A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>, used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
-  * Header Key Length: Provides the length of the Key field.  It MUST match a valid key length for the Header AEAD Algorithm.
-  * Header Key: A key for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in {{RFC9001}}.
-      * **Author's Note:** I assume it’s not better to use a TLS CipherSuite because there is no KDF stage for deriving these keys (they are a strict server-to-client advertisement), so the Hash part would be unused? (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>)
-  * AEAD Algorithm: A value from <https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml>.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
+  * Header AEAD Algorithm: A value from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>), used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
+  * Header Secret Length: Provides the length of the Secret field.
+  * Header Secret: A secret for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in {{RFC9001}}.
+  * Header Secret: Used to protect the header fields of 1-RTT packets for the channel as described in {{RFC9001}}.  The Key and Initial Vector for the application data carried in the 1-RTT packet header fields are derived from this secret as described in Section 7.3 of {{RFC8446}}.
+  * AEAD Algorithm: A value from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>), used to protect the payloads in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
   * Integrity Hash Algorithm: The hash algorithm used in integrity frames.
-    * **Author's Note:** Several candidate iana registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:
+    * **Author's Note:** Several candidate IANA registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:
       - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
       - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
       - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
-  * AEAD Key Length: Provides the length of the AEAD Key field.  It MUST match a valid key length for the AEAD Algorithm from the MC_ANNOUNCE frame for this channel.
-  * AEAD Key: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}, with length given by Key Length.
-    To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
-  * Max Rate: The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
-  * Max ACK Delay: A value used similarly to max_ack_delay (Section 18.2 of {{RFC9000}}}) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds.  Within this limit, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.
+  * Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
+  * Max ACK Delay: A value used similarly to max_ack_delay (Section 18.2 of {{RFC9000}}}) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds, and SHOULD NOT add any delay to the first MC_ACK of data packets for a channel.  As long as they stay inside these limits, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.
 
-A client MUST NOT use the channel ID included in the MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
-As the server knows which connection IDs are in use by the client, it MUST wait with the sending of a MC_JOIN frame until the channel ID associated with it has been retired by the client.
+A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
+As the server knows which connection IDs are in use by the client, it MUST wait with the sending of an MC_JOIN frame until the channel ID associated with it has been retired by the client.
 
-As all the properties except the AEAD key in MC_ANNOUNCE frames are immutable during the lifetime of a channel, a server SHOULD NOT send a MC_ANNOUNCE frame for the same channel more than once to each client. It SHOULD instead send key updates using the MC_KEY frame.
+As all the properties in MC_ANNOUNCE frames are immutable during the lifetime of a channel, a server SHOULD NOT send an MC_ANNOUNCE frame for the same channel more than once to each client except as needed for recovery.
 
-A server SHOULD send an MC_ANNOUNCE frame for a channel before sending a MC_KEY or MC_JOIN frame for it.
+A server SHOULD send an MC_ANNOUNCE frame for a channel before sending an MC_KEY and SHOULD send an MC_KEY frame for a channel before sending an MC_JOIN frame for it.
+Each of these recommended orderings MAY occur within the same packet.
 
 ## MC_KEY {#channel-key-frame}
 
 An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
-The MC_KEY frame contains an updated AEAD key that is applied to STREAM frames received on the multicast channel.
+The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.
 
-A server can send an update to a prior MC_KEY frame with a new sequence number increased by one. A server MUST send continuous sequence numbers.
+A server can send a new MC_KEY frame with a sequence number increased by one.
+A server MUST generate continuous sequence numbers, and MAY start at a value higher than 0.
+Note that while not joined, a client will not receive updates to channel secrets, and thus may see jumps in the Key Sequence Number values between MC_KEY frames.
+However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.
 
-It is RECOMMENDED that servers send regular key updates.
+Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Seqence Numbers have a Key Phase of 1 in the 1-RTT packet.
+Secrets with a Key Phase indicating an unknown key SHOULD be discarded without attempting to decrypt them.
+
+It is RECOMMENDED that servers send regular secret updates.
 
 MC_KEY frames are formatted as shown in {{fig-mc-channel-key-format}}.
 
@@ -411,27 +441,28 @@ MC_KEY Frame {
   Channel ID (8..160),
   Key Sequence Number (i),
   From Packet Number (i),
-  Key Length (i),
-  Key (..)
+  Secret Length (i),
+  Secret (..)
 }
 ~~~
 {: #fig-mc-channel-key-format title="MC_KEY Frame Format"}
-
 
 MC_KEY frames contain the following fields:
 
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID for the channel associated with this frame.
-  * Key Sequence Number: Increases by 1 each time the key for the channel is changed by the server.  The client tracks the sequence number of the MC_KEY frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher. If there is a gap in sequence numbers due to reordering or retransmission of packets, the client MUST apply the key contained in such packets as if they arrived in order.
-  * From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.
-  * Key Length: Provides the length of the Key field.  It MUST match a valid key length for the AEAD Algorithm from the MC_ANNOUNCE frame for this channel.
-  * Key: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}, with length given by Key Length.
+  * Key Sequence Number: Increases by 1 each time the secret for the channel is changed by the server.  If there is a gap in sequence numbers due to reordering or retransmission of packets, on receipt of the older MC_KEY frame, the client MUST apply the secret contained and the packet numbers on which it applies as if they arrived in order.
+  * From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.  The Packet Number MUST never decrease with an increased Key Sequence Number.
+  * Secret Length: Provides the length of the secret field.
+  * Secret: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}.  The Key and Initial Vector for the application data carried in the 1-RTT packet payloads are derived from the secret as described in Section 7.3 of {{RFC8446}}.
     To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
 
-The From Packet Number is used to indicate the starting packet number (Section 17.1 of {{RFC9000}}) of the 1-RTT packets received for which the key contained in a MCS_KEY frame are applicable.
-This key is applicable to all future packets until it is overwritten by a new MC_KEY frame.
+Clients MUST delete old secrets within 10 seconds after receiving a new key, and within 3 seconds after receiving a new key and not receiving any data traffic decrypted with the old key.
 
-The key of a channel MAY change during its lifetime. As such, a server SHOULD NOT send keys for channels except those the client has joined or will be imminently asked to join.
+The From Packet Number is used to indicate the starting packet number (Section 17.1 of {{RFC9000}}) of the 1-RTT packets for which the secret contained in an MC_KEY frame are applicable.
+This secret is applicable to all future packets until it is overwritten by a new MC_KEY frame.
+
+A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.
 
 ## MC_JOIN {#channel-join-frame}
 
@@ -439,7 +470,7 @@ An MC_JOIN frame (type TBD-02) is sent from server to client and requests that a
 
 A client cannot join a multicast channel without first receiving an MC_ANNOUNCE frame which sets all the values for a channel.
 
-If a client receives a MC_JOIN for a channel for which it has not received an MC_ANNOUNCE frame, it MUST respond with a MC_STATE with State "Declined Join" and reason "Missing Properties". The server MAY send another MC_JOIN after receiving an acknowledgement indicating receipt of the MC_ANNOUNCE.
+If a client receives an MC_JOIN for a channel for which it has not received an MC_ANNOUNCE frame, it MUST respond with an MC_STATE with State "Declined Join" and reason "Missing Properties". The server MAY send another MC_JOIN after receiving an acknowledgement indicating receipt of the MC_ANNOUNCE.
 
 MC_JOIN frames are formatted as shown in {{fig-mc-channel-join-format}}.
 
@@ -458,7 +489,7 @@ MC_JOIN Frame {
 The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_KEY not yet received by the client or one or more missing updates to MC_LIMITS or MC_STATE not yet received by the server).
 
 A client MAY perform the join if it has the sequence number of the corresponding channel properties and the client's limits will not be exceeded, even if the client sequence numbers are not up-to-date.
-If the client does not join, it MUST send a MC_STATE with "Declined Join" and a reason.
+If the client does not join, it MUST send an MC_STATE with "Declined Join" and a reason.
 
 ## MC_LEAVE {#channel-leave-frame}
 
@@ -466,7 +497,7 @@ An MC_LEAVE frame (type=TBD-03) is sent from server to client, and requests that
 
 If the client has already left or declined to join the channel, the MC_LEAVE is ignored.
 
-If a MC_JOIN or an MC_LEAVE with the same Channel ID and a higher MC_STATE Sequence number has previously been received, the MC_LEAVE is ignored.
+If an MC_JOIN or an MC_LEAVE with the same Channel ID and a higher MC_STATE Sequence number has previously been received, the MC_LEAVE is ignored.
 
 Otherwise, the client MUST leave the channel and send a new MC_STATE frame with reason Left as requested by server.
 
@@ -516,7 +547,7 @@ See {{packet-hashes}} for a description of the packet hash calculation.
 
 The MC_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by {{RFC9000}}. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.
 
-(TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of {{I-D.draft-ietf-quic-multipath}}, defining channel id as the packet number space?  at 2022-05 they're identical.)
+(TODO: Is it possible to reuse the multiple packet number space version of ACK_MP from Section 12.2 of {{I-D.draft-ietf-quic-multipath}}, defining channel id as the packet number space?  at 2022-05 they're identical except the Channel ID.)
 
 MC_ACK frames are formatted as shown in {{fig-mc-channel-ack-format}}.
 
@@ -631,20 +662,15 @@ If State is Left or Declined Join, the Reason field is set to one of:
  * 0x13: High Loss
  * 0x14: Excessive Spurious Traffic
  * 0x15: Max Streams Exceeded
- * 0x16: No Traffic
- * 0x1000000-0x3fffffff: Application-specific Reason
+ * 0x1000000-0x3fffffff: Application-defined Reason
 
 A client might receive multicast packets that it can not associate with any channel ID, or that cannot be verified as matching hashes from MC_INTEGRITY frames, or cannot be decrypted.
 This traffic is presumed either to have been corrupted in transit or to have been sent by someone other than the legitimate sender of traffic for the channel, possibly by an attacker or a misconfigured sender in the network.
 If these packets are addressed to an (S,G) that is used for reception in one or more known channels, the client MAY leave these channels with reason "Excessive Spurious traffic".
 
-(TODO: Or should we try to reuse PATH_ABANDON and/or PATH_STATUS?  I don’t think they’re sufficient, but maybe?):
-  - {{I-D.draft-ietf-quic-multipath}}
-  - <https://datatracker.ietf.org/doc/html/draft-liu-multipath-quic-04#section-9.1>
-
 # Frames Carried in Channel Packets
 
-MC Channels will contain normal QUIC 1-rtt data packets (see Section 17.3.1 of {{RFC9000}}) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys from MC_KEY frames for the corresponding channel.
+Multicast channels will contain normal QUIC 1-rtt data packets (see Section 17.3.1 of {{RFC9000}}) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys derived from the secrets in MC_KEY frames for the corresponding channel.
 
 Data packet hashes will also be sent in MC_INTEGRITY frames, as keys cannot be trusted for integrity due to giving them to too many receivers, as in {{I-D.draft-krose-multicast-security}}.
 
@@ -689,7 +715,101 @@ Not permitted:
  - MC_STATE
  - MC_ACK
 
-# Error Codes
+# Implementation and Operational Considerations
+
+## Use Cases
+
+### HTTP/3 Server Push {#server-push}
+
+HTTP/3 Server Push is defined in Section 4.6 of {{RFC9114}}.
+
+Server push is a good use case for multicast transport because the same data can be pushed to many different receivers on a multicast channel.
+Applications designed to work well with server push can leverage multicast QUIC very effectively with only a few extra considerations.
+
+A QUIC connection using HTTP/3 can use multicast channels to deliver server-initiated streams that implement HTTP/3 Server Push.
+
+Applications expecting to use server push with multicast SHOULD use a high MAX_PUSH_ID in order to work with channels that have been active for a long time already when the connection is first established.
+Servers SHOULD NOT allow clients to remain joined to channels if their MAX_PUSH_ID will be exceeded by push streams that are to be sent imminently.
+
+If a client receives data from a push ID that exceeds its MAX_PUSH_ID causing an H3_ID_ERROR on a multicast channel, it SHOULD leave the channel with reason 0x1000108 (computed by adding the H3_ID_ERROR value 0x0108 to the Application-defined Reason start value 0x1000000).
+This SHOULD NOT cause a close of the whole connection but MAY cause a stream error and reset of the stream.
+
+TODO: flesh out this principle for application-level error code assignment in general for known error code values, and specifically all HTTP/3 ones? (And is it useful?)
+
+### HTTP/3 WebTransport {#webtransport}
+
+WebTransport over HTTP/3 is defined in {{I-D.draft-ietf-webtrans-http3}}.
+
+Popular data that can be sent with server-initiated streams or server-sent datagrams and carried over WebTransport are good use cases for multicast transport because the same server-to-client data can be pushed to many different receivers on a multicast channel.
+
+A QUIC connection using HTTP/3 and WebTransport can use multicast channels to deliver WebTransport server-initiated streams.
+At the time of this writing (version -02 of {{I-D.draft-ietf-webtrans-http3}}) this comes with the significant penalty that in order to do so, servers would have to run up to 4 multicast channels per shared set of data to send, one for each possible size of the client-chosen Session ID.
+
+Servers can achieve this by sending the initial few bytes of the server-initiated stream containing the Session ID (currently defined as the Stream ID of the QUIC stream containing the original HTTP/3 request for the WebTransport extended CONNECT request), then sending the rest of the stream data over a multicast channel.
+
+However, since the client-initiated Stream ID used for the Session ID is a variable-length integer with 4 possible sizes (1, 2, 4, or 8 octets), clients will need the shared data in the stream to be at one of 4 different possible stream offsets in order to process it.
+Hence, for WebTransport as currently specified servers would need to run up to 4 separate channels instead of a single channel in order to send the same WebTransport data to many different clients.
+
+WebTransport Datagrams are delivered over HTTP/3 Datagrams as defined in {{I-D.draft-ietf-masque-h3-datagram}} and in version -04 have the same characteristic of relying on the client-chosen Quarter Stream ID value.
+
+While using 4 multicast channels instead of 1 still represents a potentially vast scalability improvement over unicast delivery for popular content, it causes other scalability problems, especially in networks that have small limits on the number of multicast channels that are allowed to be provisioned at the same time.
+The total channel count limits have a surprisingly low bound in many multicast-capable networking devices designed for TV services that were expected to support only up to a few tens of very popular channels at the same time.
+
+It is therefore hoped that an extension or revision to WebTransport and HTTP/3 Datagrams can be adopted in a future version of their specifications that make it possible to use a single channel for all the shared data.
+
+For example, an extension that permits a server-chosen value to be used as a Session ID.
+Such a value could for instance be sent in an HTTP/3 response header, and as long as it is unique within the connection and avoided collision with any client-initiated stream ID values, could still be used to multiplex data associated with different HTTP/3 traffic and different WebTransport sessions carried on the same connection.
+Then by choosing the same server-chosen session ID for all the connections, it would allow the server to use the same channel to carry the identical data, including the Session ID, to be received by multiple receivers.
+Such a change could either replace the current client-chosen definition for Session ID, or could add new frame types that allow a server-chosen Session ID when the client has advertised support for this extended functionality.
+
+As an alternate example of an extension, a mechanism that allows padding at the beginning of the WebTransport stream before the Session ID, for example with 0 bytes, would at least allow the server to align the client-chosen ID value to end at the same QUIC stream offset, which would allow the shared portion of the stream data (all or most of the data following the Session ID) to be transmitted via the same multicast channel, since it would then be the same at the same stream offset.
+
+### Non-web Applications
+
+There are also several non-web application protocols that could benefit from using multicast QUIC.  A few examples include:
+
+ - Existing multicast-capable applications that are modified to use QUIC datagrams instead of UDP payloads can potentially get improved encryption and congestion feedback, while keeping its existing FEC/error recovery techniques.
+   - An external tunnel could supply this kind of encapsulation without modification to the sender or receiver for some applications, while retaining the benefits of multicast scalability
+   - This could usefully support existing implementations of file-transfer protocols like FLUTE {{RFC6726}} or FCAST {{RFC6968}} to enable file downloads such as operating system updates or popular game downloads with encryption and packet-level authentication.
+ - Conferencing systems, especially within an enterprise that can deploy multicast network support, often can save significantly on server costs by using multicast
+ - The traditional multicast use case of broadcasting of live sports with a set-top box would benefit from a system that uses the same QUIC receiver code even for customers who installed a non-multicast-capable home router.
+ - Smart TVs or other video playing in-home devices could interoperate with a standard sender using multicast QUIC, rather than requiring proprietary integrations with TV operators.
+
+## Graceful Degradation {#graceful-degradation}
+
+Clients with multicast QUIC support can stop accepting multicast for a variety of reasons.
+
+Applications like live broadcast-scale video that rely on multicast QUIC may benefit from anticipating that clients might stop using multicast and providing data feeds with similar content that can scale even if many clients stop using multicast, for example by ensuring that a lower-bitrate rendition can still be delivered over unicast to all or most of the clients simultaneously, and ensuring that the server has a way to make the client start using the low-bitrate version when it switches to unicast.
+
+While some existing Adaptive Bitrate video players might have an easy way to provide this, other video players might need specialized logic to provide the server a way to control what bitrate individual clients consume.
+Although under ideal conditions it may often be possible using features like server push ({{server-push}}) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra devlopment at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.
+
+### Circuit Breakers
+
+Operators of multicast QUIC services should consider that some networks may implement circuit breakers such as the one described in {{I-D.draft-ietf-mboned-cbacc}}, or similar network-level safety features that might cut off previously operational multicast transport under certain conditions.
+
+The servers will notice the transport loss from the lack of MC_ACK frames from receivers in a network that cut off multicast transport, but it may be beneficial when possible in a transport cutoff event correlated across many clients to pace the recovery response according to aggregations of the affected clients so that a sudden unicast storm doesn't overload the network further.
+
+## Server Scalability {#server-scalability}
+
+Use of QUIC multicast channels can provide large scalability gains, but there still will be significant scaling requiremnts on server operators for a large client footprint.
+
+Servers, possibly many of them, still will be required to maintain unicast connections with all the clients and provide for handling MC_ACK frames from the clients, delivering MC_INTEGRITY frames, managing the clients' channel join states, and providing recovery for lost packets.
+
+Further, the use of multicast channels likely requires increased coordination between the different servers, relative to services that operate completely independently.
+
+For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.
+
+## Addressing Collisions {#addressing-collisions}
+
+Multicast channels at the network layer are addressed with a source IP, a destination group IP address, and a destination UDP port.
+
+These offers a number of potential address collision considerations that are worth mentioning:
+
+ 1. If properties change for the data being used in a channel (for example, new video encoding settings might result in a change to the expected max rate for a video feed), a server might reuse the same network addresses in a new QUIC multicast channel, and might send a join for the new channel and a leave for the old channel to clients that can support the new max rate.  If they arrive together, this could be handled by the client without making a change to the IGMP or MLD membership state, as an optimization that can prevent the need for some recovery, or even by reusing the same UDP socket.  Doing so does not change any requirements for the channel state management at the QUIC layer, and as long as the situation is transient, should not result in leaving due to Excessive Spurious Traffic even if some packets were reordered or may still be in flight.
+ 2. As described in Section 6 of {{RFC4607}}, link-layer addresses can be linked to the low-order bits of multicast addresses, and may be the same for different group destinations.  Collisions in the link-layer addressing, even with traffic that comes from other sources, can cause congestion or receiver CPU load for colliding channels that might be different from that seen with other channels that were delivered with apparently the same network paths.
+ 3. Even though multicast QUIC uses only source-specific multicast, older networks with devices that don't have IGMPv3 or MLDv2 support can propagate the joins as any-source multicast. If there are active senders sending to that destination, this can cause network congestion and CPU load due to discarding packets from the wrong source, even though at the application layer the UDP socket won't receive those packets from the wrong source.
+ 4. If different channels use the same (S,G) but different UDP ports, they will share the same multicast forwarding tree in an IP network. This is often useful when the data in the channels are linked, for example if MC_INTEGRITY frames are carried on one channel for packets carried on another channel, because it provides some fate-sharing for the linked data.  However, for data that is not so linked, it would generally be a disadvantage to share the (S,G) because the network link of any receiver joined to one of those channels but not the other would receive both packets and throw away the data for the un-joined port, causing extra congestion and CPU load for the receiving device.
 
 # Security Considerations
 
