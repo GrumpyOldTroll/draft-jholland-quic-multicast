@@ -743,7 +743,7 @@ WebTransport over HTTP/3 is defined in {{I-D.draft-ietf-webtrans-http3}}.
 Popular data that can be sent with server-initiated streams or server-sent datagrams and carried over WebTransport are good use cases for multicast transport because the same server-to-client data can be pushed to many different receivers on a multicast channel.
 
 A QUIC connection using HTTP/3 and WebTransport can use multicast channels to deliver WebTransport server-initiated streams.
-At the time of this writing (version -02 of {{I-D.draft-ietff-webtrans-http3}}) this comes with the significant penalty that in order to do so, servers would have to run up to 4 multicast channels per shared set of data to send, one for each possible size of the client-chosen Session ID.
+At the time of this writing (version -02 of {{I-D.draft-ietf-webtrans-http3}}) this comes with the significant penalty that in order to do so, servers would have to run up to 4 multicast channels per shared set of data to send, one for each possible size of the client-chosen Session ID.
 
 Servers can achieve this by sending the initial few bytes of the server-initiated stream containing the Session ID (currently defined as the Stream ID of the QUIC stream containing the original HTTP/3 request for the WebTransport extended CONNECT request), then sending the rest of the stream data over a multicast channel.
 
