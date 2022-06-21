@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-06-14T00:36:13.925613+00:00",
+  "timestamp": "2022-06-21T00:30:55.977447+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -1157,9 +1157,17 @@
       "labels": [],
       "body": "Depending on size might also be a separate ID.\r\n- Include reference to CBACC\r\n- Include fan out/ deployment strategies\r\n- Graceful degradation (#44)\r\n- Pool/ Channel management on the server side\r\n- Reusing the same S,G for multiple channels might have implications for the rate on the network\r\n- ...",
       "createdAt": "2022-05-25T18:28:29Z",
-      "updatedAt": "2022-06-08T18:57:59Z",
+      "updatedAt": "2022-06-20T21:29:48Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Reference to CBACC should also mention that popularity-based metrics within a multicast network imply that clients SHOULD NOT leave just because they are not receiving traffic, if they are otherwise willing to receive multicast and server has asked them to try (also the reason behind fixing #63).",
+          "createdAt": "2022-06-20T21:29:47Z",
+          "updatedAt": "2022-06-20T21:29:47Z"
+        }
+      ]
     },
     {
       "number": 62,
@@ -1175,9 +1183,24 @@
       "labels": [],
       "body": "possibly we need 2, there's a global state of channel existence, plus a client-specific state of joined/left.  But maybe it can fit in one diagram, not sure yet.",
       "createdAt": "2022-05-27T15:51:26Z",
-      "updatedAt": "2022-05-27T15:51:27Z",
+      "updatedAt": "2022-06-20T22:26:53Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Proposed diagram (to be converted to text):\r\n![Channel State Diagram (server)](https://user-images.githubusercontent.com/361578/174684311-b13b689e-d322-479a-9554-0504ed0b11be.svg)\r\n\r\nSee also source at:\r\nhttps://docs.google.com/presentation/d/1J1ISZFYUT-9nxX7vq17oNKAtDXZYv6KrXH4Y6AtiLSM/edit#slide=id.p\r\n",
+          "createdAt": "2022-06-20T22:24:55Z",
+          "updatedAt": "2022-06-20T22:24:55Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "(Note that svgs can be included in RFCs, but should also provide a text mapping: https://datatracker.ietf.org/doc/html/rfc7996)",
+          "createdAt": "2022-06-20T22:26:52Z",
+          "updatedAt": "2022-06-20T22:26:52Z"
+        }
+      ]
     },
     {
       "number": 63,
@@ -1191,9 +1214,31 @@
       "labels": [],
       "body": "I think we talked about this but forgot the issue I think:\r\n\r\nSince the server knows if/ when reception of multicast is interrupted (by no longer getting ACKs) there is no need for clients to leave channels unilaterally if they think the channel timed out. ",
       "createdAt": "2022-06-03T21:44:41Z",
-      "updatedAt": "2022-06-03T21:44:41Z",
+      "updatedAt": "2022-06-20T21:43:55Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Yeah, and ideally they should not do so, to allow popularity analysis to work correctly inside the ISP.  I think this point probably deserves a mention in the operational considerations section (#61)\r\n(Clients can still leave for other reasons as desired but should not leave due to non-receiving.)",
+          "createdAt": "2022-06-20T21:26:39Z",
+          "updatedAt": "2022-06-20T21:26:39Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "There's already a max_ack_delay transport parameter in base quic (https://www.rfc-editor.org/rfc/rfc9000#section-18.2), is there any reason we can't just use that and leave this out?",
+          "createdAt": "2022-06-20T21:33:58Z",
+          "updatedAt": "2022-06-20T21:33:58Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "I remember now--I think we said there should be a different value that was per-channel, basically to allow for more aggregation especially on slower channels (and especially considering the linear ack scaling problems).\r\n\r\nBut I think we probably don't need the Bundle Size anymore if we take out the idle time, it can just fit in the per-channel max_ack_delay, right?",
+          "createdAt": "2022-06-20T21:43:55Z",
+          "updatedAt": "2022-06-20T21:43:55Z"
+        }
+      ]
     },
     {
       "number": 64,
@@ -1209,7 +1254,7 @@
       "labels": [],
       "body": "Client's have no way to communicate to the server if a properties frame arrives after an announce frame. In this case, it might take them until they receive a join for the server to notice that the properties are missing. ",
       "createdAt": "2022-06-08T18:50:37Z",
-      "updatedAt": "2022-06-13T21:59:11Z",
+      "updatedAt": "2022-06-20T23:31:01Z",
       "closedAt": null,
       "comments": [
         {
@@ -1246,6 +1291,20 @@
           "body": "I think using the key phase (in the packet header) is actually a very good idea. I don\u2019t think we would even need it in the key frame as the client just needs to know that when it flips there is a new key that is should use and if it doesn\u2019t have one it probably missed a key update. \r\nI am not sure how useful/necessary it is to send the key updates over Multicast now that the frame is so small, the trade off would be to save performance but having strict key sequence numbers without gaps. Also I guess Even if they are send over Multicast they could still be without gaps, new clients would just get an initial sequence number that is larger than 1. ",
           "createdAt": "2022-06-13T21:59:11Z",
           "updatedAt": "2022-06-13T21:59:11Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Current proposal is:\r\n- take the secret out of MC_ANNOUNCE and recommend not sending MC_KEY except to clients that will also get a MC_JOIN (just to reduce scope of key distribution to only those who need it)\r\n- receiving a MC_KEY or a MC_ANNOUNCE will create the channel at client.  Keys should be stored even for a channel without properties, with a buffer size limit of 2 (with a MUST discard old keys like in TLS to have forward secrecy in compliant clients. Client MAY hold up to 2 at a time and SHOULD discard the older one after some time like 3-10s of non-receipt of older packets)\r\n- A join without both MC_KEY and MC_ANNOUNCE previously received will get a Declined Join(Unsynchronized Properties).\r\n- However, this is a transient state since both MC_KEY and MC_ANNOUNCE will be eventually received after recovery.  Join can be safely retried\r\n- (maybe recommend if a retry was necessary wait until both were acked, but not sure it's needed?)\r\n\r\nI'll update the text and make a PR if there's no objections to this?",
+          "createdAt": "2022-06-20T21:23:05Z",
+          "updatedAt": "2022-06-20T21:23:05Z"
+        },
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "If a client received an announce but not yet a key, maybe instead of retrying the join later it should just \"join\" (send IGMP/MLD report) the channel already? It has all the necessary information, just can't decrypt the stream frames. But I *think* in most cases a lost key would be retransmitted long before the client actually manages to receive any multicast packets anyway, so it might be a good optimization (Could also be left out for now).\r\n\r\nAlso, I can't think of any right now but there might be some implications or trickiness with the state sequence numbers (which the server needs to use in join/leave/retire packets) if the client just retries a join on its own without being told so by the server (just something to keep in mind I guess). \r\n\r\nBut other than those two things this sounds like a good proposal, thanks. ",
+          "createdAt": "2022-06-20T23:30:23Z",
+          "updatedAt": "2022-06-20T23:31:01Z"
         }
       ]
     },
@@ -1290,6 +1349,24 @@
           "updatedAt": "2022-06-13T20:38:37Z"
         }
       ]
+    },
+    {
+      "number": 69,
+      "id": "I_kwDOG6NyZs5MI2WQ",
+      "title": "Frame names too long, diagrams too wide",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/69",
+      "state": "OPEN",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [
+        "GrumpyOldTroll"
+      ],
+      "labels": [],
+      "body": "Warnings during build about idnits violations from diagram width (both).  In large part driven by frame name length.",
+      "createdAt": "2022-06-20T21:07:49Z",
+      "updatedAt": "2022-06-20T21:07:52Z",
+      "closedAt": null,
+      "comments": []
     }
   ],
   "pulls": [
@@ -2899,6 +2976,107 @@
           "body": "LGTM",
           "createdAt": "2022-06-13T20:38:02Z",
           "updatedAt": "2022-06-13T20:38:02Z"
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "number": 70,
+      "id": "PR_kwDOG6NyZs45-TAT",
+      "title": "shorten frame names and diagram widths (#69)",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/70",
+      "state": "OPEN",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "fix for #69 ",
+      "createdAt": "2022-06-20T21:09:21Z",
+      "updatedAt": "2022-06-21T00:29:43Z",
+      "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "baseRefName": "main",
+      "baseRefOid": "2bb104a691a0097d09452b7b4dc44d50e6a2c269",
+      "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "headRefName": "issue-69",
+      "headRefOid": "e0e3c1ede5ff879a736022b428ac6f12ec21dc01",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": [
+        {
+          "id": "PRR_kwDOG6NyZs48XkCP",
+          "commit": {
+            "abbreviatedOid": "e0e3c1e"
+          },
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-20T23:22:18Z",
+          "updatedAt": "2022-06-20T23:22:19Z",
+          "comments": [
+            {
+              "originalPosition": 168,
+              "body": "I think the \"...\" got misaligned somehow?",
+              "createdAt": "2022-06-20T23:22:18Z",
+              "updatedAt": "2022-06-20T23:22:19Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48XqAm",
+          "commit": {
+            "abbreviatedOid": "e0e3c1e"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-21T00:29:43Z",
+          "updatedAt": "2022-06-21T00:29:43Z",
+          "comments": [
+            {
+              "originalPosition": 168,
+              "body": "I have some on each side, I don't see them misaligned?\r\nMaybe the picture is unclear tho.  It's meant to represent ongoing back & forth or something.  Not sure it conveys that well.\r\n",
+              "createdAt": "2022-06-21T00:29:43Z",
+              "updatedAt": "2022-06-21T00:29:43Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 71,
+      "id": "PR_kwDOG6NyZs45-cnT",
+      "title": "replace max idle time and ack bundle with max ack delay",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/71",
+      "state": "OPEN",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "issue #63 ",
+      "createdAt": "2022-06-20T22:21:32Z",
+      "updatedAt": "2022-06-20T23:23:05Z",
+      "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "baseRefName": "main",
+      "baseRefOid": "2bb104a691a0097d09452b7b4dc44d50e6a2c269",
+      "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "headRefName": "issue-63",
+      "headRefOid": "6b13932b3f22c9afd89b684e664b136983e18563",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "LGTM, pending #70, but can be merged once it does ",
+          "createdAt": "2022-06-20T23:23:05Z",
+          "updatedAt": "2022-06-20T23:23:05Z"
         }
       ],
       "reviews": []
