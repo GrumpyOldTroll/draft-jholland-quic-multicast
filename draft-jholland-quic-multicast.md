@@ -355,8 +355,7 @@ MC_ANNOUNCE Frame {
   AEAD Key Length (i),
   AEAD Key (..),
   Max Rate (i),
-  Max Idle Time (i),
-  ACK Bundle Size (i)
+  Max ACK Delay (i)
 }
 ~~~
 {: #fig-mc-channel-announce title="MC_ANNOUNCE Frame Format"}
@@ -385,9 +384,7 @@ MC_ANNOUNCE frames contain the following fields:
   * AEAD Key: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}, with length given by Key Length.
     To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
   * Max Rate: The maximum rate in Kibps of the payload data for this channel.Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
-  * Max Idle Time: The maximum expected idle time of the channel.  If this amount of time passes in a joined channel without data received, clients SHOULD leave the channel with reason Max Idle Time Exceeded.
-  * ACK Bundle Size: The minimum number of ACKs a client should send in a single QUIC packet. If the max_ack_delay would force a client to send a packet that only consists of MC_ACK frames, it SHOULD instead wait with sending until at least the specified number of acknowledgements have been collected. However, the Client MUST send any pending acknowledgements at least once per Max Idle Time to prevent the Server from perceiving the channel as interrupted.
-
+  * Max ACK Delay: A value used similarly to max_ack_delay (Section 18.2 of {{RFC9000}}}) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds.  Within this limit, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.
 
 A client MUST NOT use the channel ID included in the MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
 As the server knows which connection IDs are in use by the client, it MUST wait with the sending of a MC_JOIN frame until the channel ID associated with it has been retired by the client.
@@ -630,21 +627,20 @@ If State is Left or Declined Join, the Reason field is set to one of:
  * 0x5: Unsynchronized Properties
  * 0x6: ID Collision
  * 0x10: Held Down
- * 0x11: Max Idle Time Exceeded
  * 0x12: Max Rate Exceeded
  * 0x13: High Loss
- * 0x14: Spurious Traffic
+ * 0x14: Excessive Spurious Traffic
  * 0x15: Max Streams Exceeded
  * 0x16: No Traffic
  * 0x1000000-0x3fffffff: Application-specific Reason
 
-A client might receive multicast packets that it can not associate with any channel ID. If these are addressed to an (S,G) that is used for reception in one or more known channels, it MAY leave these channels with reason "Spurious traffic".
+A client might receive multicast packets that it can not associate with any channel ID, or that cannot be verified as matching hashes from MC_INTEGRITY frames, or cannot be decrypted.
+This traffic is presumed either to have been corrupted in transit or to have been sent by someone other than the legitimate sender of traffic for the channel, possibly by an attacker or a misconfigured sender in the network.
+If these packets are addressed to an (S,G) that is used for reception in one or more known channels, the client MAY leave these channels with reason "Excessive Spurious traffic".
 
 (TODO: Or should we try to reuse PATH_ABANDON and/or PATH_STATUS?  I don’t think they’re sufficient, but maybe?):
   - {{I-D.draft-ietf-quic-multipath}}
   - <https://datatracker.ietf.org/doc/html/draft-liu-multipath-quic-04#section-9.1>
-
-(Authors comment: The things server needs to know for state changes *could* maybe be inferred from ack responses but explicit seems better, allowing for a more proactive response under strain?)
 
 # Frames Carried in Channel Packets
 
