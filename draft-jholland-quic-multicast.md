@@ -106,8 +106,8 @@ Incoming packets received on the network path associated with a channel use the 
 A client with a matching joined channel always has at least one connection associated with the channel.
 If a client has no matching joined channel, the packet is discarded.
 
-Since the network path for a channel is unidirectional and uses a different path than the unicast part of the connection, packets associated with a channel are acknowledged with MC_ACK frames {{channel-ack-frame}} instead of ACK frames.
 Each channel has an independent packet number space.
+Since the network path for a channel is unidirectional and uses a different packet number space than the unicast part of the connection, packets associated with a channel are acknowledged with MC_ACK frames {{channel-ack-frame}} instead of ACK frames.
 
 The use of any particular channel is OPTIONAL for both the server and the client.
 It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceful degradation for endpoints that do not or cannot make use of the multicast functionality (see {{graceful-degradation}}).
@@ -743,17 +743,17 @@ WebTransport over HTTP/3 is defined in {{I-D.draft-ietf-webtrans-http3}}.
 Popular data that can be sent with server-initiated streams or server-sent datagrams and carried over WebTransport are good use cases for multicast transport because the same server-to-client data can be pushed to many different receivers on a multicast channel.
 
 A QUIC connection using HTTP/3 and WebTransport can use multicast channels to deliver WebTransport server-initiated streams.
-At the time of this writing (version -02) this comes with the significant penalty that in order to do so, servers would have to run up to 4 multicast channels per shared set of data to send, one for each possible size of the client-chosen Session ID.
+At the time of this writing (version -02 of {{I-D.draft-ietff-webtrans-http3}}) this comes with the significant penalty that in order to do so, servers would have to run up to 4 multicast channels per shared set of data to send, one for each possible size of the client-chosen Session ID.
 
-Servers can achieve this by sending the initial few bytes of the server-initiated stream, containing the Session ID (currently defined as the Stream ID of the QUIC stream containing the original HTTP/3 request for the WebTransport extended CONNECT request), then sending the rest of the stream data over a multicast channel.
+Servers can achieve this by sending the initial few bytes of the server-initiated stream containing the Session ID (currently defined as the Stream ID of the QUIC stream containing the original HTTP/3 request for the WebTransport extended CONNECT request), then sending the rest of the stream data over a multicast channel.
 
 However, since the client-initiated Stream ID used for the Session ID is a variable-length integer with 4 possible sizes (1, 2, 4, or 8 octets), clients will need the shared data in the stream to be at one of 4 different possible stream offsets in order to process it.
 Hence, for WebTransport as currently specified servers would need to run up to 4 separate channels instead of a single channel in order to send the same WebTransport data to many different clients.
 
-WebTransport Datagrams are delivered over HTTP/3 Datagrams as defined in {{I-D.draft-ietf-masque-h3-datagram}} and have the same characteristic of relying on the client-chosen Quarter Stream ID value.
+WebTransport Datagrams are delivered over HTTP/3 Datagrams as defined in {{I-D.draft-ietf-masque-h3-datagram}} and in version -04 have the same characteristic of relying on the client-chosen Quarter Stream ID value.
 
 While using 4 multicast channels instead of 1 still represents a potentially vast scalability improvement over unicast delivery for popular content, it causes other scalability problems, especially in networks that have small limits on the number of multicast channels that are allowed to be provisioned at the same time.
-The total channel limits have a surprisingly low bound in a lot of multicast-capable networking devices designed for TV services that were expected to support only up to a few tens of popular channels at the same time.
+The total channel count limits have a surprisingly low bound in many multicast-capable networking devices designed for TV services that were expected to support only up to a few tens of very popular channels at the same time.
 
 It is therefore hoped that an extension or revision to WebTransport and HTTP/3 Datagrams can be adopted in a future version of their specifications that make it possible to use a single channel for all the shared data.
 
@@ -766,11 +766,11 @@ As an alternate example of an extension, a mechanism that allows padding at the 
 
 ### Non-web Applications
 
-There are also several non-web application protocols that could profitably use multicast QUIC.  A few examples include:
+There are also several non-web application protocols that could benefit from using multicast QUIC.  A few examples include:
 
  - Existing multicast-capable applications that are modified to use QUIC datagrams instead of UDP payloads can potentially get improved encryption and congestion feedback, while keeping its existing FEC/error recovery techniques.
    - An external tunnel could supply this kind of encapsulation without modification to the sender or receiver for some applications, while retaining the benefits of multicast scalability
-   - This could usefully support existing implementations of file-transfer protocols like FLUTE {{RFC6726}} or FCAST {{RFC6968}}.
+   - This could usefully support existing implementations of file-transfer protocols like FLUTE {{RFC6726}} or FCAST {{RFC6968}} to enable file downloads such as operating system updates or popular game downloads with encryption and packet-level authentication.
  - Conferencing systems, especially within an enterprise that can deploy multicast network support, often can save significantly on server costs by using multicast
  - The traditional multicast use case of broadcasting of live sports with a set-top box would benefit from a system that uses the same QUIC receiver code even for customers who installed a non-multicast-capable home router.
  - Smart TVs or other video playing in-home devices could interoperate with a standard sender using multicast QUIC, rather than requiring proprietary integrations with TV operators.
