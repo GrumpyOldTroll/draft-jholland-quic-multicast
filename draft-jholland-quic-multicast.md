@@ -334,7 +334,7 @@ Under a higher threshold of sustained persistent loss, the client also SHOULD le
 The unicast connection's congestion control is unaffected.
 However a few potential interactions with the unicast connection are worth highlighting:
 
- - if the client notices high loss on the unicast connection while multicast channel packets are arriving, the client MAY leave channels with reason High Loss (whether or not the arriving packets are decodable, in case the client is missing MC_INTEGRITY frames due to the high unicast loss)
+ - if the client notices high loss on the unicast connection while multicast channel packets are arriving, the client MAY leave channels with reason High Loss.
  - if the client notices congestion from unicast this MAY also drive reductions in the client's Max Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Rate (along with an updated MC_LIMITS frame).
 
 Hybrid multicast-unicast congestion control is still an experimental research topic.
