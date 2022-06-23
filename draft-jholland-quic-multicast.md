@@ -331,8 +331,11 @@ Under sustained persistent loss that exceeds server-configured thresholds, the s
 Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the clients aggregate rate is below its advertised Max Rate.
 Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(Left) frame with the High Loss reason, as well as reducing the Max Rate in MC_LIMITS.
 
-The unicast congestion control is unaffected.
-However if the client notices congestion from unicast this MAY also drive reductions in the client's Max Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Rate (along with an updated MC_LIMITS frame).
+The unicast connection's congestion control is unaffected.
+However a few potential interactions with the unicast connection are worth highlighting:
+
+ - if the client notices high loss on the unicast connection while multicast channel packets are arriving, the client MAY leave channels with reason High Loss.
+ - if the client notices congestion from unicast this MAY also drive reductions in the client's Max Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Rate (along with an updated MC_LIMITS frame).
 
 Hybrid multicast-unicast congestion control is still an experimental research topic.
 Implementations SHOULD follow the guidelines given in Section 4.1.1 of {{RFC8085}} under the assumption that applications using QUIC multicast will operate as Bulk-Transfer applications.
@@ -349,9 +352,14 @@ Note that the hash is on the encrypted packet to avoid leaking data about the en
 
 # Recovery {#recovery}
 
-TODO: Articulate key differences with {{RFC9002}}, mainly that the RTT for channel packets uses an estimated send time since the server doesn't necessarily know the exact timing of the send of the packet.
+TODO: Articulate key differences with {{RFC9002}}.
+The main known difference is that servers might not be running on the same devices that are sending the channel packets, therefore the RTT for channel packets might use an estimated send time that can vary according to the clock synchronization among servers and the deployment and implementation details of how the servers find out the sending timestamps of channel packets.
+Experience-based guidance on the recovery timing estimates is one anticipated outcome of experimenting with deployments of this experimental extension.
 
 All the new frames defined in this document except MC_ACK are ack-eliciting and are retransmitted until acknowledged to provide reliable, though possibly out of order, delivery.
+
+Note that recovery MAY be achieved either by retransmitting frame data that was lost and needs reliable transport either by sending the frame data on the unicast connection or by coordinating to cause an aggregated retransmission of widely dropped data on a multicast channel, at the server's discretion.
+However, the server in each connection is responsible for ensuring that any necessary server-to-client frame data lost by a multicast channel packet loss ultimately arrives at the client.
 
 # Connection Termination
 
@@ -732,6 +740,8 @@ Not permitted:
 
 ## Use Cases
 
+This section outlines considerations for some known transport mechanisms that are worth highlighting as potentially useful with multicast QUIC.
+
 ### HTTP/3 Server Push {#server-push}
 
 HTTP/3 Server Push is defined in Section 4.6 of {{RFC9114}}.
@@ -805,7 +815,7 @@ The servers will notice the transport loss from the lack of MC_ACK frames from r
 
 ## Server Scalability {#server-scalability}
 
-Use of QUIC multicast channels can provide large scalability gains, but there still will be significant scaling requiremnts on server operators for a large client footprint.
+Use of QUIC multicast channels can provide large scalability gains, but there still will be significant scaling requiremnts on server operators to support a large client footprint.
 
 Servers, possibly many of them, still will be required to maintain unicast connections with all the clients and provide for handling MC_ACK frames from the clients, delivering MC_INTEGRITY frames, managing the clients' channel join states, and providing recovery for lost packets.
 
@@ -813,7 +823,7 @@ Further, the use of multicast channels likely requires increased coordination be
 
 For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.
 
-## Addressing Collisions {#addressing-collisions}
+## Address Collisions {#address-collisions}
 
 Multicast channels at the network layer are addressed with a source IP, a destination group IP address, and a destination UDP port.
 
