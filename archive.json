@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-06-21T00:30:55.977447+00:00",
+  "timestamp": "2022-06-23T00:28:49.919795+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -979,19 +979,20 @@
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/48",
       "state": "OPEN",
       "author": "squarooticus",
-      "authorAssociation": "NONE",
+      "authorAssociation": "COLLABORATOR",
       "assignees": [
-        "GrumpyOldTroll"
+        "GrumpyOldTroll",
+        "squarooticus"
       ],
       "labels": [],
       "body": "\"Integrity\" as defined in draft-krose-multicast-security is specific to multicast (and necessarily weaker than for unicast). So I think the use of \"integrity\" in normative language here is probably ambiguous. The key properties are protection against:\r\n\r\n* Injection: an attacker, including other receivers, must not be able to create new channel integrity frames that will be accepted by a properly-functioning receiver. \r\n* Modification: an attacker, including other receivers, must not be able to modify channel integrity frames such that they will be accepted by a properly-functioning receiver.\r\n* Replay: an attacker, including other receivers, must not be able to alter the content delivered to a receiver through the replay of previously-seen channel integrity frames.\r\n\r\nRight now, all three properties are achieved by sending (and presumably accepting) such frames only over unicast QUIC. In the future, the first two properties will be provided by something like AMBI-over-unicast-or-signed-manifest or ALTA, while the third is (now and in the future) provided by the fact that channel integrity frames are stateless and declarative (i.e., a given frame has an immutable meaning).",
       "createdAt": "2022-05-19T20:47:11Z",
-      "updatedAt": "2022-05-25T18:46:57Z",
+      "updatedAt": "2022-06-21T22:00:40Z",
       "closedAt": null,
       "comments": [
         {
           "author": "squarooticus",
-          "authorAssociation": "NONE",
+          "authorAssociation": "COLLABORATOR",
           "body": "I should emphasize that until we have out-of-band integrity, any channel integrity packets received over multicast MUST be dropped. We could track the provenance of QUIC packets throughout the stack, or drop such privileged frames before they are injected into whatever packet queue exists in the code (if any; I don't know quite how that works yet). But I do find the way it is designed elegant in the sense that adding OOB integrity protection requires no changes to the QUIC frames as-defined here, only to how they are authenticated and interpreted.",
           "createdAt": "2022-05-19T20:53:26Z",
           "updatedAt": "2022-05-19T20:54:52Z"
@@ -1012,17 +1013,38 @@
         },
         {
           "author": "squarooticus",
-          "authorAssociation": "NONE",
+          "authorAssociation": "COLLABORATOR",
           "body": "> I don't follow. The current intent is that if an integrity frame is received in a packet delivered with a multicast channel, it is accepted only if the packet containing the frame has a hash in another integrity frame that was accepted. So they can be accepted over either unicast or multicast.\r\n\r\nWell, it's more complicated, right? It's either a hash in another accepted integrity frame, or it's delivered over unicast (which has QUIC-native integrity guarantees). It's the principle that every integrity frame must be cryptographically linked to an established root of trust.",
           "createdAt": "2022-05-20T15:32:24Z",
           "updatedAt": "2022-05-20T15:32:24Z"
         },
         {
           "author": "squarooticus",
-          "authorAssociation": "NONE",
+          "authorAssociation": "COLLABORATOR",
           "body": "So, scratch my objection to multicast-delivered integrity frames. Instead: ideally, the draft would specify a necessary and sufficient set of conditions for an integrity frame to be accepted that will not require updating when AMBI or ALTA are introduced.",
           "createdAt": "2022-05-20T15:34:05Z",
           "updatedAt": "2022-05-20T15:34:05Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "I think we can close this, right?  Or @squarooticus did you have some text you wanted to put in about this to try to phrase it so AMBI can be used without making it confusing?",
+          "createdAt": "2022-06-21T00:41:03Z",
+          "updatedAt": "2022-06-21T00:41:03Z"
+        },
+        {
+          "author": "squarooticus",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I don't have text yet, but I would like to write some. Can we keep this open until I have a chance to look at it?",
+          "createdAt": "2022-06-21T02:45:44Z",
+          "updatedAt": "2022-06-21T02:45:44Z"
+        },
+        {
+          "author": "squarooticus",
+          "authorAssociation": "COLLABORATOR",
+          "body": "If you make me a contributor, I can assign it to myself.",
+          "createdAt": "2022-06-21T02:46:41Z",
+          "updatedAt": "2022-06-21T02:46:41Z"
         }
       ]
     },
@@ -1082,7 +1104,7 @@
       "id": "I_kwDOG6NyZs5KI8BC",
       "title": "Encrypt-then-mac is recommended",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/52",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "GrumpyOldTroll",
       "authorAssociation": "OWNER",
       "assignees": [
@@ -1091,8 +1113,8 @@
       "labels": [],
       "body": "From @squarooticus:\r\n\u00a7 7.1 is going to trigger some folks who have ETM (encrypt-then-mac) on the brain to avoid leaking information, so some reassurance that the packet hashes are in the encrypted stream would probably suffice to prevent this reaction.\r\n\r\nResponse from Jake:\r\n\r\nI guess the flow here if the hash is on the encrypted packet is:\r\n 1. hash the packet with the channel's hash algorithm\r\n 2. decrypt the packet (or at least the header) so you have the packet number\r\n 3. check the hash, reject if it doesn't match\r\n 4. parse the packet and accept it (provided it doesn't trigger protocol errors, etc.)\r\n \r\nWould that work better?",
       "createdAt": "2022-05-21T03:47:52Z",
-      "updatedAt": "2022-05-25T18:46:35Z",
-      "closedAt": null,
+      "updatedAt": "2022-06-21T21:59:29Z",
+      "closedAt": "2022-06-21T21:59:29Z",
       "comments": []
     },
     {
@@ -1150,15 +1172,15 @@
       "id": "I_kwDOG6NyZs5Kas6u",
       "title": "Add operational considerations section",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/61",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "MaxF12",
       "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "Depending on size might also be a separate ID.\r\n- Include reference to CBACC\r\n- Include fan out/ deployment strategies\r\n- Graceful degradation (#44)\r\n- Pool/ Channel management on the server side\r\n- Reusing the same S,G for multiple channels might have implications for the rate on the network\r\n- ...",
       "createdAt": "2022-05-25T18:28:29Z",
-      "updatedAt": "2022-06-20T21:29:48Z",
-      "closedAt": null,
+      "updatedAt": "2022-06-21T21:59:16Z",
+      "closedAt": "2022-06-21T21:59:16Z",
       "comments": [
         {
           "author": "GrumpyOldTroll",
@@ -1207,15 +1229,15 @@
       "id": "I_kwDOG6NyZs5LIGfk",
       "title": "Replace Max Idle Time with Max Ack Delay",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/63",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "MaxF12",
       "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "I think we talked about this but forgot the issue I think:\r\n\r\nSince the server knows if/ when reception of multicast is interrupted (by no longer getting ACKs) there is no need for clients to leave channels unilaterally if they think the channel timed out. ",
       "createdAt": "2022-06-03T21:44:41Z",
-      "updatedAt": "2022-06-20T21:43:55Z",
-      "closedAt": null,
+      "updatedAt": "2022-06-21T01:51:31Z",
+      "closedAt": "2022-06-21T01:51:31Z",
       "comments": [
         {
           "author": "GrumpyOldTroll",
@@ -1245,7 +1267,7 @@
       "id": "I_kwDOG6NyZs5LaMW-",
       "title": "Ordering of Announce, properties and Join",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/64",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "MaxF12",
       "authorAssociation": "COLLABORATOR",
       "assignees": [
@@ -1254,8 +1276,8 @@
       "labels": [],
       "body": "Client's have no way to communicate to the server if a properties frame arrives after an announce frame. In this case, it might take them until they receive a join for the server to notice that the properties are missing. ",
       "createdAt": "2022-06-08T18:50:37Z",
-      "updatedAt": "2022-06-20T23:31:01Z",
-      "closedAt": null,
+      "updatedAt": "2022-06-21T22:00:17Z",
+      "closedAt": "2022-06-21T22:00:17Z",
       "comments": [
         {
           "author": "MaxF12",
@@ -1266,7 +1288,7 @@
         },
         {
           "author": "squarooticus",
-          "authorAssociation": "NONE",
+          "authorAssociation": "COLLABORATOR",
           "body": "There's a related race condition in properties frames themselves:\r\n\r\n> Properties Sequence Number: Increases by 1 each time the properties for the channel are changed by the server. The client tracks the sequence number of the MC_CHANNEL_PROPERTIES frame that set its current value, and only updates the value and the packet number range on which it's applicable if the Properties Sequence Number is higher.\r\n\r\nIf two are intentionally sent in sequence but the second is received and processed first, the first will never be processed and packets in that range may not be decryptable.",
           "createdAt": "2022-06-10T18:57:58Z",
           "updatedAt": "2022-06-10T18:57:58Z"
@@ -1305,6 +1327,20 @@
           "body": "If a client received an announce but not yet a key, maybe instead of retrying the join later it should just \"join\" (send IGMP/MLD report) the channel already? It has all the necessary information, just can't decrypt the stream frames. But I *think* in most cases a lost key would be retransmitted long before the client actually manages to receive any multicast packets anyway, so it might be a good optimization (Could also be left out for now).\r\n\r\nAlso, I can't think of any right now but there might be some implications or trickiness with the state sequence numbers (which the server needs to use in join/leave/retire packets) if the client just retries a join on its own without being told so by the server (just something to keep in mind I guess). \r\n\r\nBut other than those two things this sounds like a good proposal, thanks. ",
           "createdAt": "2022-06-20T23:30:23Z",
           "updatedAt": "2022-06-20T23:31:01Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "I should clarify my meaning: the Join cannot be retried by the client unilaterally after sending an MC_STATE(Declined Join).  When I said the join could be retried, I meant the server can send a new MC_JOIN once it sees that the client has acked both the MC_KEY and the MC_ANNOUNCE.",
+          "createdAt": "2022-06-21T09:20:32Z",
+          "updatedAt": "2022-06-21T09:20:32Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "I don't think it's a good assumption that the multicast data will be slow to arrive.  For the first to join it's slow, but for others who join from the same network it will be fast, and for the popular events that will use multicast the most widely, this would be the most common case.  I think you're right for testing and small events, but large events will typically differ there.",
+          "createdAt": "2022-06-21T09:23:27Z",
+          "updatedAt": "2022-06-21T09:23:27Z"
         }
       ]
     },
@@ -1355,7 +1391,7 @@
       "id": "I_kwDOG6NyZs5MI2WQ",
       "title": "Frame names too long, diagrams too wide",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/69",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "GrumpyOldTroll",
       "authorAssociation": "OWNER",
       "assignees": [
@@ -1364,8 +1400,24 @@
       "labels": [],
       "body": "Warnings during build about idnits violations from diagram width (both).  In large part driven by frame name length.",
       "createdAt": "2022-06-20T21:07:49Z",
-      "updatedAt": "2022-06-20T21:07:52Z",
-      "closedAt": null,
+      "updatedAt": "2022-06-21T03:42:45Z",
+      "closedAt": "2022-06-21T03:42:45Z",
+      "comments": []
+    },
+    {
+      "number": 72,
+      "id": "I_kwDOG6NyZs5MJa9-",
+      "title": "clarify how the secret in the MC_KEY frame is used",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/72",
+      "state": "CLOSED",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2022-06-21T00:42:15Z",
+      "updatedAt": "2022-06-21T21:59:42Z",
+      "closedAt": "2022-06-21T21:59:42Z",
       "comments": []
     }
   ],
@@ -2985,24 +3037,26 @@
       "id": "PR_kwDOG6NyZs45-TAT",
       "title": "shorten frame names and diagram widths (#69)",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/70",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "GrumpyOldTroll",
       "authorAssociation": "OWNER",
       "assignees": [],
       "labels": [],
       "body": "fix for #69 ",
       "createdAt": "2022-06-20T21:09:21Z",
-      "updatedAt": "2022-06-21T00:29:43Z",
+      "updatedAt": "2022-06-21T01:50:53Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "2bb104a691a0097d09452b7b4dc44d50e6a2c269",
       "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "headRefName": "issue-69",
       "headRefOid": "e0e3c1ede5ff879a736022b428ac6f12ec21dc01",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2022-06-21T01:50:45Z",
+      "mergedAt": "2022-06-21T01:50:45Z",
+      "mergedBy": "GrumpyOldTroll",
+      "mergeCommit": {
+        "oid": "326680d0c9a60d8d6cb4cbbea11d840e27faf9f6"
+      },
       "comments": [],
       "reviews": [
         {
@@ -3044,6 +3098,39 @@
               "updatedAt": "2022-06-21T00:29:43Z"
             }
           ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48XqqF",
+          "commit": {
+            "abbreviatedOid": "e0e3c1e"
+          },
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-21T00:37:48Z",
+          "updatedAt": "2022-06-21T00:37:48Z",
+          "comments": [
+            {
+              "originalPosition": 168,
+              "body": "Ah, I was following the examples in RFC9000 where I think they just had them in the middle and not on both sides, but I guess that works too",
+              "createdAt": "2022-06-21T00:37:48Z",
+              "updatedAt": "2022-06-21T00:37:48Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48Xw2e",
+          "commit": {
+            "abbreviatedOid": "e0e3c1e"
+          },
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2022-06-21T01:30:58Z",
+          "updatedAt": "2022-06-21T01:30:58Z",
+          "comments": []
         }
       ]
     },
@@ -3052,24 +3139,26 @@
       "id": "PR_kwDOG6NyZs45-cnT",
       "title": "replace max idle time and ack bundle with max ack delay",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/71",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "GrumpyOldTroll",
       "authorAssociation": "OWNER",
       "assignees": [],
       "labels": [],
       "body": "issue #63 ",
       "createdAt": "2022-06-20T22:21:32Z",
-      "updatedAt": "2022-06-20T23:23:05Z",
+      "updatedAt": "2022-06-21T01:51:16Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "2bb104a691a0097d09452b7b4dc44d50e6a2c269",
       "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "headRefName": "issue-63",
       "headRefOid": "6b13932b3f22c9afd89b684e664b136983e18563",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2022-06-21T01:51:12Z",
+      "mergedAt": "2022-06-21T01:51:12Z",
+      "mergedBy": "GrumpyOldTroll",
+      "mergeCommit": {
+        "oid": "f59416a4510a5a268106c1d08dfcabd2d2461e8b"
+      },
       "comments": [
         {
           "author": "MaxF12",
@@ -3077,6 +3166,248 @@
           "body": "LGTM, pending #70, but can be merged once it does ",
           "createdAt": "2022-06-20T23:23:05Z",
           "updatedAt": "2022-06-20T23:23:05Z"
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "number": 73,
+      "id": "PR_kwDOG6NyZs46A8K4",
+      "title": "added operational considerations (#61)",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/73",
+      "state": "MERGED",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Mostly #61, but also I think covered #52 and #72 (encryption clarity) and #64 (ordering for join/key/announce)",
+      "createdAt": "2022-06-21T09:28:10Z",
+      "updatedAt": "2022-06-21T21:38:15Z",
+      "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "baseRefName": "main",
+      "baseRefOid": "f59416a4510a5a268106c1d08dfcabd2d2461e8b",
+      "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "headRefName": "issue-61",
+      "headRefOid": "0bb49fb38dbf5c7e952c63a586d0f5d3dccaba0f",
+      "closedAt": "2022-06-21T21:38:14Z",
+      "mergedAt": "2022-06-21T21:38:14Z",
+      "mergedBy": "MaxF12",
+      "mergeCommit": {
+        "oid": "c350fa7e7b2c6ffce8db76922e81d310e8a4a47e"
+      },
+      "comments": [],
+      "reviews": [
+        {
+          "id": "PRR_kwDOG6NyZs48bFJL",
+          "commit": {
+            "abbreviatedOid": "c04b211"
+          },
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "LGTM, thanks a lot this is a great PR. Some minor comments, most of them might be future issues/todos. \r\n",
+          "createdAt": "2022-06-21T14:38:56Z",
+          "updatedAt": "2022-06-21T15:14:33Z",
+          "comments": [
+            {
+              "originalPosition": 58,
+              "body": "Is it always necessarily true that they have a different path than the unicast connection? What benefit do we get out of stating this here? I think saying that the channels are unidirectional are a good enough reason to have to send MC_ACKs on the unicast connection",
+              "createdAt": "2022-06-21T14:38:56Z",
+              "updatedAt": "2022-06-21T15:14:33Z"
+            },
+            {
+              "originalPosition": 167,
+              "body": "Should there be some more details on this? Maybe over what period/ by how much etc. This can come later though I think. \r\nIt isn't part of the spec necessarily, but more another operational insight/ guidance. ",
+              "createdAt": "2022-06-21T14:48:54Z",
+              "updatedAt": "2022-06-21T15:14:33Z"
+            },
+            {
+              "originalPosition": 186,
+              "body": "Would the client even be aware of loss on multicast channels? I guess it would see the gaps in the packet numbers, maybe we should also say something about that?",
+              "createdAt": "2022-06-21T14:58:53Z",
+              "updatedAt": "2022-06-21T15:14:33Z"
+            },
+            {
+              "originalPosition": 450,
+              "body": "Should be -01 I think (unless you want to do another rev before sending it to webtransport) ",
+              "createdAt": "2022-06-21T15:06:39Z",
+              "updatedAt": "2022-06-21T15:14:33Z"
+            },
+            {
+              "originalPosition": 473,
+              "body": "I am no expert in language of IETF documents, but \"profitably\" seems off, maybe better to use something like \"efficiently\"? ",
+              "createdAt": "2022-06-21T15:08:23Z",
+              "updatedAt": "2022-06-21T15:14:33Z"
+            },
+            {
+              "originalPosition": 480,
+              "body": "Maybe also add the file delivery/ systems update use case?",
+              "createdAt": "2022-06-21T15:09:24Z",
+              "updatedAt": "2022-06-21T15:14:33Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48c8sT",
+          "commit": {
+            "abbreviatedOid": "c04b211"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-21T20:42:28Z",
+          "updatedAt": "2022-06-21T20:42:28Z",
+          "comments": [
+            {
+              "originalPosition": 186,
+              "body": "It also can see the integrity frames and see that there are hashes for packet numbers it didn't see.",
+              "createdAt": "2022-06-21T20:42:28Z",
+              "updatedAt": "2022-06-21T20:42:28Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48c_Mo",
+          "commit": {
+            "abbreviatedOid": "c04b211"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-21T20:52:53Z",
+          "updatedAt": "2022-06-21T20:52:53Z",
+          "comments": [
+            {
+              "originalPosition": 480,
+              "body": "The FLUTE/FCAST case is meant to be this. I'll add a little color there.",
+              "createdAt": "2022-06-21T20:52:53Z",
+              "updatedAt": "2022-06-21T20:52:53Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48c_V3",
+          "commit": {
+            "abbreviatedOid": "c04b211"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-21T20:53:27Z",
+          "updatedAt": "2022-06-21T20:53:27Z",
+          "comments": [
+            {
+              "originalPosition": 450,
+              "body": "clarified that i meant version -02 of webtransport and -04 of h3 datagrams.",
+              "createdAt": "2022-06-21T20:53:27Z",
+              "updatedAt": "2022-06-21T20:53:27Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48c_aA",
+          "commit": {
+            "abbreviatedOid": "c04b211"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-21T20:53:42Z",
+          "updatedAt": "2022-06-21T20:53:42Z",
+          "comments": [
+            {
+              "originalPosition": 473,
+              "body": "sure, \"can benefit from using\" instead seems fine.",
+              "createdAt": "2022-06-21T20:53:42Z",
+              "updatedAt": "2022-06-21T20:53:42Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48dAOf",
+          "commit": {
+            "abbreviatedOid": "c04b211"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-21T20:56:31Z",
+          "updatedAt": "2022-06-21T20:56:31Z",
+          "comments": [
+            {
+              "originalPosition": 167,
+              "body": "The description of Max Rate in the MC_ANNOUNCE frame specifies a 5s window for max rate, but I think we should probably explain that in the flow control section too, yes.  I think it does probably have to be part of the spec (at least as RECOMMENDED or SHOULD or something), otherwise different implementations will not necessarily interoperate well.",
+              "createdAt": "2022-06-21T20:56:31Z",
+              "updatedAt": "2022-06-21T20:56:31Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48dAUY",
+          "commit": {
+            "abbreviatedOid": "c04b211"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-21T20:56:52Z",
+          "updatedAt": "2022-06-21T20:56:52Z",
+          "comments": [
+            {
+              "originalPosition": 58,
+              "body": "changed the wording here, thanks.",
+              "createdAt": "2022-06-21T20:56:52Z",
+              "updatedAt": "2022-06-21T20:56:52Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 74,
+      "id": "PR_kwDOG6NyZs46EkXi",
+      "title": "fine-tuning of intro text plus minor updates",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/74",
+      "state": "MERGED",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2022-06-21T23:19:08Z",
+      "updatedAt": "2022-06-22T10:45:04Z",
+      "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "baseRefName": "main",
+      "baseRefOid": "c350fa7e7b2c6ffce8db76922e81d310e8a4a47e",
+      "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "headRefName": "tune-intro",
+      "headRefOid": "71d2e310dc38660b67c6cb70e22f628fff31fc2f",
+      "closedAt": "2022-06-22T10:45:04Z",
+      "mergedAt": "2022-06-22T10:45:04Z",
+      "mergedBy": "MaxF12",
+      "mergeCommit": {
+        "oid": "25236b4cb9c2283ba5a79b911be14b3a9cd7e91e"
+      },
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Not exactly a specific raised issue for these, but I made a pass that I think cleans up a few things.",
+          "createdAt": "2022-06-21T23:20:01Z",
+          "updatedAt": "2022-06-21T23:20:01Z"
+        },
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "LGTM",
+          "createdAt": "2022-06-22T10:45:00Z",
+          "updatedAt": "2022-06-22T10:45:00Z"
         }
       ],
       "reviews": []
