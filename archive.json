@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-06-23T00:28:49.919795+00:00",
+  "timestamp": "2022-06-26T00:35:57.574487+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -1418,6 +1418,38 @@
       "createdAt": "2022-06-21T00:42:15Z",
       "updatedAt": "2022-06-21T21:59:42Z",
       "closedAt": "2022-06-21T21:59:42Z",
+      "comments": []
+    },
+    {
+      "number": 75,
+      "id": "I_kwDOG6NyZs5MZs3I",
+      "title": "Add an Application use cases sub-section?",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/75",
+      "state": "OPEN",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "I thought I'd capture here some iffy text that I wasn't happy enough with to include yet, but might be worth finishing to fill in the \"Pool/ Channel management on the server side\" part from https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/61 that I skipped when closing that issue.\r\n\r\nThe goal really is to make it clear what kinds of channel assignment strategies you'd want for a few different use cases, which I don't think this text quite achieves.\r\n\r\nI'm not sure it's worth it, it seems like a lot of background in order to cover some non-normative example stuff that might be better done by an example implementation outside the spec, but I thought I'd leave this here for a bit more discussion instead of just dropping the \"pool/Channel management\" suggestion.\r\n\r\nMaybe it would be better with a slightly different direction I just haven't thought of properly, I'm not sure.  But this is what my interpretation started out typing, until it kinda felt like maybe more of a can of worms than it's worth, so I thought I'd dump it in here for possibly a later rev.\r\n\r\nPlease do suggest direction or text here if you think there's something worth filling out and incorporating, but I'm kind of inclined to drop it at the moment.\r\n\r\n----\r\n\r\n## Application Use Cases {#application-use-cases}\r\n\r\nThis section covers some potentially useful applications and some of their deployment considerations if using multicast QUIC for the data delivery.\r\n\r\n### Live Adaptive Bitrate Media\r\n\r\nAdaptive bitrate media (for example using HLS {{RFC8216}} or DASH {{MPEG-DASH}}) that's either live or has high concurrency among end users (for example right after release of a new episode of a popular show) can benefit from leveraging multicast delivery because many end users are trying to consume the same data at roughly the same time.\r\n\r\nHowever, adaptive bitrate systems deliver different media segments to different end users according to the bitrate their network connections can support under the changing network conditions detected by the client.\r\n\r\nUseful techniques:\r\n - send each segment in a separate stream, so that there's no dependency on prior content in a stream that might not have been delivered to a client that switched bitrates\r\n - deliver the most popular or highest bitrate content over multicast, and deliver lower bitrates or bitrates with fewer consumers over unicast.\r\n\r\n### Pre-loading Popular Video Clips\r\n\r\nVideo clips that will predictably be delivered to many users can usefully be delivered and cached with multicast QUIC, then served from cache when appropriate.\r\n\r\nFor example, advertisements for a cohort of end users or \"trending\" video clips for social media applications that have a wide audience might be delivered on a multicast channel that the server asks clients to join according to group memberships they have within the social media application.  Then as users scroll their media feed, the advertisements or the popular video clips that are already pre-positioned can be inserted in the feed where appropriate without new network traffic (playing the content from a local cache), even though the users' consumption of these clips may not be synchronized.\r\n\r\n### File Transfer\r\n\r\nExisting unidirectional file transfer protocols based on ALC {{RFC5775}} and FEC {{RFC6363}} can leverage multicast to send the same file to many end users even though they might start at different times and consume the data at different rates.\r\n",
+      "createdAt": "2022-06-23T05:29:58Z",
+      "updatedAt": "2022-06-23T05:29:58Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 77,
+      "id": "I_kwDOG6NyZs5MdHTA",
+      "title": "Add section on what frames are required to be retransmitted ",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/77",
+      "state": "OPEN",
+      "author": "MaxF12",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Jakes comment: \r\n\r\n`Other kinds of frames besides streams also need to be retransmitted (like RESET_STREAM, as well as MC_INTEGRITY, MC_RETIRE, MC_LEAVE). Likewise other kinds of frames besides DATAGRAM frames don't get retransmitted (like PING and PADDING). I tried to leave it generic, but maybe we need a reference to https://www.rfc-editor.org/rfc/rfc9000.html#section-13.3 and https://www.rfc-editor.org/rfc/rfc9221.html#section-5.2 plus a similar section in this doc to list what gets retransmitted? `",
+      "createdAt": "2022-06-23T17:04:19Z",
+      "updatedAt": "2022-06-23T17:04:19Z",
+      "closedAt": null,
       "comments": []
     }
   ],
@@ -3411,6 +3443,101 @@
         }
       ],
       "reviews": []
+    },
+    {
+      "number": 76,
+      "id": "PR_kwDOG6NyZs46NjZT",
+      "title": "touch up recovery and congestion control text",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/76",
+      "state": "MERGED",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "text for 2 of the 3 points we (Max & I) discussed offline earlier today.\r\nFor the other point, I opened an issue with some tentative text and a discussion kickoff, but I'm not sure I've captured the right idea, so I'm leaving it open for a later rev:\r\nhttps://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/75",
+      "createdAt": "2022-06-23T05:31:57Z",
+      "updatedAt": "2022-06-23T17:02:15Z",
+      "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "baseRefName": "main",
+      "baseRefOid": "25236b4cb9c2283ba5a79b911be14b3a9cd7e91e",
+      "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "headRefName": "offline-comments",
+      "headRefOid": "727e420db4bbafbf0b339d742d03c02892c0731a",
+      "closedAt": "2022-06-23T17:02:15Z",
+      "mergedAt": "2022-06-23T17:02:15Z",
+      "mergedBy": "MaxF12",
+      "mergeCommit": {
+        "oid": "9635a77954574ca4fcb12856ee75774547f3273a"
+      },
+      "comments": [],
+      "reviews": [
+        {
+          "id": "PRR_kwDOG6NyZs48nJMO",
+          "commit": {
+            "abbreviatedOid": "703be86"
+          },
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "LGTM, two comments but can be merged as is as well.",
+          "createdAt": "2022-06-23T12:14:35Z",
+          "updatedAt": "2022-06-23T12:15:47Z",
+          "comments": [
+            {
+              "originalPosition": 9,
+              "body": "I think the comment in the parentheses is making this a bit confusing to me, I think it would be fine to leave it out.\r\n\r\nI also now wonder if the client unilaterally leaving channels might cause more issues than it solves as the server probably has a better understanding on what channels to leave in what order. Maybe the client should simply reduce its max rate which will lead to the server sending leave frames? Not sure, but I think its fine for now and we can think more about it in a later rev. ",
+              "createdAt": "2022-06-23T12:14:35Z",
+              "updatedAt": "2022-06-23T12:15:47Z"
+            },
+            {
+              "originalPosition": 26,
+              "body": "Should there be a mention on difference between DGRAM and STREAM frames here? I think that might be a clearer separation between what is necessary data and what is not.",
+              "createdAt": "2022-06-23T12:15:01Z",
+              "updatedAt": "2022-06-23T12:15:47Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48o0uq",
+          "commit": {
+            "abbreviatedOid": "703be86"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-23T16:37:44Z",
+          "updatedAt": "2022-06-23T16:37:44Z",
+          "comments": [
+            {
+              "originalPosition": 9,
+              "body": "While I agree the server has a better view, I think there's risk that it takes a long time with an impaired network if the unicast connection is suffering loss and can't get the MC_LIMITS sent quickly or the MC_LEAVE received quickly, and it's also no different than the client refusing any particular channel it chooses to refuse or the network refusing to forward a channel.  After leaving and reducing limits, the server can still tell the client to leave one channel and join another, and failing to optimize which channel was best to leave probably just means some extra recovery or something.\r\n\r\nI'll take out the parens, thanks.",
+              "createdAt": "2022-06-23T16:37:44Z",
+              "updatedAt": "2022-06-23T16:37:44Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs48o36R",
+          "commit": {
+            "abbreviatedOid": "703be86"
+          },
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-06-23T16:48:16Z",
+          "updatedAt": "2022-06-23T16:48:17Z",
+          "comments": [
+            {
+              "originalPosition": 26,
+              "body": "Other kinds of frames besides streams also need to be retransmitted (like RESET_STREAM, as well as MC_INTEGRITY, MC_RETIRE, MC_LEAVE).  Likewise other kinds of frames besides DATAGRAM frames don't get retransmitted (like PING and PADDING).  I tried to leave it generic, but maybe we need a reference to https://www.rfc-editor.org/rfc/rfc9000.html#section-13.3 and https://www.rfc-editor.org/rfc/rfc9221.html#section-5.2 plus a similar section in this doc to list what gets retransmitted?",
+              "createdAt": "2022-06-23T16:48:16Z",
+              "updatedAt": "2022-06-23T16:48:17Z"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
