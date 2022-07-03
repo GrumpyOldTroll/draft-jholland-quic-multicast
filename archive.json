@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-06-26T00:35:57.574487+00:00",
+  "timestamp": "2022-07-03T00:32:11.104481+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -3534,6 +3534,53 @@
               "body": "Other kinds of frames besides streams also need to be retransmitted (like RESET_STREAM, as well as MC_INTEGRITY, MC_RETIRE, MC_LEAVE).  Likewise other kinds of frames besides DATAGRAM frames don't get retransmitted (like PING and PADDING).  I tried to leave it generic, but maybe we need a reference to https://www.rfc-editor.org/rfc/rfc9000.html#section-13.3 and https://www.rfc-editor.org/rfc/rfc9221.html#section-5.2 plus a similar section in this doc to list what gets retransmitted?",
               "createdAt": "2022-06-23T16:48:16Z",
               "updatedAt": "2022-06-23T16:48:17Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 78,
+      "id": "PR_kwDOG6NyZs46vy0Z",
+      "title": "updated text for operational considerations (fixed webtrans streams e\u2026",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/78",
+      "state": "OPEN",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "\u2026xplanation, refined constraints a bit)",
+      "createdAt": "2022-07-02T23:17:01Z",
+      "updatedAt": "2022-07-03T00:02:58Z",
+      "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "baseRefName": "main",
+      "baseRefOid": "9635a77954574ca4fcb12856ee75774547f3273a",
+      "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
+      "headRefName": "fix-ops-guidance",
+      "headRefOid": "6bf893e99e10b37ab7cb1128eada6fc6ba63712c",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": [
+        {
+          "id": "PRR_kwDOG6NyZs49M6fZ",
+          "commit": {
+            "abbreviatedOid": "6bf893e"
+          },
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "One nit but otherwise LGTM ",
+          "createdAt": "2022-07-02T23:56:47Z",
+          "updatedAt": "2022-07-03T00:02:58Z",
+          "comments": [
+            {
+              "originalPosition": 27,
+              "body": "A bit confusing what \u201eThis\u201c is referring to here (similar in the one above), maybe scratch the first 3 words? ",
+              "createdAt": "2022-07-02T23:56:47Z",
+              "updatedAt": "2022-07-03T00:02:58Z"
             }
           ]
         }
