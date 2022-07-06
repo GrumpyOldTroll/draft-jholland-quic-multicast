@@ -5,10 +5,10 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 3 January 2023                                                 
+Expires: 7 January 2023                                                 
                                                                M. Franke
                                                                TU Berlin
-                                                             2 July 2022
+                                                             6 July 2022
 
 
                       Multicast Extension for QUIC
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 January 2023.
+   This Internet-Draft will expire on 7 January 2023.
 
 Copyright Notice
 
@@ -1308,11 +1308,12 @@ Table of Contents
          applications, while retaining the benefits of multicast
          scalability
 
-      -  This could usefully support existing implementations of file-
-         transfer protocols like FLUTE [RFC6726] or FCAST [RFC6968] to
-         enable file downloads such as operating system updates or
-         popular game downloads, but adding encryption, packet-level
-         authentication, and congestion control as provided by QUIC.
+      -  Using QUIC datagrams in place of UDP packets could usefully
+         support existing implementations of file-transfer protocols
+         like FLUTE [RFC6726] or FCAST [RFC6968] to enable file
+         downloads such as operating system updates or popular game
+         downloads, but adding encryption, packet-level authentication,
+         and congestion control as provided by QUIC.
 
    *  Conferencing systems, especially within an enterprise that can
       deploy multicast network support, often can save significantly on
