@@ -59,7 +59,7 @@ informative:
 
 --- abstract
 
-This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections.
+This document defines a multicast extension to QUIC to enable the efficient use of multicast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections.
 
 --- middle
 
@@ -70,9 +70,9 @@ This document specifies an extension to QUIC version 1 {{RFC9000}} to enable the
 The multicast data can only be consumed in conjunction with a unicast QUIC connection.
 When the client has support for multicast as described in {{transport-parameter}}, the server can tell the client about multicast channels and ask the client to join and leave them as described in {{channel-management}}.
 
-The client reports its joins and leaves to the server and acknowleges the packets received via multicast after verifying their integrity.
+The client reports its joins and leaves to the server and acknowledges the packets received via multicast after verifying their integrity.
 
-The purpose of this multicast extension is to realize the large scalability benefits for popular traffic over multicast-capable networks without compromising on security, network safety, or implementation reliabiliity.
+The purpose of this multicast extension is to realize the large scalability benefits for popular traffic over multicast-capable networks without compromising on security, network safety, or implementation reliability.
 Thus, this specification has several design goals:
 
  - Re-use as much as possible the mechanisms and packet formats of QUIC version 1
@@ -159,7 +159,7 @@ A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addr
 
 The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
 
-The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
+The AEAD Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
 If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION.
 
 The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION:
@@ -444,7 +444,7 @@ A server MUST generate continuous sequence numbers, and MAY start at a value hig
 Note that while not joined, a client will not receive updates to channel secrets, and thus may see jumps in the Key Sequence Number values between MC_KEY frames.
 However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.
 
-Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Seqence Numbers have a Key Phase of 1 in the 1-RTT packet.
+Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1 in the 1-RTT packet.
 Secrets with a Key Phase indicating an unknown key SHOULD be discarded without attempting to decrypt them.
 (An unknown key might happen after loss of the latest MC_KEY frame, so that packets on a channel have an updated Key Phase starting at a particular packet number, but the client does not yet know about the key change.)
 
@@ -805,7 +805,7 @@ Clients with multicast QUIC support can stop accepting multicast for a variety o
 Applications like live broadcast-scale video that rely on multicast QUIC may benefit from anticipating that clients might stop using multicast and providing data feeds with similar content that can scale even if many clients stop using multicast, for example by ensuring that a lower-bitrate rendition can still be delivered over unicast to all or most of the clients simultaneously, and ensuring that the server has a way to make the client start using the low-bitrate version when it switches to unicast.
 
 While some existing Adaptive Bitrate video players might have an easy way to provide this, other video players might need specialized logic to provide the server a way to control what bitrate individual clients consume.
-Although under ideal conditions it may often be possible using features like server push ({{server-push}}) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra devlopment at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.
+Although under ideal conditions it may often be possible using features like server push ({{server-push}}) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra development at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.
 
 ### Circuit Breakers
 
@@ -815,7 +815,7 @@ The servers will notice the transport loss from the lack of MC_ACK frames from r
 
 ## Server Scalability {#server-scalability}
 
-Use of QUIC multicast channels can provide large scalability gains, but there still will be significant scaling requiremnts on server operators to support a large client footprint.
+Use of QUIC multicast channels can provide large scalability gains, but there still will be significant scaling requirements on server operators to support a large client footprint.
 
 Servers, possibly many of them, still will be required to maintain unicast connections with all the clients and provide for handling MC_ACK frames from the clients, delivering MC_INTEGRITY frames, managing the clients' channel join states, and providing recovery for lost packets.
 
@@ -851,7 +851,7 @@ that the unicast stream is authorized to use it for data transport
 via proof they know the private key corresponding to the public
 key that arrived on the multicast channel.
 Note this doesn't prevent unauthorized receipt of multicast
-data packts, but does prevent a quic server from lying when
+data packets, but does prevent a quic server from lying when
 claiming a multicast data channel belongs to it, preventing
 legit receivers from consuming it.
 
