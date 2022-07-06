@@ -296,13 +296,13 @@ See {{data-integrity}} for a more complete overview of the security issues invol
 
 Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see {{Section 2.1 of RFC9000}}).
 
-When a channel contains streams with ids above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in {{Sections 4.6 and 19.14 of RFC9000}}.
+When a channel contains streams with IDs above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in {{Sections 4.6 and 19.14 of RFC9000}}.
 
 If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send an MC_LEAVE frame.
 
 If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason Max Streams Exceeded.
 
-Since clients can join later than a channel began, it is RECOMMENDED that clients supporting the multicast extensions to QUIC be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream id count might have been increasing for a long time.
+Since clients can join later than a channel began, it is RECOMMENDED that clients supporting the multicast extensions to QUIC be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream ID count might have been increasing for a long time.
 Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see {{Section 19.11 of RFC9000}}) with a high limit.
 Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.
 
@@ -568,7 +568,7 @@ See {{packet-hashes}} for a description of the packet hash calculation.
 
 The MC_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by {{RFC9000}}. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.
 
-(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from {{Section 12.2 of I-D.draft-ietf-quic-multipath}}, defining channel id as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)
+(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from {{Section 12.2 of I-D.draft-ietf-quic-multipath}}, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)
 
 MC_ACK frames are formatted as shown in {{fig-mc-channel-ack-format}}.
 
@@ -633,7 +633,7 @@ MC_RETIRE Frame {
 ~~~
 {: #fig-mc-channel-retire-format title="MC_RETIRE Frame Format"}
 
-Retires a channel by id, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
+Retires a channel by ID, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
 If After Packet Number is nonzero and the channel is joined and has received any data, the channel will be retired after receiving that packet or a higher valued number, otherwise it will be retired immediately.
 
 After retiring a channel, the client MUST send a new MC_STATE frame with reason Retired to the server.
