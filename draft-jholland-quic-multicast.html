@@ -9,7 +9,7 @@
 <meta content="Lucas Pardue" name="author">
 <meta content="Max Franke" name="author">
 <meta content="
-       This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections. 
+       This document defines a multicast extension to QUIC to enable the efficient use of multicast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections. 
     " name="description">
 <meta content="xml2rfc 3.13.0" name="generator">
 <meta content="Internet-Draft" name="keyword">
@@ -1070,7 +1070,7 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 <h1 id="title">Multicast Extension for QUIC</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">This document defines a multicast extension to QUIC to enable the efficient use of multicast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1294,8 +1294,8 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 <p id="section-1-1">This document specifies an extension to QUIC version 1 <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> to enable the use of multicast IP transport of identical packets for use in many individual QUIC connections.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">The multicast data can only be consumed in conjunction with a unicast QUIC connection.
 When the client has support for multicast as described in <a href="#transport-parameter" class="xref">Section 3</a>, the server can tell the client about multicast channels and ask the client to join and leave them as described in <a href="#channel-management" class="xref">Section 4.1</a>.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">The client reports its joins and leaves to the server and acknowleges the packets received via multicast after verifying their integrity.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">The purpose of this multicast extension is to realize the large scalability benefits for popular traffic over multicast-capable networks without compromising on security, network safety, or implementation reliabiliity.
+<p id="section-1-3">The client reports its joins and leaves to the server and acknowledges the packets received via multicast after verifying their integrity.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">The purpose of this multicast extension is to realize the large scalability benefits for popular traffic over multicast-capable networks without compromising on security, network safety, or implementation reliability.
 Thus, this specification has several design goals:<a href="#section-1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1-5.1">Re-use as much as possible the mechanisms and packet formats of QUIC version 1<a href="#section-1-5.1" class="pilcrow">¶</a>
@@ -1416,7 +1416,7 @@ multicast_client_params {
       </ul>
 <p id="section-3-8">A server MUST NOT send MC_ANNOUNCE (<a href="#channel-announce-frame" class="xref">Section 10.1</a>) frames with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_LIMITS (<a href="#client-limits-frame" class="xref">Section 10.7</a>) frame adds permission for a different address family.<a href="#section-3-8" class="pilcrow">¶</a></p>
 <p id="section-3-9">The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_LIMITS frames (<a href="#client-limits-frame" class="xref">Section 10.7</a>) and provide the initial client values.<a href="#section-3-9" class="pilcrow">¶</a></p>
-<p id="section-3-10">The AEAD Algorithms List field is in order of preference (most preferred occuring first) using values from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
+<p id="section-3-10">The AEAD Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
 If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION.<a href="#section-3-10" class="pilcrow">¶</a></p>
 <p id="section-3-11">The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION:<a href="#section-3-11" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1781,7 +1781,7 @@ The MC_KEY frame contains an updated secret that is used to generate the keying 
 A server MUST generate continuous sequence numbers, and MAY start at a value higher than 0.
 Note that while not joined, a client will not receive updates to channel secrets, and thus may see jumps in the Key Sequence Number values between MC_KEY frames.
 However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
-<p id="section-10.2-3">Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Seqence Numbers have a Key Phase of 1 in the 1-RTT packet.
+<p id="section-10.2-3">Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1 in the 1-RTT packet.
 Secrets with a Key Phase indicating an unknown key SHOULD be discarded without attempting to decrypt them.
 (An unknown key might happen after loss of the latest MC_KEY frame, so that packets on a channel have an updated Key Phase starting at a particular packet number, but the client does not yet know about the key change.)<a href="#section-10.2-3" class="pilcrow">¶</a></p>
 <p id="section-10.2-4">It is RECOMMENDED that servers send regular secret updates.<a href="#section-10.2-4" class="pilcrow">¶</a></p>
@@ -2270,7 +2270,7 @@ Such a change could either replace the current client-chosen definition for Sess
 <p id="section-12.2-1">Clients with multicast QUIC support can stop accepting multicast for a variety of reasons.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
 <p id="section-12.2-2">Applications like live broadcast-scale video that rely on multicast QUIC may benefit from anticipating that clients might stop using multicast and providing data feeds with similar content that can scale even if many clients stop using multicast, for example by ensuring that a lower-bitrate rendition can still be delivered over unicast to all or most of the clients simultaneously, and ensuring that the server has a way to make the client start using the low-bitrate version when it switches to unicast.<a href="#section-12.2-2" class="pilcrow">¶</a></p>
 <p id="section-12.2-3">While some existing Adaptive Bitrate video players might have an easy way to provide this, other video players might need specialized logic to provide the server a way to control what bitrate individual clients consume.
-Although under ideal conditions it may often be possible using features like server push (<a href="#server-push" class="xref">Section 12.1.1</a>) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra devlopment at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.<a href="#section-12.2-3" class="pilcrow">¶</a></p>
+Although under ideal conditions it may often be possible using features like server push (<a href="#server-push" class="xref">Section 12.1.1</a>) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra development at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.<a href="#section-12.2-3" class="pilcrow">¶</a></p>
 <div id="circuit-breakers">
 <section id="section-12.2.1">
           <h4 id="name-circuit-breakers">
@@ -2287,7 +2287,7 @@ Although under ideal conditions it may often be possible using features like ser
         <h3 id="name-server-scalability">
 <a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-server-scalability" class="section-name selfRef">Server Scalability</a>
         </h3>
-<p id="section-12.3-1">Use of QUIC multicast channels can provide large scalability gains, but there still will be significant scaling requiremnts on server operators to support a large client footprint.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
+<p id="section-12.3-1">Use of QUIC multicast channels can provide large scalability gains, but there still will be significant scaling requirements on server operators to support a large client footprint.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
 <p id="section-12.3-2">Servers, possibly many of them, still will be required to maintain unicast connections with all the clients and provide for handling MC_ACK frames from the clients, delivering MC_INTEGRITY frames, managing the clients' channel join states, and providing recovery for lost packets.<a href="#section-12.3-2" class="pilcrow">¶</a></p>
 <p id="section-12.3-3">Further, the use of multicast channels likely requires increased coordination between the different servers, relative to services that operate completely independently.<a href="#section-12.3-3" class="pilcrow">¶</a></p>
 <p id="section-12.3-4">For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.<a href="#section-12.3-4" class="pilcrow">¶</a></p>
@@ -2333,7 +2333,7 @@ that the unicast stream is authorized to use it for data transport
 via proof they know the private key corresponding to the public
 key that arrived on the multicast channel.
 Note this doesn't prevent unauthorized receipt of multicast
-data packts, but does prevent a quic server from lying when
+data packets, but does prevent a quic server from lying when
 claiming a multicast data channel belongs to it, preventing
 legit receivers from consuming it.<a href="#section-13-2" class="pilcrow">¶</a></p>
 <p id="section-13-3">alternatively, can the multicast channel just periodically say

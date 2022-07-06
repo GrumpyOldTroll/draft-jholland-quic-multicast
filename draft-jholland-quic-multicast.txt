@@ -17,7 +17,7 @@ Expires: 7 January 2023
 Abstract
 
    This document defines a multicast extension to QUIC to enable the
-   efficient use of mullticast-capable networks to send identical data
+   efficient use of multicast-capable networks to send identical data
    streams to many clients at once, coordinated through individual
    unicast QUIC connections.
 
@@ -127,13 +127,14 @@ Table of Contents
    multicast channels and ask the client to join and leave them as
    described in Section 4.1.
 
-   The client reports its joins and leaves to the server and acknowleges
-   the packets received via multicast after verifying their integrity.
+   The client reports its joins and leaves to the server and
+   acknowledges the packets received via multicast after verifying their
+   integrity.
 
    The purpose of this multicast extension is to realize the large
    scalability benefits for popular traffic over multicast-capable
    networks without compromising on security, network safety, or
-   implementation reliabiliity.  Thus, this specification has several
+   implementation reliability.  Thus, this specification has several
    design goals:
 
    *  Re-use as much as possible the mechanisms and packet formats of
@@ -284,7 +285,7 @@ Table of Contents
    initial client values.
 
    The AEAD Algorithms List field is in order of preference (most
-   preferred occuring first) using values from the TLS Cipher Suite
+   preferred occurring first) using values from the TLS Cipher Suite
    registry (https://www.iana.org/assignments/tls-parameters/tls-
    parameters.xhtml#tls-parameters-4 (https://www.iana.org/assignments/
    tls-parameters/tls-parameters.xhtml#tls-parameters-4)).  It lists the
@@ -830,7 +831,7 @@ Table of Contents
    increment by 1 for each new secret.
 
    Secrets with even-valued Key Sequence Numbers have a Key Phase of 0
-   in the 1-RTT packet, and secrets with odd-valued Key Seqence Numbers
+   in the 1-RTT packet, and secrets with odd-valued Key Sequence Numbers
    have a Key Phase of 1 in the 1-RTT packet.  Secrets with a Key Phase
    indicating an unknown key SHOULD be discarded without attempting to
    decrypt them.  (An unknown key might happen after loss of the latest
@@ -1437,7 +1438,7 @@ Table of Contents
    clients consume.  Although under ideal conditions it may often be
    possible using features like server push (Section 12.1.1) to use
    unmodified existing HTTP-based video players with multicast QUIC, in
-   practice it may require extra devlopment at the application level to
+   practice it may require extra development at the application level to
    make a player that robustly delivers a good user experience under
    variable network conditions, depending on the scalability gains that
    multicast transport is providing and the Adaptive Bitrate algorithms
@@ -1461,7 +1462,7 @@ Table of Contents
 12.3.  Server Scalability
 
    Use of QUIC multicast channels can provide large scalability gains,
-   but there still will be significant scaling requiremnts on server
+   but there still will be significant scaling requirements on server
    operators to support a large client footprint.
 
    Servers, possibly many of them, still will be required to maintain
@@ -1547,9 +1548,9 @@ Table of Contents
    authorized to use it for data transport via proof they know the
    private key corresponding to the public key that arrived on the
    multicast channel.  Note this doesn't prevent unauthorized receipt of
-   multicast data packts, but does prevent a quic server from lying when
-   claiming a multicast data channel belongs to it, preventing legit
-   receivers from consuming it.
+   multicast data packets, but does prevent a quic server from lying
+   when claiming a multicast data channel belongs to it, preventing
+   legit receivers from consuming it.
 
    alternatively, can the multicast channel just periodically say what
    domain name is expected for the quic connection and get the same
