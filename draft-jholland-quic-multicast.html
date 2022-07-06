@@ -11,22 +11,22 @@
 <meta content="
        This document defines a multicast extension to QUIC to enable the efficient use of mullticast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections. 
     " name="description">
-<meta content="xml2rfc 3.12.10" name="generator">
+<meta content="xml2rfc 3.13.0" name="generator">
 <meta content="Internet-Draft" name="keyword">
 <meta content="draft-jholland-quic-multicast-latest" name="ietf.draft">
 <!-- Generator version information:
-  xml2rfc 3.12.10
+  xml2rfc 3.13.0
     Python 3.10.4
     appdirs 1.4.4
     ConfigArgParse 1.5.3
-    google-i18n-address 2.5.1
+    google-i18n-address 2.5.2
     html5lib 1.1
     intervaltree 3.1.0
-    Jinja2 2.11.3
+    Jinja2 3.1.2
     kitchen 1.2.6
-    lxml 4.8.0
-    MarkupSafe 2.0.1
-    pycountry 20.7.3
+    lxml 4.9.1
+    MarkupSafe 2.1.1
+    pycountry 22.3.5
     pyflakes 2.4.0
     PyYAML 6.0
     requests 2.27.1
@@ -1028,11 +1028,11 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Multicast QUIC</td>
-<td class="right">June 2022</td>
+<td class="right">July 2022</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Holland, et al.</td>
-<td class="center">Expires 25 December 2022</td>
+<td class="center">Expires 7 January 2023</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1045,12 +1045,12 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2022-06-23" class="published">23 June 2022</time>
+<time datetime="2022-07-06" class="published">6 July 2022</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2022-12-25">25 December 2022</time></dd>
+<dd class="expires"><time datetime="2023-01-07">7 January 2023</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1106,7 +1106,7 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 December 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 7 January 2023.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1357,12 +1357,12 @@ appear in all capitals, as shown here.<a href="#section-1.1-1" class="pilcrow">�
 <p id="section-2-1">A QUIC multicast channel (or just channel) is a one-way network path that a server can use as an alternate path to send QUIC connection data to a client.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">Multicast channels are designed to leverage multicast IP and to be shared by many different connections simultaneously for unidirectional server-initiated data.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">One or more servers can use the same QUIC multicast channel to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
-(Note that QUIC connections are defined in Section 5 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> and are not changed in this document; each connection is a shared state between a client and a server.)<a href="#section-2-3" class="pilcrow">¶</a></p>
+(Note that QUIC connections are defined in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-5" class="relref">Section 5</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span> and are not changed in this document; each connection is a shared state between a client and a server.)<a href="#section-2-3" class="pilcrow">¶</a></p>
 <p id="section-2-4">Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels do not support any-source multicast (ASM) semantics.<a href="#section-2-4" class="pilcrow">¶</a></p>
 <p id="section-2-5">Channels carry only 1-RTT packets.
 Packets associated with a channel contain a Channel ID in place of a Destination Connection ID.
 (A Channel ID cannot be zero length.)
-This adds a layer of indirection to the process described in Section 5.2 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> for matching packets to connections upon receipt.
+This adds a layer of indirection to the process described in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span> for matching packets to connections upon receipt.
 Incoming packets received on the network path associated with a channel use the Channel ID to associate the packet with a joined channel.<a href="#section-2-5" class="pilcrow">¶</a></p>
 <p id="section-2-6">A client with a matching joined channel always has at least one connection associated with the channel.
 If a client has no matching joined channel, the packet is discarded.<a href="#section-2-6" class="pilcrow">¶</a></p>
@@ -1576,14 +1576,14 @@ The different path can be either the unicast connection or another multicast cha
         <h3 id="name-stream-processing">
 <a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-stream-processing" class="section-name selfRef">Stream Processing</a>
         </h3>
-<p id="section-4.4-1">Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 2.1).<a href="#section-4.4-1" class="pilcrow">¶</a></p>
-<p id="section-4.4-2">When a channel contains streams with ids above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in Sections 4.6 and 19.14 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+<p id="section-4.4-1">Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see <span><a href="https://rfc-editor.org/rfc/rfc9000#section-2.1" class="relref">Section 2.1</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span>).<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<p id="section-4.4-2">When a channel contains streams with ids above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in Sections <a href="https://rfc-editor.org/rfc/rfc9000#section-4.6" class="relref">4.6</a> and <a href="https://rfc-editor.org/rfc/rfc9000#section-19.14" class="relref">19.14</a> of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
 <p id="section-4.4-3">If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send an MC_LEAVE frame.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
 <p id="section-4.4-4">If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason Max Streams Exceeded.<a href="#section-4.4-4" class="pilcrow">¶</a></p>
 <p id="section-4.4-5">Since clients can join later than a channel began, it is RECOMMENDED that clients supporting the multicast extensions to QUIC be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream id count might have been increasing for a long time.
-Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see Section 19.11 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) with a high limit.
+Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see <span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.11" class="relref">Section 19.11</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span>) with a high limit.
 Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
-<p id="section-4.4-6">The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in Section 2.2 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>, stream data received multiple times for the same offset MUST be identical, even across different network paths; if it's not identical it MAY be treated as a connection error of type PROTOCOL_VIOLATION.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
+<p id="section-4.4-6">The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span>, stream data received multiple times for the same offset MUST be identical, even across different network paths; if it's not identical it MAY be treated as a connection error of type PROTOCOL_VIOLATION.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1608,7 +1608,7 @@ If the actual contents sent in the channel exceed the advertised limits from the
       <h2 id="name-congestion-control">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-congestion-control" class="section-name selfRef">Congestion Control</a>
       </h2>
-<p id="section-6-1">Both the server and the client perform congestion control operations, so that according to the guidelines in Section 4.1 of <span>[<a href="#RFC8085" class="xref">RFC8085</a>]</span>, mechanisms for both feedback-based and receiver-driven styles of congestion control are present and operational.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-1">Both the server and the client perform congestion control operations, so that according to the guidelines in <span><a href="https://rfc-editor.org/rfc/rfc8085#section-4.1" class="relref">Section 4.1</a> of [<a href="#RFC8085" class="xref">RFC8085</a>]</span>, mechanisms for both feedback-based and receiver-driven styles of congestion control are present and operational.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <p id="section-6-2">The server maintains a full view of the traffic received by the client via the MC_ACK (<a href="#channel-ack-frame" class="xref">Section 10.6</a>) frames and ACK frames it receives, and can detect loss experienced by the client.
 Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.<a href="#section-6-2" class="pilcrow">¶</a></p>
 <p id="section-6-3">Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the clients aggregate rate is below its advertised Max Rate.
@@ -1622,7 +1622,7 @@ However a few potential interactions with the unicast connection are worth highl
 </li>
       </ul>
 <p id="section-6-6">Hybrid multicast-unicast congestion control is still an experimental research topic.
-Implementations SHOULD follow the guidelines given in Section 4.1.1 of <span>[<a href="#RFC8085" class="xref">RFC8085</a>]</span> under the assumption that applications using QUIC multicast will operate as Bulk-Transfer applications.<a href="#section-6-6" class="pilcrow">¶</a></p>
+Implementations SHOULD follow the guidelines given in <span><a href="https://rfc-editor.org/rfc/rfc8085#section-4.1.1" class="relref">Section 4.1.1</a> of [<a href="#RFC8085" class="xref">RFC8085</a>]</span> under the assumption that applications using QUIC multicast will operate as Bulk-Transfer applications.<a href="#section-6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="data-integrity">
@@ -1661,7 +1661,7 @@ However, the server in each connection is responsible for ensuring that any nece
       <h2 id="name-connection-termination">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-connection-termination" class="section-name selfRef">Connection Termination</a>
       </h2>
-<p id="section-9-1">Termination of the unicast connection behaves as described in Section 10 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>, with the following notable differences:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-1">Termination of the unicast connection behaves as described in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-10" class="relref">Section 10</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span>, with the following notable differences:<a href="#section-9-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-2.1">On the client side, termination of the unicast connection means that it MUST leave all multicast channels and discard any state associated with them. Servers MAY stop sending to multicast channels if there are no unicast connections left that are associated with them.<a href="#section-9-2.1" class="pilcrow">¶</a>
 </li>
@@ -1736,7 +1736,7 @@ MC_ANNOUNCE Frame {
 </li>
           <li class="normal" id="section-10.1-6.7">Header Secret Length: Provides the length of the Secret field.<a href="#section-10.1-6.7" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.1-6.8">Header Secret: A secret for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in <span>[<a href="#RFC9001" class="xref">RFC9001</a>]</span>.  The Key and Initial Vector for the application data carried in the 1-RTT packet header fields are derived from this secret as described in Section 7.3 of <span>[<a href="#RFC8446" class="xref">RFC8446</a>]</span>.<a href="#section-10.1-6.8" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.1-6.8">Header Secret: A secret for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in <span>[<a href="#RFC9001" class="xref">RFC9001</a>]</span>.  The Key and Initial Vector for the application data carried in the 1-RTT packet header fields are derived from this secret as described in <span><a href="https://rfc-editor.org/rfc/rfc8446#section-7.3" class="relref">Section 7.3</a> of [<a href="#RFC8446" class="xref">RFC8446</a>]</span>.<a href="#section-10.1-6.8" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-10.1-6.9">AEAD Algorithm: A value from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>), used to protect the payloads in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see <a href="#transport-parameter" class="xref">Section 3</a>).<a href="#section-10.1-6.9" class="pilcrow">¶</a>
 </li>
@@ -1760,7 +1760,7 @@ MC_ANNOUNCE Frame {
 </li>
           <li class="normal" id="section-10.1-6.11">Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.<a href="#section-10.1-6.11" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.1-6.12">Max ACK Delay: A value used similarly to max_ack_delay (Section 18.2 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>}) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds, and SHOULD NOT add any delay to the first MC_ACK of data packets for a channel.  As long as they stay inside these limits, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.<a href="#section-10.1-6.12" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.1-6.12">Max ACK Delay: A value used similarly to max_ack_delay (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-18.2" class="relref">Section 18.2</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span>}) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds, and SHOULD NOT add any delay to the first MC_ACK of data packets for a channel.  As long as they stay inside these limits, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.<a href="#section-10.1-6.12" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-10.1-7">A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
@@ -1817,12 +1817,12 @@ MC_KEY Frame {
 </li>
           <li class="normal" id="section-10.2-8.5">Secret Length: Provides the length of the secret field.<a href="#section-10.2-8.5" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.2-8.6">Secret: Used to protect the packet contents of 1-RTT packets for the channel as described in <span>[<a href="#RFC9001" class="xref">RFC9001</a>]</span>.  The Key and Initial Vector for the application data carried in the 1-RTT packet payloads are derived from the secret as described in Section 7.3 of <span>[<a href="#RFC8446" class="xref">RFC8446</a>]</span>.
+          <li class="normal" id="section-10.2-8.6">Secret: Used to protect the packet contents of 1-RTT packets for the channel as described in <span>[<a href="#RFC9001" class="xref">RFC9001</a>]</span>.  The Key and Initial Vector for the application data carried in the 1-RTT packet payloads are derived from the secret as described in <span><a href="https://rfc-editor.org/rfc/rfc8446#section-7.3" class="relref">Section 7.3</a> of [<a href="#RFC8446" class="xref">RFC8446</a>]</span>.
 To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.<a href="#section-10.2-8.6" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-10.2-9">Clients MUST delete old secrets within 10 seconds after receiving a new key, and within 3 seconds after receiving a new key and not receiving any data traffic decrypted with the old key.<a href="#section-10.2-9" class="pilcrow">¶</a></p>
-<p id="section-10.2-10">The From Packet Number is used to indicate the starting packet number (Section 17.1 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
+<p id="section-10.2-10">The From Packet Number is used to indicate the starting packet number (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.1" class="relref">Section 17.1</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span>) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
 This secret is applicable to all future packets until it is updated by a new MC_KEY frame.<a href="#section-10.2-10" class="pilcrow">¶</a></p>
 <p id="section-10.2-11">A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.<a href="#section-10.2-11" class="pilcrow">¶</a></p>
 </section>
@@ -1928,7 +1928,7 @@ Subsequent hashes refer to the packets for the channel with packet numbers incre
 <a href="#section-10.6" class="section-number selfRef">10.6. </a><a href="#name-mc_ack" class="section-name selfRef">MC_ACK</a>
         </h3>
 <p id="section-10.6-1">The MC_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.<a href="#section-10.6-1" class="pilcrow">¶</a></p>
-<p id="section-10.6-2">(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from Section 12.2 of <span>[<a href="#I-D.draft-ietf-quic-multipath" class="xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel id as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)<a href="#section-10.6-2" class="pilcrow">¶</a></p>
+<p id="section-10.6-2">(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-01#section-12.2" class="relref">Section 12.2</a> of [<a href="#I-D.draft-ietf-quic-multipath" class="xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel id as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)<a href="#section-10.6-2" class="pilcrow">¶</a></p>
 <p id="section-10.6-3">MC_ACK frames are formatted as shown in <a href="#fig-mc-channel-ack-format" class="xref">Figure 9</a>.<a href="#section-10.6-3" class="pilcrow">¶</a></p>
 <span id="name-mc_ack-frame-format"></span><div id="fig-mc-channel-ack-format">
 <figure id="figure-9">
@@ -2100,21 +2100,21 @@ If these packets are addressed to an (S,G) that is used for reception in one or 
       <h2 id="name-frames-carried-in-channel-p">
 <a href="#section-11" class="section-number selfRef">11. </a><a href="#name-frames-carried-in-channel-p" class="section-name selfRef">Frames Carried in Channel Packets</a>
       </h2>
-<p id="section-11-1">Multicast channels will contain normal QUIC 1-RTT data packets (see Section 17.3.1 of <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys derived from the secrets in MC_KEY frames for the corresponding channel.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-1">Multicast channels will contain normal QUIC 1-RTT data packets (see <span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.3.1" class="relref">Section 17.3.1</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span>) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys derived from the secrets in MC_KEY frames for the corresponding channel.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11-2">Data packet hashes will also be sent in MC_INTEGRITY frames, as keys cannot be trusted for integrity due to giving them to too many receivers, as described in <span>[<a href="#I-D.draft-krose-multicast-security" class="xref">I-D.draft-krose-multicast-security</a>]</span>.<a href="#section-11-2" class="pilcrow">¶</a></p>
 <p id="section-11-3">The 1-RTT packets in multicast channels will have a restricted set of frames.
 Since the channel is strictly 1-way server to client, the general principle is that broadcastable shared server-&gt;client data frames can be sent, but frames that make sense only for individualized connections or that are sent client-to-server cannot.<a href="#section-11-3" class="pilcrow">¶</a></p>
 <p id="section-11-4">Permitted:<a href="#section-11-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-5.1">PADDING Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.1)<a href="#section-11-5.1" class="pilcrow">¶</a>
+<li class="normal" id="section-11-5.1">PADDING Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.1" class="relref">Section 19.1</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span> )<a href="#section-11-5.1" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-11-5.2">PING Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.2)<a href="#section-11-5.2" class="pilcrow">¶</a>
+        <li class="normal" id="section-11-5.2">PING Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.2" class="relref">Section 19.2</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span> )<a href="#section-11-5.2" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-11-5.3">RESET_STREAM Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.4)<a href="#section-11-5.3" class="pilcrow">¶</a>
+        <li class="normal" id="section-11-5.3">RESET_STREAM Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.4" class="relref">Section 19.4</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span> )<a href="#section-11-5.3" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-11-5.4">STREAM Frames (<span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span> Section 19.8)<a href="#section-11-5.4" class="pilcrow">¶</a>
+        <li class="normal" id="section-11-5.4">STREAM Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.8" class="relref">Section 19.8</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span> )<a href="#section-11-5.4" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-11-5.5">DATAGRAM Frames (both types) (<span>[<a href="#RFC9221" class="xref">RFC9221</a>]</span> Section 4)<a href="#section-11-5.5" class="pilcrow">¶</a>
+        <li class="normal" id="section-11-5.5">DATAGRAM Frames (both types) (<span><a href="https://rfc-editor.org/rfc/rfc9221#section-4" class="relref">Section 4</a> of [<a href="#RFC9221" class="xref">RFC9221</a>]</span>)<a href="#section-11-5.5" class="pilcrow">¶</a>
 </li>
         <li class="normal" id="section-11-5.6">MC_KEY<a href="#section-11-5.6" class="pilcrow">¶</a>
 </li>
@@ -2201,7 +2201,7 @@ Since the channel is strictly 1-way server to client, the general principle is t
           <h4 id="name-http-3-server-push">
 <a href="#section-12.1.1" class="section-number selfRef">12.1.1. </a><a href="#name-http-3-server-push" class="section-name selfRef">HTTP/3 Server Push</a>
           </h4>
-<p id="section-12.1.1-1">HTTP/3 Server Push is defined in Section 4.6 of <span>[<a href="#RFC9114" class="xref">RFC9114</a>]</span>.<a href="#section-12.1.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.1.1-1">HTTP/3 Server Push is defined in <span><a href="https://rfc-editor.org/rfc/rfc9114#section-4.6" class="relref">Section 4.6</a> of [<a href="#RFC9114" class="xref">RFC9114</a>]</span>.<a href="#section-12.1.1-1" class="pilcrow">¶</a></p>
 <p id="section-12.1.1-2">Server push is a good use case for multicast transport because the same data can be pushed to many different receivers on a multicast channel.
 Applications designed to work well with server push can leverage multicast QUIC very effectively with only a few extra considerations.<a href="#section-12.1.1-2" class="pilcrow">¶</a></p>
 <p id="section-12.1.1-3">A QUIC connection using HTTP/3 can use multicast channels to deliver server-initiated streams that implement HTTP/3 Server Push.<a href="#section-12.1.1-3" class="pilcrow">¶</a></p>
@@ -2303,7 +2303,7 @@ Although under ideal conditions it may often be possible using features like ser
 <ol start="1" type="1" class="normal type-1" id="section-12.4-3">
 <li id="section-12.4-3.1">If properties change for the data being used in a channel (for example, new video encoding settings might result in a change to the expected max rate for a video feed), a server might reuse the same network addresses in a new QUIC multicast channel, and might send a join for the new channel and a leave for the old channel to clients that can support the new max rate.  If they arrive together, this could be handled by the client without making a change to the IGMP or MLD membership state, as an optimization that can prevent the need for some recovery, or even by reusing the same UDP socket.  Doing so does not change any requirements for the channel state management at the QUIC layer, and as long as the situation is transient, should not result in leaving due to Excessive Spurious Traffic even if some packets were reordered or may still be in flight.<a href="#section-12.4-3.1" class="pilcrow">¶</a>
 </li>
-          <li id="section-12.4-3.2">As described in Section 6 of <span>[<a href="#RFC4607" class="xref">RFC4607</a>]</span>, link-layer addresses can be linked to the low-order bits of multicast addresses, and may be the same for different group destinations.  Collisions in the link-layer addressing, even with traffic that comes from other sources, can cause congestion or receiver CPU load for colliding channels that might be different from that seen with other channels that were delivered with apparently the same network paths.<a href="#section-12.4-3.2" class="pilcrow">¶</a>
+          <li id="section-12.4-3.2">As described in <span><a href="https://rfc-editor.org/rfc/rfc4607#section-6" class="relref">Section 6</a> of [<a href="#RFC4607" class="xref">RFC4607</a>]</span>, link-layer addresses can be linked to the low-order bits of multicast addresses, and may be the same for different group destinations.  Collisions in the link-layer addressing, even with traffic that comes from other sources, can cause congestion or receiver CPU load for colliding channels that might be different from that seen with other channels that were delivered with apparently the same network paths.<a href="#section-12.4-3.2" class="pilcrow">¶</a>
 </li>
           <li id="section-12.4-3.3">Even though multicast QUIC uses only source-specific multicast, older networks with devices that don't have IGMPv3 or MLDv2 support can propagate the joins as any-source multicast. If there are active senders sending to that destination, this can cause network congestion and CPU load due to discarding packets from the wrong source, even though at the application layer the UDP socket won't receive those packets from the wrong source.<a href="#section-12.4-3.3" class="pilcrow">¶</a>
 </li>

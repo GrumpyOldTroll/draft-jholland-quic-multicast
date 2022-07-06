@@ -5,10 +5,10 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 25 December 2022                                               
+Expires: 7 January 2023                                                 
                                                                M. Franke
                                                                TU Berlin
-                                                            23 June 2022
+                                                             6 July 2022
 
 
                       Multicast Extension for QUIC
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 December 2022.
+   This Internet-Draft will expire on 7 January 2023.
 
 Copyright Notice
 
@@ -494,7 +494,7 @@ Table of Contents
 
    Stream IDs in channels are restricted to unidirectional server
    initiated streams, or those with the least significant 2 bits of the
-   stream ID equal to 3 (see [RFC9000] Section 2.1).
+   stream ID equal to 3 (see Section 2.1 of [RFC9000]).
 
    When a channel contains streams with ids above the client's
    unidirectional MAX_STREAMS, the server MUST NOT instruct the client
@@ -1199,15 +1199,15 @@ Table of Contents
 
    Permitted:
 
-   *  PADDING Frames ([RFC9000] Section 19.1)
+   *  PADDING Frames (Section 19.1 of [RFC9000] )
 
-   *  PING Frames ([RFC9000] Section 19.2)
+   *  PING Frames (Section 19.2 of [RFC9000] )
 
-   *  RESET_STREAM Frames ([RFC9000] Section 19.4)
+   *  RESET_STREAM Frames (Section 19.4 of [RFC9000] )
 
-   *  STREAM Frames ([RFC9000] Section 19.8)
+   *  STREAM Frames (Section 19.8 of [RFC9000] )
 
-   *  DATAGRAM Frames (both types) ([RFC9221] Section 4)
+   *  DATAGRAM Frames (both types) (Section 4 of [RFC9221])
 
    *  MC_KEY
 
