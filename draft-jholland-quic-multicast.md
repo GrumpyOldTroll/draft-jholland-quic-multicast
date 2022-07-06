@@ -53,6 +53,7 @@ informative:
   I-D.draft-ietf-webtrans-http3:
   I-D.draft-ietf-masque-h3-datagram:
   RFC4607:
+  RFC6363:
   RFC6726:
   RFC6968:
   RFC9114:
@@ -738,7 +739,26 @@ Not permitted:
 
 # Implementation and Operational Considerations
 
-## Use Cases
+## Constraints on Stream Data
+
+Note that when a newly connected client joins a channel, the client will only be able to receive application data carried in stream frames delivered on that channel when they have received the stream data starting from offset 0 of the stream.
+
+This usually means that new streams must be started for application data carried in channel packets whenever there might be new clients that have joined since an earlier stream started.
+
+With broadcast video, this usually means a new stream is necessary for every video segment or group of video frames since new clients will join throughout the broadcast, whereas for video conferencing, it could be possible to start a new stream whenever new clients join the conference without needing a new stream per object.
+
+## Application Use Cases
+
+There are several known applications that could benefit from using multicast QUIC, either with their own custom application-layer transport or with one of the transports discussed in {{data-use-cases}}.  A few examples include:
+
+ - Existing multicast-capable applications that are modified to use QUIC datagrams instead of UDP payloads can potentially get improved encryption and congestion feedback, while keeping existing error recovery techniques (e.g. techniques based on the forward error correction (FEC) framework in {{RFC6363}}).
+   - An external tunnel could supply this kind of encapsulation without modification to the sender or receiver for some applications, while retaining the benefits of multicast scalability
+   - Using QUIC datagrams in place of UDP packets could usefully support existing implementations of file-transfer protocols like FLUTE {{RFC6726}} or FCAST {{RFC6968}} to enable file downloads such as operating system updates or popular game downloads, but adding encryption, packet-level authentication, and congestion control as provided by QUIC.
+ - Conferencing systems, especially within an enterprise that can deploy multicast network support, often can save significantly on server costs by using multicast
+ - The traditional multicast use case of broadcasting of live sports with a set-top box would benefit from an interoperable system such as these QUIC extensions that can fall back to unicast transparently as needed, for example if there are a few customers who installed a non-multicast-capable home router.
+ - Smart TVs or other video playing in-home devices could interoperate with a standard sender using multicast QUIC, rather than requiring proprietary integrations with TV operators.
+
+## Data Transport Use Cases {#data-use-cases}
 
 This section outlines considerations for some known transport mechanisms that are worth highlighting as potentially useful with multicast QUIC.
 
@@ -757,46 +777,32 @@ Servers SHOULD NOT allow clients to remain joined to channels if their MAX_PUSH_
 If a client receives data from a push ID that exceeds its MAX_PUSH_ID causing an H3_ID_ERROR on a multicast channel, it SHOULD leave the channel with reason 0x1000108 (computed by adding the H3_ID_ERROR value 0x0108 to the Application-defined Reason start value 0x1000000).
 This SHOULD NOT cause a close of the whole connection but MAY cause a stream error and reset of the stream.
 
-TODO: flesh out this principle for application-level error code assignment in general for known error code values, and specifically all HTTP/3 ones? (And is it useful?)
+TODO: flesh out this principle for application-level error code assignment in general for known error code values, and specifically all HTTP/3 ones? (Or is there a better approach?)
 
-### HTTP/3 WebTransport {#webtransport}
+### HTTP/3 WebTransport Streams {#webtransport}
 
 WebTransport over HTTP/3 is defined in {{I-D.draft-ietf-webtrans-http3}}.
 
-Popular data that can be sent with server-initiated streams or server-sent datagrams and carried over WebTransport are good use cases for multicast transport because the same server-to-client data can be pushed to many different receivers on a multicast channel.
+Popular data that can be sent with server-initiated streams and carried over WebTransport is a good use cases for multicast transport because the same server-to-client data can be pushed to many different receivers on a multicast channel.
 
 A QUIC connection using HTTP/3 and WebTransport can use multicast channels to deliver WebTransport server-initiated streams.
-At the time of this writing (version -02 of {{I-D.draft-ietf-webtrans-http3}}) this comes with the significant penalty that in order to do so, servers would have to run up to 4 multicast channels per shared set of data to send, one for each possible size of the client-chosen Session ID.
 
-Servers can achieve this by sending the initial few bytes of the server-initiated stream containing the Session ID (currently defined as the Stream ID of the QUIC stream containing the original HTTP/3 request for the WebTransport extended CONNECT request), then sending the rest of the stream data over a multicast channel.
+However, because the WebTransport Session ID is a client-specific value, the bytes that carry the WebTransport Session ID value within the stream would need to be carried over unicast, since it's not the same for different clients.
 
-However, since the client-initiated Stream ID used for the Session ID is a variable-length integer with 4 possible sizes (1, 2, 4, or 8 octets), clients will need the shared data in the stream to be at one of 4 different possible stream offsets in order to process it.
-Hence, for WebTransport as currently specified servers would need to run up to 4 separate channels instead of a single channel in order to send the same WebTransport data to many different clients.
+For this situation, note that the Session ID is a variable length integer, and that a variable length integer can be encoded in any size that's big enough to hold it.  In particular, it's possible to use the largest size of any Session IDs of any of the WebTransport sessions of any clients (or 8 octets, the maximum size for a variable length integer), and that all clients receiving stream data on a channel will need to use the same size for the Session ID so that the rest of the stream data will be at the same offset for every client.
 
-WebTransport Datagrams are delivered over HTTP/3 Datagrams as defined in {{I-D.draft-ietf-masque-h3-datagram}} and in version -04 have the same characteristic of relying on the client-chosen Quarter Stream ID value.
+### Datagrams
 
-While using 4 multicast channels instead of 1 still represents a potentially vast scalability improvement over unicast delivery for popular content, it causes other scalability problems, especially in networks that have small limits on the number of multicast channels that are allowed to be provisioned at the same time.
-The total channel count limits have a surprisingly low bound in many multicast-capable networking devices designed for TV services that were expected to support only up to a few tens of very popular channels at the same time.
+DATAGRAM frames ({{RFC9221}}) can be carried in multicast channels, and can be a good way to deliver popular content to receivers.
+Doing so can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.
 
-It is therefore hoped that an extension or revision to WebTransport and HTTP/3 Datagrams can be adopted in a future version of their specifications that make it possible to use a single channel for all the shared data.
+However, at the time of this writing (version -05 of {{I-D.draft-ietf-masque-h3-datagram}}) multicast channels generally cannot deliver HTTP/3 datagrams, including WebTransport datagrams (version -02 of {{I-D.draft-ietf-webtrans-http3}}), since the demuxing of WebTransport datagrams uses a Session ID based on a client-specific value (the HTTP/3 Session ID comes from the Stream ID of the client-initiated stream that issued the initial extended CONNECT request).
 
-For example, an extension that permits a server-chosen value to be used as a Session ID.
-Such a value could for instance be sent in an HTTP/3 response header, and as long as it is unique within the connection and avoided collision with any client-initiated stream ID values, could still be used to multiplex data associated with different HTTP/3 traffic and different WebTransport sessions carried on the same connection.
-Then by choosing the same server-chosen session ID for all the connections, it would allow the server to use the same channel to carry the identical data, including the Session ID, to be received by multiple receivers.
-Such a change could either replace the current client-chosen definition for Session ID, or could add new frame types that allow a server-chosen Session ID when the client has advertised support for this extended functionality.
+It is therefore hoped that an extension or revision to WebTransport and HTTP/3 datagrams can be adopted in a future version of their specifications that make it possible to use a server-chosen Session ID value for demuxing WebTransport datagrams (and HTTP/3 datagrams in general).
 
-As an alternate example of an extension, a mechanism that allows padding at the beginning of the WebTransport stream before the Session ID, for example with 0 bytes, would at least allow the server to align the client-chosen ID value to end at the same QUIC stream offset, which would allow the shared portion of the stream data (all or most of the data following the Session ID) to be transmitted via the same multicast channel, since it would then be the same at the same stream offset.
-
-### Non-web Applications
-
-There are also several non-web application protocols that could benefit from using multicast QUIC.  A few examples include:
-
- - Existing multicast-capable applications that are modified to use QUIC datagrams instead of UDP payloads can potentially get improved encryption and congestion feedback, while keeping its existing FEC/error recovery techniques.
-   - An external tunnel could supply this kind of encapsulation without modification to the sender or receiver for some applications, while retaining the benefits of multicast scalability
-   - This could usefully support existing implementations of file-transfer protocols like FLUTE {{RFC6726}} or FCAST {{RFC6968}} to enable file downloads such as operating system updates or popular game downloads with encryption and packet-level authentication.
- - Conferencing systems, especially within an enterprise that can deploy multicast network support, often can save significantly on server costs by using multicast
- - The traditional multicast use case of broadcasting of live sports with a set-top box would benefit from a system that uses the same QUIC receiver code even for customers who installed a non-multicast-capable home router.
- - Smart TVs or other video playing in-home devices could interoperate with a standard sender using multicast QUIC, rather than requiring proprietary integrations with TV operators.
+Such a value could for instance be sent in an HTTP/3 response header, and as long as it is unique within the connection and avoids collision with any client-initiated stream ID values, it could still be used to multiplex data associated with different HTTP/3 traffic and different WebTransport sessions carried on the same connection.
+Then by choosing the same server-chosen session ID for all the connections, the server would be able to use the same channel to carry the identical complete datagrams, including the server-chosen Session ID, to multiple receivers that the server asks to join the same channel.
+Such a change could either replace the current client-chosen definition for Session ID in server-to-client datagrams, or could add new HTTP/3 frame types that allow a server-chosen Session ID when the client has advertised support for this extended functionality.
 
 ## Graceful Degradation {#graceful-degradation}
 
