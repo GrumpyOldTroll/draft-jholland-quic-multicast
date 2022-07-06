@@ -496,7 +496,7 @@ Table of Contents
    initiated streams, or those with the least significant 2 bits of the
    stream ID equal to 3 (see Section 2.1 of [RFC9000]).
 
-   When a channel contains streams with ids above the client's
+   When a channel contains streams with IDs above the client's
    unidirectional MAX_STREAMS, the server MUST NOT instruct the client
    to join that channel and SHOULD send a STREAMS_BLOCKED frame, as
    described in Sections 4.6 and 19.14 of [RFC9000].
@@ -514,7 +514,7 @@ Table of Contents
    Since clients can join later than a channel began, it is RECOMMENDED
    that clients supporting the multicast extensions to QUIC be prepared
    to handle stream IDs that do not begin at early values, since by the
-   time a client joins a channel in progress the stream id count might
+   time a client joins a channel in progress the stream ID count might
    have been increasing for a long time.  Clients should therefore begin
    with a high initial_max_streams_uni or send an early MAX_STREAMS type
    0x13 value (see Section 19.11 of [RFC9000]) with a high limit.
@@ -1023,7 +1023,7 @@ Table of Contents
 
    (TODO: Would there be value in reusing the multiple packet number
    space version of ACK_MP from Section 12.2 of
-   [I-D.draft-ietf-quic-multipath], defining channel id as the packet
+   [I-D.draft-ietf-quic-multipath], defining channel ID as the packet
    number space?  at 2022-05 they're identical except the Channel ID and
    types.)
 
@@ -1093,7 +1093,7 @@ Table of Contents
 
                      Figure 11: MC_RETIRE Frame Format
 
-   Retires a channel by id, discarding any state associated with it.
+   Retires a channel by ID, discarding any state associated with it.
    (Author comment: We can't use RETIRE_CONNECTION_ID because we don't
    have a coherent sequence number.)  If After Packet Number is nonzero
    and the channel is joined and has received any data, the channel will
