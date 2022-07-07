@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-07-05T00:29:36.232757+00:00",
+  "timestamp": "2022-07-07T00:35:45.018798+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -1432,9 +1432,17 @@
       "labels": [],
       "body": "I thought I'd capture here some iffy text that I wasn't happy enough with to include yet, but might be worth finishing to fill in the \"Pool/ Channel management on the server side\" part from https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/61 that I skipped when closing that issue.\r\n\r\nThe goal really is to make it clear what kinds of channel assignment strategies you'd want for a few different use cases, which I don't think this text quite achieves.\r\n\r\nI'm not sure it's worth it, it seems like a lot of background in order to cover some non-normative example stuff that might be better done by an example implementation outside the spec, but I thought I'd leave this here for a bit more discussion instead of just dropping the \"pool/Channel management\" suggestion.\r\n\r\nMaybe it would be better with a slightly different direction I just haven't thought of properly, I'm not sure.  But this is what my interpretation started out typing, until it kinda felt like maybe more of a can of worms than it's worth, so I thought I'd dump it in here for possibly a later rev.\r\n\r\nPlease do suggest direction or text here if you think there's something worth filling out and incorporating, but I'm kind of inclined to drop it at the moment.\r\n\r\n----\r\n\r\n## Application Use Cases {#application-use-cases}\r\n\r\nThis section covers some potentially useful applications and some of their deployment considerations if using multicast QUIC for the data delivery.\r\n\r\n### Live Adaptive Bitrate Media\r\n\r\nAdaptive bitrate media (for example using HLS {{RFC8216}} or DASH {{MPEG-DASH}}) that's either live or has high concurrency among end users (for example right after release of a new episode of a popular show) can benefit from leveraging multicast delivery because many end users are trying to consume the same data at roughly the same time.\r\n\r\nHowever, adaptive bitrate systems deliver different media segments to different end users according to the bitrate their network connections can support under the changing network conditions detected by the client.\r\n\r\nUseful techniques:\r\n - send each segment in a separate stream, so that there's no dependency on prior content in a stream that might not have been delivered to a client that switched bitrates\r\n - deliver the most popular or highest bitrate content over multicast, and deliver lower bitrates or bitrates with fewer consumers over unicast.\r\n\r\n### Pre-loading Popular Video Clips\r\n\r\nVideo clips that will predictably be delivered to many users can usefully be delivered and cached with multicast QUIC, then served from cache when appropriate.\r\n\r\nFor example, advertisements for a cohort of end users or \"trending\" video clips for social media applications that have a wide audience might be delivered on a multicast channel that the server asks clients to join according to group memberships they have within the social media application.  Then as users scroll their media feed, the advertisements or the popular video clips that are already pre-positioned can be inserted in the feed where appropriate without new network traffic (playing the content from a local cache), even though the users' consumption of these clips may not be synchronized.\r\n\r\n### File Transfer\r\n\r\nExisting unidirectional file transfer protocols based on ALC {{RFC5775}} and FEC {{RFC6363}} can leverage multicast to send the same file to many end users even though they might start at different times and consume the data at different rates.\r\n",
       "createdAt": "2022-06-23T05:29:58Z",
-      "updatedAt": "2022-06-23T05:29:58Z",
+      "updatedAt": "2022-07-06T18:08:48Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Fixed in https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/78",
+          "createdAt": "2022-07-06T18:08:48Z",
+          "updatedAt": "2022-07-06T18:08:48Z"
+        }
+      ]
     },
     {
       "number": 77,
@@ -1449,6 +1457,334 @@
       "body": "Jakes comment: \r\n\r\n`Other kinds of frames besides streams also need to be retransmitted (like RESET_STREAM, as well as MC_INTEGRITY, MC_RETIRE, MC_LEAVE). Likewise other kinds of frames besides DATAGRAM frames don't get retransmitted (like PING and PADDING). I tried to leave it generic, but maybe we need a reference to https://www.rfc-editor.org/rfc/rfc9000.html#section-13.3 and https://www.rfc-editor.org/rfc/rfc9221.html#section-5.2 plus a similar section in this doc to list what gets retransmitted? `",
       "createdAt": "2022-06-23T17:04:19Z",
       "updatedAt": "2022-06-23T17:04:19Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 82,
+      "id": "I_kwDOG6NyZs5NG7Ze",
+      "title": "Do bitfields really need to be up to 62 bits long?",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/82",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "GrumpyOldTroll"
+      ],
+      "labels": [],
+      "body": "In a few places there is `Capabilities Flags (i)`, which is a varint that can provide between 6 and 62 bits. Given that there are only two things currently defined, this is a slight waste of space if implementations don't minimally encode. It also introduces potential interop issues if you don't define MSB or LSB. If we stick with that design, some more text would probably be required.\r\n\r\nA different approach here is to just list out the bits e.g. assuming 8-bit alignment is desirable, the smallest thing we could do is\r\n\r\n```\r\nIPv4 capable (1),\r\nIPv6 capable (1),\r\nReserved(6),\r\n```\r\n\r\nthis would give back 2 bits otherwise consumed by the varint encoding, and allow up to 6 more future capabilities.\r\n\r\nThere's a tradoff either way but given that these fields won't be sent often, I don't think we need to over-optimize.\r\n",
+      "createdAt": "2022-07-05T00:48:22Z",
+      "updatedAt": "2022-07-06T19:20:54Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "I agree it doesn't much matter in terms of performance, and that if we leave it the way it is a bit more text is required.\r\n\r\nA bit of brainstorming came up with 2-3 more bits that might theoretically be worthwhile additions for future extensions if anyone ever has a use case (namely: dns, asm, and a new ip version).\r\n\r\nSo I guess I'd be comfortable making this an 8-bit fixed field and requiring a heavier weight extension if we run out due to unforeseen needs.",
+          "createdAt": "2022-07-06T19:20:54Z",
+          "updatedAt": "2022-07-06T19:20:54Z"
+        }
+      ]
+    },
+    {
+      "number": 83,
+      "id": "I_kwDOG6NyZs5NG8mj",
+      "title": "MC_STATE: consider using MACRO_CASE",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/83",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "MaxF12"
+      ],
+      "labels": [],
+      "body": "Style comment. The state and reason fields are variable-length integers, which makes them quite like RFC 9000 Error Codes. For consistency, my suggestion is to use MACRO_CASE for the values defined in this document. E.g instead of `Property Violation` use `PROPERTY_VIOLATION`. This can make it easier to slot into existing enum-based handling or logging systems.",
+      "createdAt": "2022-07-05T00:59:33Z",
+      "updatedAt": "2022-07-06T18:14:50Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 84,
+      "id": "I_kwDOG6NyZs5NG9rq",
+      "title": "MC_STATE: don't overload connection and application Reason code spaces",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/84",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "MaxF12"
+      ],
+      "labels": [],
+      "body": "The MC_STATE `Reason` field provides a shared code space for connection and application errors. This is quite different from how RFC 9000 does things, whereby CONNECTION_CLOSE indicates connection or application errors via the Frame type. This separation allows all transport concerns to be managed by one set of experts, while delegating application concerns to a different set of experts. That scales well.\r\n\r\nI don't see much strong reason to deviate from the design QUIC already uses. The example in https://www.ietf.org/archive/id/draft-jholland-quic-multicast-01.html#section-12.1.1 highlights that an H3 implementation would need to model another error code `0x1000108` somehow, and it would be awkward to figure out where that actually gets registered.\r\n\r\nSo in summary, I suggest just defining two types of MC_STATE frame",
+      "createdAt": "2022-07-05T01:09:41Z",
+      "updatedAt": "2022-07-06T17:07:55Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 85,
+      "id": "I_kwDOG6NyZs5NG-RY",
+      "title": "Mandate the shortest possible encoding of some varint fields?",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/85",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "GrumpyOldTroll"
+      ],
+      "labels": [],
+      "body": "There's a few fields that are variable-length integers, which are used to communicate only a handful of defined types. I'm guessing this is done to hedge some bets against future growth; that seems ok. But that leaves the door open to implementations doing annoything things like encoding 0x1 in 62 bits. \r\n\r\nRFC 9000 includes a requirement that *frame types* are encoded using the smallest integer encoding https://www.rfc-editor.org/rfc/rfc9000.html#section-12.4-18. We might want to levy a similar requirement in this document",
+      "createdAt": "2022-07-05T01:14:45Z",
+      "updatedAt": "2022-07-06T18:31:16Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 86,
+      "id": "I_kwDOG6NyZs5NG_Np",
+      "title": "GREASING fields?",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/86",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "GrumpyOldTroll"
+      ],
+      "labels": [],
+      "body": "There's a few fields that are varints, supporting a huge 62-bit space of values. Yet only a handful of values are defined in this spec.\r\nThat leaves plenty of space for future extension, but we've learned that you have to \"use it or lose it\". QUIC addresses this concern by GREASING a.k.a reserving a wide range of values that have no meaning and must be ignored - https://www.rfc-editor.org/rfc/rfc9000.html#section-22.3-7\r\n\r\nWe might want to consider similar here.\r\n",
+      "createdAt": "2022-07-05T01:22:53Z",
+      "updatedAt": "2022-07-06T22:51:48Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Scanning thru the frames, I see:\r\n- MC_STATE state\r\n- MC_STATE reason\r\n- Capabilities in MC_LIMITS and Tranport Parameter\r\n\r\nI think the rest are all numerical values, did I miss any that you noticed?\r\n\r\nFor what to do with those, my initial thoughts are:\r\n\r\n- I think we could make the MC_STATE state field a fixed size probably.  It's hard to imagine what to do with an unknown state value besides tell the client to close the channel or maybe close the connection?\r\n- The reason field in MC_STATE seems more analogous to the error code in CONNECTION_CLOSE, which I notice doesn't have any extra GREASE defined the way Transport Parameters does. (But I think nothing stops an implementation from sending undefined values by way of GREASE handling?  Maybe that should be explicit?)\r\n- I guess the bits in Transport Parameter's capabilities are sent without knowing what the server can support, so these have to be ignored by servers that don't understand them.  I'm not sure how a client can grease these without potentially advertising support for something it doesn't actually support, do we have any analogies in QUIC for a case like this?\r\n\r\nActually, thinking thru the capabilities again is making me realize we maybe also need something besides MC_ANNOUNCE sent server-to-client to indicate server has multicast support, else a client can't send a new MC_LIMITS.  Hmm, I think I will open a new issue for that. (edit: opened https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/95)",
+          "createdAt": "2022-07-06T22:05:48Z",
+          "updatedAt": "2022-07-06T22:51:48Z"
+        }
+      ]
+    },
+    {
+      "number": 87,
+      "id": "I_kwDOG6NyZs5NHABE",
+      "title": "Integrity and MC_INTEGRITY",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/87",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "GrumpyOldTroll"
+      ],
+      "labels": [],
+      "body": "Section 4.3 says:\r\n\r\n> Data transmitted in a multicast channel is encrypted with symmetric keys so that on-path observers without access to these keys cannot decode the data. However, since potentially many receivers receive identical packets and identical keys for the multicast channel and some receivers might be malicious, the packets are also protected by MC_INTEGRITY ([Section 10.5](https://www.ietf.org/archive/id/draft-jholland-quic-multicast-01.html#channel-integrity-frame)) frames transmitted over a separate integrity-protected path.\r\n\r\n> A client MUST NOT decode packets on a multicast channel for which it has not received a matching hash in an MC_INTEGRITY frame over a different integrity-protected communication path. The different path can be either the unicast connection or another multicast channel with packets that were verified with an earlier MC_INTEGRITY frame.\r\n\r\nMy initial comprehension was that MC_INTEGRITY frames are only delivered over the unicast channel, so they are always delivered in packets that have integrity, confidentiality and authenticity.\r\n\r\nBut this section focuses on integrity, via using the term \"integrity-protected path\". This makes me wonder whether there is a design intention to allow MC_INTEGRITY frames related to multicast channel A, to be delivered on multicast channel B, as long as the packet containing the MC_INTEGRITY frame has a chain of integrity back to some root (avoiding a bootstrap issue). The document doesn't really go into detail here and I think it would help to be a little clear if such a deployment is intended to be allowed.",
+      "createdAt": "2022-07-05T01:30:56Z",
+      "updatedAt": "2022-07-06T20:01:58Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Good point, it's a relatively common point of confusion and could use clearing up.\r\n\r\nTo answer the question: yes, the design intent is to allow MC_INTEGRITY frames to be carried in a multicast channel.  An MC_INTEGRITY frame carried in a channel of course requires its packet to be secured by another MC_INTEGRITY frame that contains its hash that was delivered on a secure channel such as the unicast connection, which would form a [merkle tree](https://en.wikipedia.org/wiki/Merkle_tree).\r\n\r\nAlso note: @squarooticus in https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/48 wants to tweak the text to permit the secure hash delivery to occur in out-of-band paths like [AMBI](https://datatracker.ietf.org/doc/html/draft-ietf-mboned-ambi).  I'm not fully convinced that's worth including in this spec, but have deferred judgement on the point for now.  And in general I agree with him that it's feasible to use an integrity anchor that comes from outside the current connection in ways that can provide adequate security--my unsureness here is about whether this is a can of worms that's worth leaving open in this doc, and whether it's likely to provoke any needlessly difficult discussions.",
+          "createdAt": "2022-07-06T20:01:58Z",
+          "updatedAt": "2022-07-06T20:01:58Z"
+        }
+      ]
+    },
+    {
+      "number": 88,
+      "id": "I_kwDOG6NyZs5NHA0h",
+      "title": "Channel idle timeouts",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/88",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "GrumpyOldTroll"
+      ],
+      "labels": [],
+      "body": "Has any consideration been given to channel idle timeouts? That is, if the channel-related comms go quiet, the channel is cleaned away without a flood of chatter. This might help avoid thundering herds of MC_STATE messages coming back from clients.",
+      "createdAt": "2022-07-05T01:38:17Z",
+      "updatedAt": "2022-07-06T18:13:24Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "We had client-side idle timeouts in an earlier version, but later realized we probably shouldn't.  Gave the reasoning in 4.2 (\"Client Response\") (and hit it again lightly under \"Circuit Breakers\" in the \"Graceful Degradation\" section).  Maybe we need more?\r\n\r\nAnd are you suggesting a protocol change, like that we need to refresh the channel state on the connection periodically if it's been joined without traffic for long enough?  Or more like text on how to handle it right if no data is flowing?",
+          "createdAt": "2022-07-06T18:00:09Z",
+          "updatedAt": "2022-07-06T18:00:09Z"
+        }
+      ]
+    },
+    {
+      "number": 89,
+      "id": "I_kwDOG6NyZs5NHBG8",
+      "title": "What happens when \"not permitted\" frames are received",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/89",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "MaxF12"
+      ],
+      "labels": [],
+      "body": "Section 11 lists a load of frames that aren't allowed. What does a client do if it does receive one? Closing the connection (and all channels) seems like the safest option.",
+      "createdAt": "2022-07-05T01:40:46Z",
+      "updatedAt": "2022-07-06T17:07:33Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 90,
+      "id": "I_kwDOG6NyZs5NHBZ_",
+      "title": "Consider an MC_EXTENSION_ERROR error code",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/90",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "MaxF12"
+      ],
+      "labels": [],
+      "body": "Section 3 lists some instances that an endpoint might close a connection and states that a `PROTOCOL_VIOLATION` error code be used. Since the problems are actually due to the behaviour defined in this extension, it might be prescient to define a specific error code that can disambugate the underlying problem.",
+      "createdAt": "2022-07-05T01:43:24Z",
+      "updatedAt": "2022-07-06T17:07:23Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 91,
+      "id": "I_kwDOG6NyZs5NHB0b",
+      "title": "What's a \"liveness test\"?",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/91",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "MaxF12"
+      ],
+      "labels": [],
+      "body": "> If the unicast connection becomes idle and the server does not respond to a liveness test, the client MUST terminate the connection as described above.\r\n\r\nI don't follow this. QUIC endpoints that want to avoid the connection going idle are obligated to keep to it alive. There isn't a concept of testing after the period has elapsed, that would be too late.",
+      "createdAt": "2022-07-05T01:47:00Z",
+      "updatedAt": "2022-07-05T12:25:21Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Probably me not being clear enough, I was trying to refer to section 10.1.1. and the mechanic described there, I will rephrase. ",
+          "createdAt": "2022-07-05T12:25:19Z",
+          "updatedAt": "2022-07-05T12:25:19Z"
+        }
+      ]
+    },
+    {
+      "number": 92,
+      "id": "I_kwDOG6NyZs5NHCJs",
+      "title": "Deleting old stuff seems arbitrary",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/92",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "GrumpyOldTroll"
+      ],
+      "labels": [],
+      "body": "Section 10.2 says\r\n\r\n> Clients MUST delete old secrets within 10 seconds after receiving a new key, and within 3 seconds after receiving a new key and not receiving any data traffic decrypted with the old key.\r\n\r\nMy first question is why is it a MUST. My second question is why these values? \r\n\r\nSince this is a client behaviour that is hard for the peer to enforce, it would help to explain the rational behind these requirements so that implementations `Do the Right Thing`.",
+      "createdAt": "2022-07-05T01:49:42Z",
+      "updatedAt": "2022-07-06T19:38:07Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "The MUST delete is for forward secrecy.  Like in TLS, if all clients have deleted all keys, the key exposure footprint is reduced to only what's necessary.\r\n\r\nThe time choices are arbitrary, yes.  I wanted something in there, but I don't have a principled answer for what they should be.  It's possible that these should be server-advertised values instead of a client-side constant, but I'd expect for most practical purposes a time-based hard limit will suffice.\r\n\r\nMaybe we should add this to the list of things we hope to learn by making this experimental, like the congestion control handwaviness?",
+          "createdAt": "2022-07-06T19:38:07Z",
+          "updatedAt": "2022-07-06T19:38:07Z"
+        }
+      ]
+    },
+    {
+      "number": 93,
+      "id": "I_kwDOG6NyZs5NHCXH",
+      "title": "Why be frugal with MC_KEY?",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/93",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "GrumpyOldTroll"
+      ],
+      "labels": [],
+      "body": "Section 10.2 says:\r\n\r\n> A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.\r\n\r\nThat sounds sensible but my question is, why shouldn't they? If they ignore the recommendation, what can go wrong?",
+      "createdAt": "2022-07-05T01:51:31Z",
+      "updatedAt": "2022-07-06T19:32:07Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Good point, thanks.  I think the answer is \"principle of least trust\" from RFC 4949, which in this instance tells us we should not deliberately leak keys to clients that don't need them, as that would increase the key exposure footprint unnecessarily.",
+          "createdAt": "2022-07-06T19:32:07Z",
+          "updatedAt": "2022-07-06T19:32:07Z"
+        }
+      ]
+    },
+    {
+      "number": 94,
+      "id": "I_kwDOG6NyZs5NHDFT",
+      "title": "MC_STATE: reason can be 0-length?",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/94",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "MaxF12"
+      ],
+      "labels": [],
+      "body": "https://www.ietf.org/archive/id/draft-jholland-quic-multicast-01.html#figure-12\r\n\r\n```\r\nMC_STATE Frame {\r\n  Type (i) = TBD-0b (experiments use 0xff3e80b),\r\n  Client Channel State Sequence Number (i),\r\n  ID Length (8),\r\n  Channel ID (8..160),\r\n  State (i),\r\n  Reason (0..i)\r\n}\r\n```\r\n\r\nThis implies `Reason` can be 0-length, which seems odd and I'm not sure a frame parser could acutally handle this unless it new the field was going to be 0-length (I.e. the field is optional, usually indicated by the frame type or another field in the frame.\r\n\r\nSuggest this is just made to be `Reason (i)`, unless I'm missing something.",
+      "createdAt": "2022-07-05T01:57:43Z",
+      "updatedAt": "2022-07-06T21:16:11Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I think the intention is that for cases when the state is Joined or Retired the reason field is 0-length, so the parser could learn it off of that I guess. It would always have to be present for the Left or Declined Join cases. Probably needs rephrasing to be more clear on that. ",
+          "createdAt": "2022-07-05T12:28:38Z",
+          "updatedAt": "2022-07-05T12:29:01Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Thanks for the explanation. That's a deviation from the way other QUIC frames are described or handled.\r\n\r\nI would suggest avoiding deviations and following familiar patterns. Either always send an error code, or model the frame type around a bit field model - I.e. you encode the `State` field in the type and then that determines if there is a Reason field or not ",
+          "createdAt": "2022-07-05T12:34:06Z",
+          "updatedAt": "2022-07-05T12:34:06Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "Yeah, we missed this one when refactoring out a similar problem in an earlier draft, thanks.  I like the idea of:\r\n- reason is always present (and I guess always 0 for MC_JOIN or MC_RETIRE)\r\n- 2 different frame types for application vs. protocol, very similar to [CONNECTION_CLOSE](https://www.rfc-editor.org/rfc/rfc9000.html#name-connection_close-frames)\r\n\r\nI'm even kinda thinking it might also be useful to include another 2 types or a length+bytes to support an optional Reason Phrase, like connection close.  Not sure we need it, but it might be helpful.",
+          "createdAt": "2022-07-06T21:16:02Z",
+          "updatedAt": "2022-07-06T21:16:11Z"
+        }
+      ]
+    },
+    {
+      "number": 95,
+      "id": "I_kwDOG6NyZs5NSCO7",
+      "title": "Add a server-to-client transport parameter",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/95",
+      "state": "OPEN",
+      "author": "GrumpyOldTroll",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "There's a failure mode for instance where client starts with an IPv4-only interface and advertises only IPv4 capabilities but server has only IPv6 groups, so it never sends any MC_ANNOUNCE, nor any other multicast-related frames.\r\n\r\nClient then gains an IPv6 address and adds IPv6 capability, but unless client knows it's safe to send a new MC_LIMITS there's not a way to tell server, right?\r\n\r\n(Or alternately, if client sends an MC_LIMITS to a server that doesn't support multicast (which the client doesn't know in the current spec if it never saw a multicast-related frame) serve will close the connection from seeing an unknown frame.)\r\n\r\nOne answer would be to add a server-to-client transport parameter that declares multicast support.  (Any useful data to include in it?  Capabilities flags saying what kinds of capabilities it supports, maybe?) I'm not sure if there's other good options.",
+      "createdAt": "2022-07-06T22:50:47Z",
+      "updatedAt": "2022-07-06T22:50:47Z",
       "closedAt": null,
       "comments": []
     }
@@ -3544,24 +3880,26 @@
       "id": "PR_kwDOG6NyZs46vy0Z",
       "title": "updated text for operational considerations (fixed webtrans streams e\u2026",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/78",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "GrumpyOldTroll",
       "authorAssociation": "OWNER",
       "assignees": [],
       "labels": [],
       "body": "\u2026xplanation, refined constraints a bit)",
       "createdAt": "2022-07-02T23:17:01Z",
-      "updatedAt": "2022-07-03T00:02:58Z",
+      "updatedAt": "2022-07-06T18:08:26Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "9635a77954574ca4fcb12856ee75774547f3273a",
       "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "headRefName": "fix-ops-guidance",
-      "headRefOid": "6bf893e99e10b37ab7cb1128eada6fc6ba63712c",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "headRefOid": "5e2e511a5949bce71b33855ee3f5c39ff0727c37",
+      "closedAt": "2022-07-06T17:13:50Z",
+      "mergedAt": "2022-07-06T17:13:50Z",
+      "mergedBy": "MaxF12",
+      "mergeCommit": {
+        "oid": "953cc3424f5e061c2539439d9df9540177294cef"
+      },
       "comments": [],
       "reviews": [
         {
@@ -3591,24 +3929,26 @@
       "id": "PR_kwDOG6NyZs460pWB",
       "title": "nits: spellcheck",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/79",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "LPardue",
-      "authorAssociation": "NONE",
+      "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "",
       "createdAt": "2022-07-04T23:38:03Z",
-      "updatedAt": "2022-07-04T23:38:04Z",
+      "updatedAt": "2022-07-06T16:25:18Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "9635a77954574ca4fcb12856ee75774547f3273a",
       "headRepository": "LPardue/draft-jholland-quic-multicast",
       "headRefName": "spellcheck",
       "headRefOid": "51e1ff6818423012a8ec5fc082001371df44a5e0",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2022-07-06T16:25:18Z",
+      "mergedAt": "2022-07-06T16:25:18Z",
+      "mergedBy": "GrumpyOldTroll",
+      "mergeCommit": {
+        "oid": "211fbe952fe9a82dcda83a60ac8ab09cecf22535"
+      },
       "comments": [],
       "reviews": []
     },
@@ -3617,25 +3957,42 @@
       "id": "PR_kwDOG6NyZs460qLk",
       "title": "nits: hyperlink sections in other drafts",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/80",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "LPardue",
-      "authorAssociation": "NONE",
+      "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "You won't believe this one cool trick that will change your life*\n\n* not _that) cool, unlikely to change your life, might require\n  an update to your tooling\n",
       "createdAt": "2022-07-04T23:51:19Z",
-      "updatedAt": "2022-07-04T23:51:20Z",
+      "updatedAt": "2022-07-06T16:18:58Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "9635a77954574ca4fcb12856ee75774547f3273a",
       "headRepository": "LPardue/draft-jholland-quic-multicast",
       "headRefName": "hyperlink-sections",
       "headRefOid": "13bb965fa9d4a31b50a79c4a8095a53415c9cc0b",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
-      "comments": [],
+      "closedAt": "2022-07-06T16:18:58Z",
+      "mergedAt": "2022-07-06T16:18:57Z",
+      "mergedBy": "GrumpyOldTroll",
+      "mergeCommit": {
+        "oid": "3e0723573e400c76b96e824a0bd69e4c520fb453"
+      },
+      "comments": [
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "This looks like an amazing and life-changing approach that I would love to apply, but when I build locally I get errors.\r\n\r\nCan you say more about this \"update your tooling\" idea?  I did a `pip install --upgrade xml2rfc`, but no joy. What am I missing that makes it say this?:\r\n\r\n~~~\r\n$ make\r\ncat draft-jholland-quic-multicast.md  | kramdown-rfc2629 --v3 | lib/add-note.py | xml2rfc -q -s 'Setting consensus=\"true\" for IETF STD document' --rfc-base-url https://www.rfc-editor.org/rfc/ --id-base-url https://datatracker.ietf.org/doc/html/ --cache=/Users/jholland/.cache/xml2rfc --v2v3 /dev/stdin -o /dev/stdout >draft-jholland-quic-multicast.xml\r\n*** attributes left {\"v\"=>3, \"venue\"=>{\"group\"=>\"QUIC\", \"type\"=>\"Individual Draft\", \"mail\"=>\"quic@ietf.org\", \"arch\"=>\"https://mailarchive.ietf.org/arch/browse/quic/\", \"github\"=>\"GrumpyOldTroll/draft-jholland-quic-multicast\", \"latest\"=>\"https://GrumpyOldTroll.github.io/draft-jholland-quic-multicast/draft-jholland-quic-multicast.html\"}}!\r\n/Users/jholland/.cache/xml2rfc/reference.I-D.draft-krose-multicast-security.xml: renewing (stale by 3.7 days)\r\n/Users/jholland/.cache/xml2rfc/reference.I-D.draft-ietf-mboned-ambi.xml: renewing (stale by 3.7 days)\r\n/Users/jholland/.cache/xml2rfc/reference.I-D.draft-ietf-mboned-cbacc.xml: renewing (stale by 3.7 days)\r\n/Users/jholland/.cache/xml2rfc/reference.I-D.draft-ietf-quic-multipath.xml: renewing (stale by 3.7 days)\r\n/Users/jholland/.cache/xml2rfc/reference.I-D.draft-ietf-webtrans-http3.xml: renewing (stale by 3.7 days)\r\n/Users/jholland/.cache/xml2rfc/reference.I-D.draft-ietf-masque-h3-datagram.xml: renewing (stale by 3.7 days)\r\nxml2rfc -q -s 'Setting consensus=\"true\" for IETF STD document' --rfc-base-url https://www.rfc-editor.org/rfc/ --id-base-url https://datatracker.ietf.org/doc/html/ --cache=/Users/jholland/.cache/xml2rfc draft-jholland-quic-multicast.xml -o draft-jholland-quic-multicast.txt --text --no-pagination\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_19.1_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_7.3_of_RFC8446\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_7.3_of_RFC8446\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_18.2_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_2.2_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_19.11_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_4.6_of_RFC9114\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_4_of_RFC9221\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Sections_4.6_and_19.14_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_12.2_of_I-D.draft-ietf-quic-multipath\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_10_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_17.3.1_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_17.1_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_4.1.1_of_RFC8085\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_19.4_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_19.2_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_5.2_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_5_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_6_of_RFC4607\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_2.1_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_19.8_of_RFC9000\", at None\r\ndraft-jholland-quic-multicast.xml(0): Error: IDREF attribute target references an unknown ID \"Section_4.1_of_RFC8085\", at None\r\n/Users/jholland/src/github/draft-jholland-quic-multicast/draft-jholland-quic-multicast.xml(13): Error: Invalid document before running preptool.\r\nUnable to complete processing draft-jholland-quic-multicast.xml\r\nmake: *** [draft-jholland-quic-multicast.txt] Error 1\r\nrm draft-jholland-quic-multicast.xml\r\n\r\n~~~",
+          "createdAt": "2022-07-06T16:10:13Z",
+          "updatedAt": "2022-07-06T16:10:13Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "OK, nm.  `sudo gem install kramdown-rfc` fixed it, thanks.  I've been wanting this since the recent changes to the submit page, and didn't know what had happened.",
+          "createdAt": "2022-07-06T16:17:58Z",
+          "updatedAt": "2022-07-06T16:17:58Z"
+        }
+      ],
       "reviews": []
     },
     {
@@ -3643,24 +4000,26 @@
       "id": "PR_kwDOG6NyZs460qYu",
       "title": "nits: capitalize ID",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/81",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "LPardue",
-      "authorAssociation": "NONE",
+      "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "",
       "createdAt": "2022-07-04T23:55:16Z",
-      "updatedAt": "2022-07-04T23:55:16Z",
+      "updatedAt": "2022-07-06T16:23:16Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
-      "baseRefOid": "9635a77954574ca4fcb12856ee75774547f3273a",
+      "baseRefOid": "3e0723573e400c76b96e824a0bd69e4c520fb453",
       "headRepository": "LPardue/draft-jholland-quic-multicast",
       "headRefName": "nits-ID-caps",
-      "headRefOid": "e7dd554ba0b976ebacc0b9853073227113157238",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "headRefOid": "9378fb88bdcde198e0605c9f0129aa56fcf9b7e5",
+      "closedAt": "2022-07-06T16:23:16Z",
+      "mergedAt": "2022-07-06T16:23:15Z",
+      "mergedBy": "GrumpyOldTroll",
+      "mergeCommit": {
+        "oid": "742b5aa6f7c03fcf08804d29cea44dac5d96a229"
+      },
       "comments": [],
       "reviews": []
     }
