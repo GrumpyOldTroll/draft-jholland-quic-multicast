@@ -167,9 +167,9 @@ A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addr
 The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_LIMITS frames ({{client-limits-frame}}) and provide the initial client values.
 
 The AEAD Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
-If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION.
+If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.
 
-The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type PROTOCOL_VIOLATION:
+The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:
 
  - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
 
@@ -191,7 +191,7 @@ The server uses the MC_ANNOUNCE ({{channel-announce-frame}}) frame before any jo
 MC_KEY frames provide the secrets necessary to decode the payload of packets in the channel.
 {{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
-Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients. If a client decides not to join after being asked to do so, it can indicate this decision by sending an MC_STATE ({{client-channel-state-frame}}) frame with state Declined Join and an appropriate reason.
+Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients. If a client decides not to join after being asked to do so, it can indicate this decision by sending an MC_STATE ({{client-channel-state-frame}}) frame with state DECLINED_JOIN and an appropriate reason.
 
 The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS ({{client-limits-frame}}) frame the server received.
 
@@ -219,7 +219,7 @@ The server ensures that in aggregate, all channels that the client has currently
 
 *: Each transition except the initial receiving of MC_ANNOUNCE
    and MC_KEY frames causes the client to send an MC_STATE frame
-   describing the state transition (for Left or Declined Join, this
+   describing the state transition (for LEFT or DECLINED_JOIN, this
    includes a reason for the transition).
 
 "able to join" means:
@@ -230,7 +230,7 @@ The server ensures that in aggregate, all channels that the client has currently
 ~~~
 {: #fig-client-channel-states title="States a channel from the clients point of view."}
 
-When the server has asked the client to join a channel and has not received any MC_STATE frames {{client-channel-state-frame}} with state Declined Join or Left, it also sends MC_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
+When the server has asked the client to join a channel and has not received any MC_STATE frames {{client-channel-state-frame}} with state DECLINED_JOIN or LEFT, it also sends MC_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
 A client MUST NOT decode packets for a channel for which it has not received an applicable MC_ANNOUNCE ({{channel-announce-frame}}), or for which it has not received a matching packet hash in an MC_INTEGRITY ({{channel-integrity-frame}}) frame, or for which it has not received an applicable MC_KEY frame {{channel-key-frame}}.
 
 {{fig-frame-exchange}} shows the frames that are being exchanged about and over a channel during the lifetime of an example channel.
@@ -244,7 +244,7 @@ MC_LIMITS/initial_limits  --->
                                               MC_KEY
                                        <----  MC_JOIN
 
-MC_STATE(Joined)  --->
+MC_STATE(JOINED)  --->
 
                                               MC_INTEGRITY
                                        <----  [STREAM(...)]
@@ -255,11 +255,11 @@ MC_LIMITS  --->
 
                                        <----  MC_LEAVE
 
-MC_STATE(Left)  --->
+MC_STATE(LEFT)  --->
 
                                        <----  MC_JOIN
 
-MC_STATE(Joined)  --->
+MC_STATE(JOINED)  --->
 
                                               MC_INTEGRITY
                                        <----  [STREAM(...)]
@@ -268,11 +268,11 @@ MC_ACK  --->                                  ...
 
                                        <----  MC_LEAVE
 
-MC_STATE(Left)  --->
+MC_STATE(LEFT)  --->
 
                                        <----  MC_RETIRE
 
-MC_STATE(Retired)  --->
+MC_STATE(RETIRED)  --->
 ~~~
 {: #fig-frame-exchange title="Example flow of frames for a channel. Frames in square brackets are sent over multicast."}
 
@@ -307,13 +307,13 @@ When a channel contains streams with IDs above the client's unidirectional MAX_S
 
 If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send an MC_LEAVE frame.
 
-If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason Max Streams Exceeded.
+If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason "MAX_STREAMS_EXCEEDED".
 
 Since clients can join later than a channel began, it is RECOMMENDED that clients supporting the multicast extensions to QUIC be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream ID count might have been increasing for a long time.
 Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see {{Section 19.11 of RFC9000}}) with a high limit.
 Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.
 
-The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in {{Section 2.2 of RFC9000}}, stream data received multiple times for the same offset MUST be identical, even across different network paths; if it's not identical it MAY be treated as a connection error of type PROTOCOL_VIOLATION.
+The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in {{Section 2.2 of RFC9000}}, stream data received multiple times for the same offset MUST be identical, even across different network paths; if it's not identical it MAY be treated as a connection error of type MC_EXTENSION_ERROR.
 
 # Flow Control {#flow-control}
 
@@ -324,9 +324,9 @@ The server is responsible for keeping the client within its advertised limits, b
 The server also advertises the expected maxima of the values that can contribute toward client resource limits within a channel in an MC_ANNOUNCE ({{channel-announce-frame}}) frame, and the client also ensures that the set of channels it's joined to does not exceed its limits, according to the advertised values.
 The client also monitors the packets received to ensure that channels don't exceed their advertised values, and leaves channels that do.
 
-If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back an MC_STATE frame ({{client-channel-state-frame}}) with "Declined Join" and reason "Property Violation".
-If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Key Sequence Number that the client has not yet seen, the client should instead send back a "Declined Join" with "Desynchronized Limit Violation".
-If the actual contents sent in the channel exceed the advertised limits from the MC_ANNOUNCE, clients SHOULD leave the stream and send an MC_STATE(Left) frame, using the Limit Violated reason.
+If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back an MC_STATE frame ({{client-channel-state-frame}}) with "DECLINED_JOIN" and reason "PROPERTY_VIOLATION".
+If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Key Sequence Number that the client has not yet seen, the client should instead send back a "DECLINED_JOIN" with "Desynchronized Limit Violation".
+If the actual contents sent in the channel exceed the advertised limits from the MC_ANNOUNCE, clients SHOULD leave the stream and send an MC_STATE(LEFT) frame, using the Limit Violated reason.
 
 # Congestion Control {#congestion-control}
 
@@ -336,12 +336,12 @@ The server maintains a full view of the traffic received by the client via the M
 Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.
 
 Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the clients aggregate rate is below its advertised Max Rate.
-Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(Left) frame with the High Loss reason, as well as reducing the Max Rate in MC_LIMITS.
+Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(LEFT) frame with the "HIGH_LOSS" reason, as well as reducing the Max Rate in MC_LIMITS.
 
 The unicast connection's congestion control is unaffected.
 However a few potential interactions with the unicast connection are worth highlighting:
 
- - if the client notices high loss on the unicast connection while multicast channel packets are arriving, the client MAY leave channels with reason High Loss.
+ - if the client notices high loss on the unicast connection while multicast channel packets are arriving, the client MAY leave channels with reason "HIGH_LOSS".
  - if the client notices congestion from unicast this MAY also drive reductions in the client's Max Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Rate (along with an updated MC_LIMITS frame).
 
 Hybrid multicast-unicast congestion control is still an experimental research topic.
@@ -374,7 +374,7 @@ Termination of the unicast connection behaves as described in {{Section 10 of RF
 
 * On the client side, termination of the unicast connection means that it MUST leave all multicast channels and discard any state associated with them. Servers MAY stop sending to multicast channels if there are no unicast connections left that are associated with them.
 
-* For determining the liveness of a connection, the client MUST only consider packets received on the unicast connection. Any packets received on a multicast channel MUST NOT be used to reset a timer checking if a potentially specified max_idle_timeout has been reached. If the unicast connection becomes idle and the server does not respond to a liveness test, the client MUST terminate the connection as described above.
+* For determining the liveness of a connection, the client MUST only consider packets received on the unicast connection. Any packets received on a multicast channel MUST NOT be used to reset a timer checking if a potentially specified max_idle_timeout has been reached. If the unicast connection becomes idle, as described in {{Section 10.1 of RFC9000}}, the client MUST terminate the connection as described above.
 
 ## Stateless Reset
 
@@ -430,8 +430,8 @@ MC_ANNOUNCE frames contain the following fields:
       - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
       - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
       - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
-  * Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason Max Rate Exceeded.
-  * Max ACK Delay: A value used similarly to max_ack_delay ({{Section 18.2 of RFC9000}}}) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds, and SHOULD NOT add any delay to the first MC_ACK of data packets for a channel.  As long as they stay inside these limits, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.
+  * Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason "MAX_RATE_EXCEEDED".
+  * Max ACK Delay: A value used similarly to max_ack_delay ({{Section 18.2 of RFC9000}}) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds, and SHOULD NOT add any delay to the first MC_ACK of data packets for a channel.  As long as they stay inside these limits, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.
 
 A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
 As the server knows which connection IDs are in use by the client, it MUST wait with the sending of an MC_JOIN frame until the channel ID associated with it has been retired by the client.
@@ -495,7 +495,7 @@ An MC_JOIN frame (type TBD-02) is sent from server to client and requests that a
 
 A client cannot join a multicast channel without first receiving an MC_ANNOUNCE frame and an MC_KEY frame, which together set all the values necessary to process the channel.
 
-If a client receives an MC_JOIN for a channel for which it has not received both an MC_ANNOUNCE frame and an MC_KEY frame, it MUST respond with an MC_STATE with State "Declined Join" and reason "Missing Properties". The server MAY send another MC_JOIN after receiving an acknowledgement indicating receipt of the MC_ANNOUNCE frame and the MC_KEY frame.
+If a client receives an MC_JOIN for a channel for which it has not received both an MC_ANNOUNCE frame and an MC_KEY frame, it MUST respond with an MC_STATE with State "DECLINED_JOIN" and reason "Missing Properties". The server MAY send another MC_JOIN after receiving an acknowledgement indicating receipt of the MC_ANNOUNCE frame and the MC_KEY frame.
 
 MC_JOIN frames are formatted as shown in {{fig-mc-channel-join-format}}.
 
@@ -515,9 +515,9 @@ The sequence numbers are the most recently processed sequence number by the serv
 
 A client MAY perform the join if it has the sequence number of the corresponding channel properties and the client's limits will not be exceeded, even if the client sequence numbers are not up-to-date.
 
-If the client does not join, it MUST send an MC_STATE frame with "Declined Join" and a reason.
+If the client does not join, it MUST send an MC_STATE frame with "DECLINED_JOIN" and a reason.
 
-If the client does join, it MUST send an MC_STATE frame with "Joined".
+If the client does join, it MUST send an MC_STATE frame with "JOINED".
 
 ## MC_LEAVE {#channel-leave-frame}
 
@@ -527,7 +527,7 @@ If the client has already left or declined to join the channel, the MC_LEAVE is 
 
 If an MC_JOIN or an MC_LEAVE with the same Channel ID and a higher MC_STATE Sequence number has previously been received, the MC_LEAVE is ignored.
 
-Otherwise, the client MUST leave the channel and send a new MC_STATE frame with reason Left as requested by server.
+Otherwise, the client MUST leave the channel and send a new MC_STATE frame with reason LEFT as requested by server.
 
 MC_LEAVE frames are formatted as shown in {{fig-mc-channel-leave-format}}.
 
@@ -643,15 +643,17 @@ MC_RETIRE Frame {
 Retires a channel by ID, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
 If After Packet Number is nonzero and the channel is joined and has received any data, the channel will be retired after receiving that packet or a higher valued number, otherwise it will be retired immediately.
 
-After retiring a channel, the client MUST send a new MC_STATE frame with reason Retired to the server.
+After retiring a channel, the client MUST send a new MC_STATE frame with reason RETIRED to the server.
 
-If the client is still joined in the channel that is being retired, it MUST also leave it. If a channel is left this way, it does not need to send an additional MC_STATE frame with reason Left, as reason Retired also implies the channel was left.
+If the client is still joined in the channel that is being retired, it MUST also leave it. If a channel is left this way, it does not need to send an additional MC_STATE frame with state LEFT, as state RETIRED also implies the channel was left.
 
 ## MC_STATE {#client-channel-state-frame}
 
-MC_STATE frames are sent from client to server to report changes in the client's channel state.
+MC_STATE frames (type=TBD-0b or TBD-0c) are sent from client to server to report changes in the client's channel state.
 Each time the channel state changes, the Client Channel State Sequence number is increased by one.
 It is a state change to the channel if the server requests that a client join a channel and the client declines the join, even though no join occurs on the network.
+
+Frames of type TBD-0b are used for cases in which the reason for the state change occur in the QUIC multicast layer while frames of type TBD-0c are used for reasons that are application specific.
 
 MC_STATE frames are formatted as shown in {{fig-mc-client-channel-state-format}}.
 
@@ -662,35 +664,40 @@ MC_STATE Frame {
   ID Length (8),
   Channel ID (8..160),
   State (i),
-  Reason (0..i)
+  Reason Code (i),
+  Reason Phrase Length (i),
+  Reason Phrase (..)
 }
 ~~~
 {: #fig-mc-client-channel-state-format title="MC_STATE Frame Format"}
 
 State has these defined values:
 
- * 0x1: Left
- * 0x2: Declined Join
- * 0x3: Joined
- * 0x4: Retired
+ * 0x1: LEFT
+ * 0x2: DECLINED_JOIN
+ * 0x3: JOINED
+ * 0x4: RETIRED
 
-If State is Joined or Retired, the Reason field is absent.
+If State is JOINED or RETIRED, the Reason Code MUST be REQUESTED_BY_SERVER (0x1).
 
-If State is Left or Declined Join, the Reason field is set to one of:
+If State is LEFT or DECLINED_JOIN, for frames of type TBD-0b the Reason Code field is set to one of:
 
- * 0x0: Unspecified Other
- * 0x1: Left as requested by server
- * 0x2: Administrative Block
- * 0x3: Protocol Error
- * 0x4: Property Violation
- * 0x5: Unsynchronized Properties
- * 0x6: ID Collision
- * 0x10: Held Down
- * 0x12: Max Rate Exceeded
- * 0x13: High Loss
- * 0x14: Excessive Spurious Traffic
- * 0x15: Max Streams Exceeded
- * 0x1000000-0x3fffffff: Application-defined Reason
+ * 0x0: UNSPECIFIED_OTHER
+ * 0x1: REQUESTED_BY_SERVER
+ * 0x2: ADMINISTRATIVE_BLOCK
+ * 0x3: PROTOCOL_ERROR
+ * 0x4: PROPERTY_VIOLATION
+ * 0x5: UNSYNCHRONIZED_PROPERTIES
+ * 0x6: ID_COLLISION
+ * 0x10: HELD_DOWN
+ * 0x12: MAX_RATE_EXCEEDED
+ * 0x13: HIGH_LOSS
+ * 0x14: EXCESSIVE_SPURIOUS_TRAFFIC
+ * 0x15: MAX_STREAMS_EXCEEDED
+
+For frames of type TBD-0c, the Reason Code is left to the application, as described in {{Section 20.2 of RFC9000}}
+
+The Reason Phrase field, in combination with the Reason Phrase Length field, can optionally be used to give further details for the state change.
 
 A client might receive multicast packets that it can not associate with any channel ID, or that cannot be verified as matching hashes from MC_INTEGRITY frames, or cannot be decrypted.
 This traffic is presumed either to have been corrupted in transit or to have been sent by someone other than the legitimate sender of traffic for the channel, possibly by an attacker or a misconfigured sender.
@@ -704,6 +711,8 @@ Data packet hashes will also be sent in MC_INTEGRITY frames, as keys cannot be t
 
 The 1-RTT packets in multicast channels will have a restricted set of frames.
 Since the channel is strictly 1-way server to client, the general principle is that broadcastable shared server->client data frames can be sent, but frames that make sense only for individualized connections or that are sent client-to-server cannot.
+
+Should a not permitted frame arrive on a multicast channel, the connection MUST be closed with a connection error of type MC_EXTENSION_ERROR.
 
 Permitted:
 
@@ -873,6 +882,7 @@ same crypto guarantee of a proper sender via the domain's cert,
 which was already checked on the unicast channel?)
 
 # IANA Considerations
+TODO: MC_EXTENSION_ERROR error code
 
 TODO: lots
 
