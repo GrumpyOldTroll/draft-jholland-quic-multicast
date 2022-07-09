@@ -482,7 +482,16 @@ MC_KEY frames contain the following fields:
   * Secret: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}.  The Key and Initial Vector for the application data carried in the 1-RTT packet payloads are derived from the secret as described in {{Section 7.3 of RFC8446}}.
     To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
 
-Clients MUST delete old secrets within 10 seconds after receiving a new key, and within 3 seconds after receiving a new key and not receiving any data traffic decrypted with the old key.
+Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
+Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.
+
+Client implementations MAY institute a delay before deleting secrets to allow for decoding of packets for the channel that arrive shortly after a new MC_KEY frame.
+For this experimental specification, it is RECOMMENDED that clients delete old keys 10 seconds after receiving a new key or after 3 seconds that elapse without receiving any new data to decode with the old key, whichever is shorter.
+Clients MUST NOT delay more than 60 seconds before deleting the old keys.
+
+The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
+One of the target discoveries for experimental evaluation is to determine good default delay values to use, and to understand whether there are use cases that would benefit from a negotiation between server and client to determine the delays to use dynamically.
+(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)
 
 The From Packet Number is used to indicate the starting packet number ({{Section 17.1 of RFC9000}}) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
 This secret is applicable to all future packets until it is updated by a new MC_KEY frame.
