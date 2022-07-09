@@ -128,13 +128,19 @@ A datagram or any particular bytes from a server-initiated unidirectional stream
 
 Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in {{I-D.draft-krose-multicast-security}}.
 
-# Transport Parameter {#transport-parameter}
+# Transport Parameters {#transport-parameter}
 
-Support for multicast extensions in a client is advertised by means of a QUIC transport parameter:
+Support for multicast extensions in a client is advertised by means of QUIC transport parameters:
 
+ * name: multicast_server_support (TBD - experiments use 0xff3e808)
  * name: multicast_client_params (TBD - experiments use 0xff3e800)
 
-If a multicast_client_params transport parameter is not included, servers MUST NOT send any frames defined in this document.  (Given that a server never sends any MC_JOIN frames, the clients also will never send any frames in this document so only the client-to-server advertisement is necessary.)
+If a multicast_server_support transport parameter is not included, clients MUST NOT send any frames defined in this document.
+
+If a multicast_client_params transport parameter is not included, servers MUST NOT send any frames defined in this document.
+
+The multicast_server_support parameter is a 0-length value.
+Presence indicates that multicast-capable clients MAY send frames defined in this document, and SHOULD send MC_LIMITS ({{client-limits-frame}}) frames as appropriate when their capabilities or client-side limitations change.
 
 The multicast_client_params parameter has the structure shown below in {{fig-transport-parameter-format}}.
 
