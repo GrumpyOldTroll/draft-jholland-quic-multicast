@@ -1579,7 +1579,9 @@ Note that clients willing to join a channel SHOULD remain joined to the channel 
 However, since potentially many receivers receive identical packets and identical keys for the multicast channel and some receivers might be malicious, the packets are also protected by MC_INTEGRITY (<a href="#channel-integrity-frame" class="xref">Section 10.5</a>) frames transmitted over a separate integrity-protected path.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
 <p id="section-4.3-2">A client MUST NOT decode packets on a multicast channel for which it has not received a matching hash in an MC_INTEGRITY frame over a different integrity-protected communication path.
 The different path can be either the unicast connection or another multicast channel with packets that were verified with an earlier MC_INTEGRITY frame.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
-<p id="section-4.3-3">See <a href="#data-integrity" class="xref">Section 7</a> for a more complete overview of the security issues involved here.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<p id="section-4.3-3">Note that MC_INTEGRITY frames MAY be carried in packets on multicast channels, however such packets will not be accepted unless another accepted MC_INTEGRITY frame contains its packet hash.
+Hashes of packets containing hashes of other packets can thus form a Merkle tree <span>[<a href="#MERKLE" class="xref">MERKLE</a>]</span> with a root that is carried in the unicast connection.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<p id="section-4.3-4">See <a href="#data-integrity" class="xref">Section 7</a> for a more complete overview of the security issues involved here.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stream-processing">
@@ -2457,6 +2459,10 @@ which was already checked on the unicast channel?)<a href="#section-13-3" class=
 <dt id="I-D.draft-ietf-webtrans-http3">[I-D.draft-ietf-webtrans-http3]</dt>
         <dd>
 <span class="refAuthor">Frindell, A.</span>, <span class="refAuthor">Kinnear, E.</span>, and <span class="refAuthor">V. Vasiliev</span>, <span class="refTitle">"WebTransport over HTTP/3"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-webtrans-http3-03</span>, <time datetime="2022-07-06" class="refDate">6 July 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-webtrans-http3-03">https://datatracker.ietf.org/doc/html/draft-ietf-webtrans-http3-03</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="MERKLE">[MERKLE]</dt>
+        <dd>
+<span class="refAuthor">Merkle, R.</span>, <span class="refTitle">"Secrecy, Authentication, and Public Key Systems"</span>, <span class="seriesInfo">Computer Science Series, UMI Research Press, ISBN: 9780835713849 </span>, <time datetime="1983" class="refDate">1983</time>. </dd>
 <dd class="break"></dd>
 <dt id="RFC4607">[RFC4607]</dt>
         <dd>

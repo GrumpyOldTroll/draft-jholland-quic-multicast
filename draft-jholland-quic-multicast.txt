@@ -498,6 +498,12 @@ Table of Contents
    can be either the unicast connection or another multicast channel
    with packets that were verified with an earlier MC_INTEGRITY frame.
 
+   Note that MC_INTEGRITY frames MAY be carried in packets on multicast
+   channels, however such packets will not be accepted unless another
+   accepted MC_INTEGRITY frame contains its packet hash.  Hashes of
+   packets containing hashes of other packets can thus form a Merkle
+   tree [MERKLE] with a root that is carried in the unicast connection.
+
    See Section 7 for a more complete overview of the security issues
    involved here.
 
@@ -1708,6 +1714,10 @@ Table of Contents
               ietf-webtrans-http3-03, 6 July 2022,
               <https://datatracker.ietf.org/doc/html/draft-ietf-
               webtrans-http3-03>.
+
+   [MERKLE]   Merkle, R., "Secrecy, Authentication, and Public Key
+              Systems", Computer Science Series, UMI Research Press,
+              ISBN: 9780835713849 , 1983.
 
    [RFC4607]  Holbrook, H. and B. Cain, "Source-Specific Multicast for
               IP", RFC 4607, DOI 10.17487/RFC4607, August 2006,
