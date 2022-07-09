@@ -5,10 +5,10 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 8 January 2023                                                 
+Expires: 10 January 2023                                                
                                                                M. Franke
                                                                TU Berlin
-                                                             7 July 2022
+                                                             9 July 2022
 
 
                       Multicast Extension for QUIC
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2023.
+   This Internet-Draft will expire on 10 January 2023.
 
 Copyright Notice
 
@@ -74,7 +74,7 @@ Table of Contents
    1.  Introduction
      1.1.  Conventions and Definitions
    2.  Multicast Channel
-   3.  Transport Parameter
+   3.  Transport Parameters
    4.  Extension Overview
      4.1.  Channel Management
      4.2.  Client Response
@@ -242,18 +242,26 @@ Table of Contents
    privacy-related reasons covered in
    [I-D.draft-krose-multicast-security].
 
-3.  Transport Parameter
+3.  Transport Parameters
 
    Support for multicast extensions in a client is advertised by means
-   of a QUIC transport parameter:
+   of QUIC transport parameters:
+
+   *  name: multicast_server_support (TBD - experiments use 0xff3e808)
 
    *  name: multicast_client_params (TBD - experiments use 0xff3e800)
 
+   If a multicast_server_support transport parameter is not included,
+   clients MUST NOT send any frames defined in this document.
+
    If a multicast_client_params transport parameter is not included,
-   servers MUST NOT send any frames defined in this document.  (Given
-   that a server never sends any MC_JOIN frames, the clients also will
-   never send any frames in this document so only the client-to-server
-   advertisement is necessary.)
+   servers MUST NOT send any frames defined in this document.
+
+   The multicast_server_support parameter is a 0-length value.  Presence
+   indicates that multicast-capable clients MAY send frames defined in
+   this document, and SHOULD send MC_LIMITS (Section 10.7) frames as
+   appropriate when their capabilities or client-side limitations
+   change.
 
    The multicast_client_params parameter has the structure shown below
    in Figure 1.
