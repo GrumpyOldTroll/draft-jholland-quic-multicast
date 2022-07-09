@@ -57,6 +57,12 @@ informative:
   RFC6726:
   RFC6968:
   RFC9114:
+  MERKLE:
+    title: "Secrecy, Authentication, and Public Key Systems"
+    author:
+      - ins: R. Merkle
+    seriesinfo: "Computer Science Series, UMI Research Press, ISBN: 9780835713849"
+    date: 1983
 
 --- abstract
 
@@ -290,6 +296,9 @@ However, since potentially many receivers receive identical packets and identica
 
 A client MUST NOT decode packets on a multicast channel for which it has not received a matching hash in an MC_INTEGRITY frame over a different integrity-protected communication path.
 The different path can be either the unicast connection or another multicast channel with packets that were verified with an earlier MC_INTEGRITY frame.
+
+Note that MC_INTEGRITY frames MAY be carried in packets on multicast channels, however such packets will not be accepted unless another accepted MC_INTEGRITY frame contains its packet hash.
+Hashes of packets containing hashes of other packets can thus form a Merkle tree {{MERKLE}} with a root that is carried in the unicast connection.
 
 See {{data-integrity}} for a more complete overview of the security issues involved here.
 
