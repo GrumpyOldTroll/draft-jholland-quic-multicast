@@ -5,10 +5,10 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 10 January 2023                                                
+Expires: 11 January 2023                                                
                                                                M. Franke
                                                                TU Berlin
-                                                             9 July 2022
+                                                            10 July 2022
 
 
                       Multicast Extension for QUIC
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 January 2023.
+   This Internet-Draft will expire on 11 January 2023.
 
 Copyright Notice
 
@@ -259,7 +259,9 @@ Table of Contents
    in Figure 1.
 
    multicast_client_params {
-     Capabilities Field (8),
+     Reserved (6),
+     IPv6 Channels Allowed (1),
+     IPv4 Channels Allowed (1),
      Max Aggregate Rate (i),
      Max Channel IDs (i),
      Hash Algorithms Supported (i),
@@ -270,15 +272,16 @@ Table of Contents
 
                   Figure 1: multicast_client_params Format
 
-   The Capabilities, Max Aggregate Rate, and Max Channel ID fields are
-   identical to their analogous fields in the MC_LIMITS frame
-   (Section 10.7) and hold the initial values.
+   The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max
+   Aggregate Rate, and Max Channel ID fields are identical to their
+   analogous fields in the MC_LIMITS frame (Section 10.7) and hold the
+   initial values.
 
    A server MUST NOT send MC_ANNOUNCE (Section 10.1) frames with
-   addresses using an IP Family that is not supported according to the
-   Capabilities in the multicast_client_params, unless and until a later
-   MC_LIMITS (Section 10.7) frame adds permission for a different
-   address family.
+   addresses using an IP Family that is not allowed according to the
+   IPv4 and IPv6 Channels Allowed fields in the multicast_client_params,
+   unless and until a later MC_LIMITS (Section 10.7) frame adds
+   permission for a different address family.
 
    The AEAD Algorithms List field is in order of preference (most
    preferred occurring first) using values from the TLS Cipher Suite
@@ -1047,7 +1050,9 @@ Table of Contents
    MC_LIMITS Frame {
      Type (i) = TBD-09 (experiments use 0xff3e809),
      Client Limits Sequence Number (i),
-     Capabilities Flags(8),
+     Reserved (6),
+     IPv6 Channels Allowed (1),
+     IPv4 Channels Allowed (1),
      Max Aggregate Rate (i),
      Max Channel IDs (i),
      Max Joined Count (i),
@@ -1059,17 +1064,15 @@ Table of Contents
    from the client, and increases by 1 each new frame that's sent.
    Newer frames override older ones.
 
-   Capabilities Flags is a bit field structured as follows:
+   The 6 Reserved bits MUST be set to 0 by the client and MUST be
+   ignored by the server.  These are reserved to advertise future
+   capabilities.
 
-   *  0x1 is set if IPv4 channels are permitted
+   IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can
+   be joined and 0 if IPv6 channels cannot be joined.
 
-   *  0x2 is set if IPv6 channels are permitted
-
-   *  The other 6 bits are reserved for future capabilities.  Servers
-      MUST ignore the reserved bits.
-
-   For example, a Capabilities Flags value of 3 (0x11) indicates that
-   both IPv4 and IPv6 channels are permitted.
+   IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can
+   be joined and 0 if IPv4 channels cannot be joined.
 
    Max Aggregate Rate allowed across all joined channels is in Kibps.
 
@@ -1147,7 +1150,7 @@ Table of Contents
    *  0x4: RETIRED
 
    If a server receives an undefined value, it SHOULD close the
-   connection with reason PROTOCOL_ERROR.
+   connection with reason MC_EXTENSION_ERROR.
 
    If State is JOINED or RETIRED, the Reason Code MUST be
    REQUESTED_BY_SERVER (0x1).
