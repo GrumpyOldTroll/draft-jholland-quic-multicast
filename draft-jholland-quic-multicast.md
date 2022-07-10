@@ -140,7 +140,9 @@ The multicast_client_params parameter has the structure shown below in {{fig-tra
 
 ~~~
 multicast_client_params {
-  Capabilities Field (8),
+  Reserved (6),
+  IPv6 Channels Allowed (1),
+  IPv4 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Hash Algorithms Supported (i),
@@ -151,9 +153,9 @@ multicast_client_params {
 ~~~
 {: #fig-transport-parameter-format title="multicast_client_params Format"}
 
-The Capabilities, Max Aggregate Rate, and Max Channel ID fields are identical to their analogous fields in the MC_LIMITS frame ({{client-limits-frame}}) and hold the initial values.
+The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, and Max Channel ID fields are identical to their analogous fields in the MC_LIMITS frame ({{client-limits-frame}}) and hold the initial values.
 
-A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_LIMITS ({{client-limits-frame}}) frame adds permission for a different address family.
+A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not allowed according to the IPv4 and IPv6 Channels Allowed fields in the multicast_client_params, unless and until a later MC_LIMITS ({{client-limits-frame}}) frame adds permission for a different address family.
 
 The AEAD Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
 If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.
@@ -591,7 +593,9 @@ MC_LIMITS frames are formatted as shown in {{fig-mc-client-limits-format}}.
 MC_LIMITS Frame {
   Type (i) = TBD-09 (experiments use 0xff3e809),
   Client Limits Sequence Number (i),
-  Capabilities Flags(8),
+  Reserved (6),
+  IPv6 Channels Allowed (1),
+  IPv4 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Max Joined Count (i),
@@ -602,13 +606,12 @@ MC_LIMITS Frame {
 The sequence number is implicitly 0 before the first MC_LIMITS frame from the client, and increases by 1 each new frame that's sent.
 Newer frames override older ones.
 
-Capabilities Flags is a bit field structured as follows:
+The 6 Reserved bits MUST be set to 0 by the client and MUST be ignored by the server.
+These are reserved to advertise future capabilities.
 
- - 0x1 is set if IPv4 channels are permitted
- - 0x2 is set if IPv6 channels are permitted
- - The other 6 bits are reserved for future capabilities.  Servers MUST ignore the reserved bits.
+IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can be joined and 0 if IPv6 channels cannot be joined.
 
-For example, a Capabilities Flags value of 3 (0x11) indicates that both IPv4 and IPv6 channels are permitted.
+IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can be joined and 0 if IPv4 channels cannot be joined.
 
 Max Aggregate Rate allowed across all joined channels is in Kibps.
 
@@ -668,7 +671,7 @@ State has these defined values:
  * 0x3: JOINED
  * 0x4: RETIRED
 
-If a server receives an undefined value, it SHOULD close the connection with reason PROTOCOL_ERROR.
+If a server receives an undefined value, it SHOULD close the connection with reason MC_EXTENSION_ERROR.
 
 If State is JOINED or RETIRED, the Reason Code MUST be REQUESTED_BY_SERVER (0x1).
 
