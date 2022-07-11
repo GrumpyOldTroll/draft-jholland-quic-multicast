@@ -1032,7 +1032,7 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Holland, et al.</td>
-<td class="center">Expires 10 January 2023</td>
+<td class="center">Expires 12 January 2023</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1045,12 +1045,12 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2022-07-09" class="published">9 July 2022</time>
+<time datetime="2022-07-11" class="published">11 July 2022</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2023-01-10">10 January 2023</time></dd>
+<dd class="expires"><time datetime="2023-01-12">12 January 2023</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1106,7 +1106,7 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 January 2023.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 January 2023.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1404,7 +1404,9 @@ Presence indicates that multicast-capable clients MAY send frames defined in thi
         <div class="alignLeft art-text artwork" id="section-3-7.1">
 <pre>
 multicast_client_params {
-  Capabilities Field (i),
+  Reserved (6),
+  IPv6 Channels Allowed (1),
+  IPv4 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Hash Algorithms Supported (i),
@@ -1418,21 +1420,14 @@ multicast_client_params {
 <a href="#name-multicast_client_params-for" class="selfRef">multicast_client_params Format</a>
         </figcaption></figure>
 </div>
-<p id="section-3-8">Capabilities Flags is a bit field structured as follows:<a href="#section-3-8" class="pilcrow">¶</a></p>
+<p id="section-3-8">The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, and Max Channel ID fields are identical to their analogous fields in the MC_LIMITS frame (<a href="#client-limits-frame" class="xref">Section 10.7</a>) and hold the initial values.<a href="#section-3-8" class="pilcrow">¶</a></p>
+<p id="section-3-9">A server MUST NOT send MC_ANNOUNCE (<a href="#channel-announce-frame" class="xref">Section 10.1</a>) frames with addresses using an IP Family that is not allowed according to the IPv4 and IPv6 Channels Allowed fields in the multicast_client_params, unless and until a later MC_LIMITS (<a href="#client-limits-frame" class="xref">Section 10.7</a>) frame adds permission for a different address family.<a href="#section-3-9" class="pilcrow">¶</a></p>
+<p id="section-3-10">The AEAD Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
+If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.<a href="#section-3-10" class="pilcrow">¶</a></p>
+<p id="section-3-11">The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:<a href="#section-3-11" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3-9.1">0x1 is set if IPv4 channels are permitted<a href="#section-3-9.1" class="pilcrow">¶</a>
-</li>
-        <li class="normal" id="section-3-9.2">0x2 is set if IPv6 channels are permitted<a href="#section-3-9.2" class="pilcrow">¶</a>
-</li>
-      </ul>
-<p id="section-3-10">A server MUST NOT send MC_ANNOUNCE (<a href="#channel-announce-frame" class="xref">Section 10.1</a>) frames with addresses using an IP Family that is not supported according to the Capabilities in the multicast_client_params, unless and until a later MC_LIMITS (<a href="#client-limits-frame" class="xref">Section 10.7</a>) frame adds permission for a different address family.<a href="#section-3-10" class="pilcrow">¶</a></p>
-<p id="section-3-11">The Capabilities Field, Max Aggregate Rate, and Max Channel IDs are the same as in MC_LIMITS frames (<a href="#client-limits-frame" class="xref">Section 10.7</a>) and provide the initial client values.<a href="#section-3-11" class="pilcrow">¶</a></p>
-<p id="section-3-12">The AEAD Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
-If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.<a href="#section-3-12" class="pilcrow">¶</a></p>
-<p id="section-3-13">The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:<a href="#section-3-13" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-3-14.1">
-          <a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-3-14.1" class="pilcrow">¶</a>
+<li class="normal" id="section-3-12.1">
+          <a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-3-12.1" class="pilcrow">¶</a>
 </li>
       </ul>
 </section>
@@ -1948,7 +1943,7 @@ Subsequent hashes refer to the packets for the channel with packet numbers incre
 <a href="#section-10.6" class="section-number selfRef">10.6. </a><a href="#name-mc_ack" class="section-name selfRef">MC_ACK</a>
         </h3>
 <p id="section-10.6-1">The MC_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by <span>[<a href="#RFC9000" class="xref">RFC9000</a>]</span>. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.<a href="#section-10.6-1" class="pilcrow">¶</a></p>
-<p id="section-10.6-2">(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-01#section-12.2" class="relref">Section 12.2</a> of [<a href="#I-D.draft-ietf-quic-multipath" class="xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)<a href="#section-10.6-2" class="pilcrow">¶</a></p>
+<p id="section-10.6-2">(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-02#section-12.2" class="relref">Section 12.2</a> of [<a href="#I-D.draft-ietf-quic-multipath" class="xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)<a href="#section-10.6-2" class="pilcrow">¶</a></p>
 <p id="section-10.6-3">MC_ACK frames are formatted as shown in <a href="#fig-mc-channel-ack-format" class="xref">Figure 9</a>.<a href="#section-10.6-3" class="pilcrow">¶</a></p>
 <span id="name-mc_ack-frame-format"></span><div id="fig-mc-channel-ack-format">
 <figure id="figure-9">
@@ -1986,7 +1981,9 @@ MC_ACK Frame {
 MC_LIMITS Frame {
   Type (i) = TBD-09 (experiments use 0xff3e809),
   Client Limits Sequence Number (i),
-  Capabilities Flags(i),
+  Reserved (6),
+  IPv6 Channels Allowed (1),
+  IPv4 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Max Joined Count (i),
@@ -1999,14 +1996,10 @@ MC_LIMITS Frame {
 </div>
 <p id="section-10.7-3">The sequence number is implicitly 0 before the first MC_LIMITS frame from the client, and increases by 1 each new frame that's sent.
 Newer frames override older ones.<a href="#section-10.7-3" class="pilcrow">¶</a></p>
-<p id="section-10.7-4">Capabilities Flags is a bit field structured as follows:<a href="#section-10.7-4" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-10.7-5.1">0x1 is set if IPv4 channels are permitted<a href="#section-10.7-5.1" class="pilcrow">¶</a>
-</li>
-          <li class="normal" id="section-10.7-5.2">0x2 is set if IPv6 channels are permitted<a href="#section-10.7-5.2" class="pilcrow">¶</a>
-</li>
-        </ul>
-<p id="section-10.7-6">For example, a Capabilities Flags value of 3 (0x11) indicates that both IPv4 and IPv6 channels are permitted.<a href="#section-10.7-6" class="pilcrow">¶</a></p>
+<p id="section-10.7-4">The 6 Reserved bits MUST be set to 0 by the client and MUST be ignored by the server.
+These are reserved to advertise future capabilities.<a href="#section-10.7-4" class="pilcrow">¶</a></p>
+<p id="section-10.7-5">IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can be joined and 0 if IPv6 channels cannot be joined.<a href="#section-10.7-5" class="pilcrow">¶</a></p>
+<p id="section-10.7-6">IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can be joined and 0 if IPv4 channels cannot be joined.<a href="#section-10.7-6" class="pilcrow">¶</a></p>
 <p id="section-10.7-7">Max Aggregate Rate allowed across all joined channels is in Kibps.<a href="#section-10.7-7" class="pilcrow">¶</a></p>
 <p id="section-10.7-8">Max Channel IDs is the count of channel IDs that can be announced to this client and have keys.  Retired Channel IDs don't count against this value.<a href="#section-10.7-8" class="pilcrow">¶</a></p>
 <p id="section-10.7-9">Max Joined Count is the count of channels that are allowed to be joined concurrently.<a href="#section-10.7-9" class="pilcrow">¶</a></p>
@@ -2055,11 +2048,11 @@ It is a state change to the channel if the server requests that a client join a 
           <div class="alignLeft art-text artwork" id="section-10.9-4.1">
 <pre>
 MC_STATE Frame {
-  Type (i) = TBD-0b (experiments use 0xff3e80b),
+  Type (i) = TBD-0b..TBD-0c (experiments use 0xff3e80b and 0xff3e80c),
   Client Channel State Sequence Number (i),
   ID Length (8),
   Channel ID (8..160),
-  State (i),
+  State (8),
   Reason Code (i),
   Reason Phrase Length (i),
   Reason Phrase (..)
@@ -2081,39 +2074,41 @@ MC_STATE Frame {
           <li class="normal" id="section-10.9-6.4">0x4: RETIRED<a href="#section-10.9-6.4" class="pilcrow">¶</a>
 </li>
         </ul>
-<p id="section-10.9-7">If State is JOINED or RETIRED, the Reason Code MUST be REQUESTED_BY_SERVER (0x1).<a href="#section-10.9-7" class="pilcrow">¶</a></p>
-<p id="section-10.9-8">If State is LEFT or DECLINED_JOIN, for frames of type TBD-0b the Reason Code field is set to one of:<a href="#section-10.9-8" class="pilcrow">¶</a></p>
+<p id="section-10.9-7">If a server receives an undefined value, it SHOULD close the connection with reason MC_EXTENSION_ERROR.<a href="#section-10.9-7" class="pilcrow">¶</a></p>
+<p id="section-10.9-8">If State is JOINED or RETIRED, the Reason Code MUST be REQUESTED_BY_SERVER (0x1).<a href="#section-10.9-8" class="pilcrow">¶</a></p>
+<p id="section-10.9-9">If State is LEFT or DECLINED_JOIN, for frames of type TBD-0b the Reason Code field is set to one of:<a href="#section-10.9-9" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10.9-9.1">0x0: UNSPECIFIED_OTHER<a href="#section-10.9-9.1" class="pilcrow">¶</a>
+<li class="normal" id="section-10.9-10.1">0x0: UNSPECIFIED_OTHER<a href="#section-10.9-10.1" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.2">0x1: REQUESTED_BY_SERVER<a href="#section-10.9-9.2" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.2">0x1: REQUESTED_BY_SERVER<a href="#section-10.9-10.2" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.3">0x2: ADMINISTRATIVE_BLOCK<a href="#section-10.9-9.3" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.3">0x2: ADMINISTRATIVE_BLOCK<a href="#section-10.9-10.3" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.4">0x3: PROTOCOL_ERROR<a href="#section-10.9-9.4" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.4">0x3: PROTOCOL_ERROR<a href="#section-10.9-10.4" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.5">0x4: PROPERTY_VIOLATION<a href="#section-10.9-9.5" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.5">0x4: PROPERTY_VIOLATION<a href="#section-10.9-10.5" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.6">0x5: UNSYNCHRONIZED_PROPERTIES<a href="#section-10.9-9.6" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.6">0x5: UNSYNCHRONIZED_PROPERTIES<a href="#section-10.9-10.6" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.7">0x6: ID_COLLISION<a href="#section-10.9-9.7" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.7">0x6: ID_COLLISION<a href="#section-10.9-10.7" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.8">0x10: HELD_DOWN<a href="#section-10.9-9.8" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.8">0x10: HELD_DOWN<a href="#section-10.9-10.8" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.9">0x12: MAX_RATE_EXCEEDED<a href="#section-10.9-9.9" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.9">0x12: MAX_RATE_EXCEEDED<a href="#section-10.9-10.9" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.10">0x13: HIGH_LOSS<a href="#section-10.9-9.10" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.10">0x13: HIGH_LOSS<a href="#section-10.9-10.10" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.11">0x14: EXCESSIVE_SPURIOUS_TRAFFIC<a href="#section-10.9-9.11" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.11">0x14: EXCESSIVE_SPURIOUS_TRAFFIC<a href="#section-10.9-10.11" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-10.9-9.12">0x15: MAX_STREAMS_EXCEEDED<a href="#section-10.9-9.12" class="pilcrow">¶</a>
+          <li class="normal" id="section-10.9-10.12">0x15: MAX_STREAMS_EXCEEDED<a href="#section-10.9-10.12" class="pilcrow">¶</a>
 </li>
         </ul>
-<p id="section-10.9-10">For frames of type TBD-0c, the Reason Code is left to the application, as described in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-20.2" class="relref">Section 20.2</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span><a href="#section-10.9-10" class="pilcrow">¶</a></p>
-<p id="section-10.9-11">The Reason Phrase field, in combination with the Reason Phrase Length field, can optionally be used to give further details for the state change.<a href="#section-10.9-11" class="pilcrow">¶</a></p>
-<p id="section-10.9-12">A client might receive multicast packets that it can not associate with any channel ID, or that cannot be verified as matching hashes from MC_INTEGRITY frames, or cannot be decrypted.
+<p id="section-10.9-11">(Author's note TODO: consider whether that these reasons should be added to the QUIC Transport Error Codes registry (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-22.5" class="relref">Section 22.5</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span>) instead of defining a new registry specific to multicast.)<a href="#section-10.9-11" class="pilcrow">¶</a></p>
+<p id="section-10.9-12">For frames of type TBD-0c, the Reason Code is left to the application, as described in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-20.2" class="relref">Section 20.2</a> of [<a href="#RFC9000" class="xref">RFC9000</a>]</span><a href="#section-10.9-12" class="pilcrow">¶</a></p>
+<p id="section-10.9-13">The Reason Phrase field, in combination with the Reason Phrase Length field, can optionally be used to give further details for the state change.<a href="#section-10.9-13" class="pilcrow">¶</a></p>
+<p id="section-10.9-14">A client might receive multicast packets that it can not associate with any channel ID, or that cannot be verified as matching hashes from MC_INTEGRITY frames, or cannot be decrypted.
 This traffic is presumed either to have been corrupted in transit or to have been sent by someone other than the legitimate sender of traffic for the channel, possibly by an attacker or a misconfigured sender.
-If these packets are addressed to an (S,G) that is used for reception in one or more known channels, the client MAY leave these channels with reason "Excessive Spurious traffic".<a href="#section-10.9-12" class="pilcrow">¶</a></p>
+If these packets are addressed to an (S,G) that is used for reception in one or more known channels, the client MAY leave these channels with reason "Excessive Spurious traffic".<a href="#section-10.9-14" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2407,7 +2402,7 @@ which was already checked on the unicast channel?)<a href="#section-13-3" class=
 <dd class="break"></dd>
 <dt id="I-D.draft-ietf-quic-multipath">[I-D.draft-ietf-quic-multipath]</dt>
         <dd>
-<span class="refAuthor">Liu, Y.</span>, <span class="refAuthor">Ma, Y.</span>, <span class="refAuthor">Coninck, Q. D.</span>, <span class="refAuthor">Bonaventure, O.</span>, <span class="refAuthor">Huitema, C.</span>, and <span class="refAuthor">M. Kuehlewind</span>, <span class="refTitle">"Multipath Extension for QUIC"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-quic-multipath-01</span>, <time datetime="2022-03-07" class="refDate">7 March 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-01">https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-01</a>&gt;</span>. </dd>
+<span class="refAuthor">Liu, Y.</span>, <span class="refAuthor">Ma, Y.</span>, <span class="refAuthor">Coninck, Q. D.</span>, <span class="refAuthor">Bonaventure, O.</span>, <span class="refAuthor">Huitema, C.</span>, and <span class="refAuthor">M. Kuehlewind</span>, <span class="refTitle">"Multipath Extension for QUIC"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-quic-multipath-02</span>, <time datetime="2022-07-11" class="refDate">11 July 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-02">https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-krose-multicast-security">[I-D.draft-krose-multicast-security]</dt>
         <dd>
