@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-07-10T00:36:22.366014+00:00",
+  "timestamp": "2022-07-12T00:32:35.314276+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -1554,7 +1554,7 @@
       "labels": [],
       "body": "There's a few fields that are varints, supporting a huge 62-bit space of values. Yet only a handful of values are defined in this spec.\r\nThat leaves plenty of space for future extension, but we've learned that you have to \"use it or lose it\". QUIC addresses this concern by GREASING a.k.a reserving a wide range of values that have no meaning and must be ignored - https://www.rfc-editor.org/rfc/rfc9000.html#section-22.3-7\r\n\r\nWe might want to consider similar here.\r\n",
       "createdAt": "2022-07-05T01:22:53Z",
-      "updatedAt": "2022-07-09T15:06:10Z",
+      "updatedAt": "2022-07-10T01:05:57Z",
       "closedAt": null,
       "comments": [
         {
@@ -1570,6 +1570,20 @@
           "body": "I think it's useful to think about this throught the eye of extensibility. Is there anything we might add later that is safe to send without waiting for the peer to tell us it is safe first. The way to do this is to ignore unknown values. That's a design choice this specification should be clear about whether it supports it or not.\r\n\r\nGiven that there is a PR to change the capabilities to be a bit field, that is going to constrain the scope of problem that GREASING is intended to address. So I don't think any greasing is required there.\r\n\r\nSo then we are left with MC_STATE `State` or `Reason` codes. It turns out that, for some reason, QUIC transport doesn't GREASE error codes but HTTP/3 does. That might have been the reason for part of the confusion. Personally, given that the `State` field can potentially have non-trivial impact on the protocol at runtime, I think there is some benefit in asupporting future extensions via ignoring unknown state values and greasing that field. But maybe you disagree?\r\n\r\nI'm not so worried about the Reason code, that's probably mostly used for logging or offline purposes.\r\n\r\n",
           "createdAt": "2022-07-09T15:06:10Z",
           "updatedAt": "2022-07-09T15:06:10Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "I guess if we assume other possible values for state are only in the style of DECLINED_JOIN, where they don't actually come with a change in the state, then we could ignore other values and grease them (like a REPORT_STATUS or something?  A \"NETWORK_SUPPRESSED\" that you could send in addition to your separate JOINED state to indicate to servers that understand it that traffic is not actually expected because of a future multicast feature that reports success/failure of the IGMP membership propagation to the client, and a corresponding NETWORK_UNSUPPRESSED?).\r\n\r\nBy default I was thinking if we need future extensions to the state transition signals, they may or may not be no-ops to the current state, so ignoring them might not be right, and therefore support for the new improved state transitions would have to be negotiated in an updated transport parameters or something, and you're forbidden from sending unknown state transition signals to endpoints that haven't negotiated support for them, on pain of connection close/MC_EXTENSION_ERROR.\r\n\r\nI guess I'm pretty agnostic here.",
+          "createdAt": "2022-07-10T00:57:52Z",
+          "updatedAt": "2022-07-10T00:57:52Z"
+        },
+        {
+          "author": "GrumpyOldTroll",
+          "authorAssociation": "OWNER",
+          "body": "However, this line of reasoning suggests to me that maybe we should have a list of capabilities (which can have unknown greasable capabilities) in the transport parameters instead of just a bitfield for ipv4/ipv6.  Like maybe there's a difference between \"I am currently capable of joining an IPv4 group\" and \"I understand how to interpret IPv4 addresses\", and the 2nd could be a listed capability among potentially numerous capabilities, whereas the first remains a bit that can be updated by a later MC_LIMITS.",
+          "createdAt": "2022-07-10T01:02:44Z",
+          "updatedAt": "2022-07-10T01:05:57Z"
         }
       ]
     },
@@ -4123,7 +4137,7 @@
       "labels": [],
       "body": "address #95",
       "createdAt": "2022-07-09T01:38:24Z",
-      "updatedAt": "2022-07-10T00:34:23Z",
+      "updatedAt": "2022-07-10T00:58:28Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "fa664bb279efd92bfc2473869dd9df440ae102ed",
@@ -4143,6 +4157,13 @@
           "body": "I think it's good to have both because the server can go ahead and send MC_xxx frames in the first response packet, and we don't have to wait for the unicast handshake to complete before we can start sending MC_LIMITS and then wait for the MC_LIMITS before sending an MC_ANNOUNCE, MC_KEY, and MC_JOIN.  So this saves a round trip I think.",
           "createdAt": "2022-07-10T00:34:23Z",
           "updatedAt": "2022-07-10T00:34:23Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "COLLABORATOR",
+          "body": "+1 to both, transport parameters are cheap and help endpoints coordinate what they are doing very early in the connection.",
+          "createdAt": "2022-07-10T00:57:41Z",
+          "updatedAt": "2022-07-10T00:57:41Z"
         }
       ],
       "reviews": [
@@ -4209,24 +4230,26 @@
       "id": "PR_kwDOG6NyZs47Irmw",
       "title": "tighten up the small bit fields",
       "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/pull/99",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "GrumpyOldTroll",
       "authorAssociation": "OWNER",
       "assignees": [],
       "labels": [],
       "body": "tries to address:\r\n- #82 \r\n- #85 \r\n\r\nI think it partially addresses #86 also, but I'm not sure it fully covers the GREASE suggestion.",
       "createdAt": "2022-07-09T02:35:17Z",
-      "updatedAt": "2022-07-10T00:29:25Z",
+      "updatedAt": "2022-07-11T14:05:35Z",
       "baseRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "baseRefName": "main",
       "baseRefOid": "fa664bb279efd92bfc2473869dd9df440ae102ed",
       "headRepository": "GrumpyOldTroll/draft-jholland-quic-multicast",
       "headRefName": "issues-82-85-86",
       "headRefOid": "d6e57b2f01f501fef1f3b7bd9f9d03304810e986",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2022-07-11T14:05:31Z",
+      "mergedAt": "2022-07-11T14:05:31Z",
+      "mergedBy": "GrumpyOldTroll",
+      "mergeCommit": {
+        "oid": "fd10b7a8e750e98fd58cd486c6f562eae7ecddf9"
+      },
       "comments": [
         {
           "author": "MaxF12",
@@ -4323,6 +4346,39 @@
               "updatedAt": "2022-07-10T00:19:15Z"
             }
           ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs49my4O",
+          "commit": {
+            "abbreviatedOid": "d6e57b2"
+          },
+          "author": "LPardue",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-07-10T00:52:13Z",
+          "updatedAt": "2022-07-10T00:52:13Z",
+          "comments": [
+            {
+              "originalPosition": 36,
+              "body": "ah I'll correct myself, QUIC is pretty clear in https://www.rfc-editor.org/rfc/rfc9000.html#section-1.3-5 on that.\r\nBut doing it with explicit field values as in the diagram works well too.\r\n\r\n",
+              "createdAt": "2022-07-10T00:52:13Z",
+              "updatedAt": "2022-07-10T00:52:13Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOG6NyZs49my4b",
+          "commit": {
+            "abbreviatedOid": "d6e57b2"
+          },
+          "author": "LPardue",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2022-07-10T00:52:23Z",
+          "updatedAt": "2022-07-10T00:52:23Z",
+          "comments": []
         }
       ]
     },
