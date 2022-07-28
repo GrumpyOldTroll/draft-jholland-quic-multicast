@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-07-12T00:32:35.314276+00:00",
+  "timestamp": "2022-07-28T00:30:54.634922+00:00",
   "repo": "GrumpyOldTroll/draft-jholland-quic-multicast",
   "labels": [
     {
@@ -1851,6 +1851,30 @@
           "body": "Yeah, good point.  The reaction should be specified.  My first idea is that declining a join to such a channel with a new reason like UNUSABLE_ADDRESS might be right.  We don't really have a way to object to an announce, but refusing a join is easy.  (BAD_ADDRESS also might be applicable for addresses that are multicast but reserved, or that are in a range that isn't for SSM.)",
           "createdAt": "2022-07-10T00:13:08Z",
           "updatedAt": "2022-07-10T00:13:08Z"
+        }
+      ]
+    },
+    {
+      "number": 102,
+      "id": "I_kwDOG6NyZs5OlGaK",
+      "title": "How to deal with frames of other QUIC extensions ",
+      "url": "https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/102",
+      "state": "OPEN",
+      "author": "MaxF12",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Section 11 has a list of permitted and not permitted frames, we should probably make it more explicit that the list isn\u2019t exhaustive and that frames that are introduced by future QUIC extensions should be handled on a common sense basis (or similar)",
+      "createdAt": "2022-07-26T14:42:48Z",
+      "updatedAt": "2022-07-26T14:46:05Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "MaxF12",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Also, Reading the list, why are ANNOUNCE and JOIN frames not allowed? It would make failovers more easy to handle when you know this channel will soon close (for whatever reason) and clients should switch to an new one",
+          "createdAt": "2022-07-26T14:45:54Z",
+          "updatedAt": "2022-07-26T14:46:05Z"
         }
       ]
     }
