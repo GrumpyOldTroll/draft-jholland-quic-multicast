@@ -461,6 +461,8 @@ Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT
 Secrets with a Key Phase indicating an unknown key SHOULD be discarded without attempting to decrypt them.
 (An unknown key might happen after loss of the latest MC_KEY frame, so that packets on a channel have an updated Key Phase starting at a particular packet number, but the client does not yet know about the key change.)
 
+Should a client receive two different Keys with the same Key Sequence Number and Channel ID, e.g. one over the unicast connection and one over the multicast channel, it SHOULD close the connection with reason MC_EXTENSION_ERROR.
+
 It is RECOMMENDED that servers send regular secret updates.
 
 MC_KEY frames are formatted as shown in {{fig-mc-channel-key-format}}.
@@ -517,11 +519,11 @@ MC_JOIN frames are formatted as shown in {{fig-mc-channel-join-format}}.
 ~~~
 MC_JOIN Frame {
   Type (i) = TBD-02 (experiments use 0xff3e802),
+  ID Length (8),
+  Channel ID (8..160),
   MC_LIMITS Sequence Number (i),
   MC_STATE Sequence Number (i),
-  MC_KEY Sequence Number (i),
-  ID Length (8),
-  Channel ID (8..160)
+  MC_KEY Sequence Number (i)
 }
 ~~~
 {: #fig-mc-channel-join-format title="MC_JOIN Frame Format"}
@@ -677,9 +679,9 @@ MC_STATE frames are formatted as shown in {{fig-mc-client-channel-state-format}}
 ~~~
 MC_STATE Frame {
   Type (i) = TBD-0b..TBD-0c (experiments use 0xff3e80b and 0xff3e80c),
-  Client Channel State Sequence Number (i),
   ID Length (8),
   Channel ID (8..160),
+  Client Channel State Sequence Number (i),
   State (8),
   Reason Code (i),
   Reason Phrase Length (i),
