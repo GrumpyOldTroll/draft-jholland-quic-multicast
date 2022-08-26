@@ -191,8 +191,8 @@ The client tells its server about some restrictions on resources that it is capa
 The server asks the client to join channels with MC_JOIN ({{channel-join-frame}}) frames and to leave channels with MC_LEAVE ({{channel-leave-frame}}) frames.
 
 The server uses the MC_ANNOUNCE ({{channel-announce-frame}}) frame before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the secrets necessary to decode the headers of packets in the channel.
-This is done in advance of sending an MC_JOIN frame to make sure the client can establish necessary state for joining and retire any connection IDs that would be colliding with the channel ID.
-Separating announcement of channels from joining also allows clients to leave and later rejoin channels in cases where they get temporarily experience a high rate of loss or switch to a network that does not support multicast.
+Sending an MC_ANNOUNCE before an MC_JOIN ensures the client can establish the necessary state required to join and retire any connection IDs that might collide with channel IDs.
+Separating announcement of channels from joining them allows clients to leave and later rejoining channels at their discretion without the cost of terminating a connection. This could, for example, be used by clients to temporarily disabling multicast reception in response to a high rate of loss or a switch to a network that does not support multicast.
 MC_KEY frames provide the secrets necessary to decode the payload of packets in the channel.
 {{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
@@ -783,7 +783,7 @@ Not permitted:
 
 Note that when a newly connected client joins a channel, the client will only be able to receive application data carried in stream frames delivered on that channel when they have received the stream data starting from offset 0 of the stream.
 
-This usually means that new streams must be started for application data carried in channel packets whenever there might be new clients that have joined since an earlier stream started. If the server deems it convenient, it could also send preceding data for that stream over the unicast conenction to catch the client up.
+This usually means that new streams must be started for application data carried in channel packets whenever there might be new clients that have joined since an earlier stream started. If the server deems it convenient, it could also send preceding data for that stream over the unicast connection to catch the client up.
 
 With broadcast video, this usually means a new stream is necessary for every video segment or group of video frames since new clients will join throughout the broadcast, whereas for video conferencing, it could be possible to start a new stream whenever new clients join the conference without needing a new stream per object.
 
