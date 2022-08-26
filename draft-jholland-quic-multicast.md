@@ -110,7 +110,7 @@ Multicast channels are designed to leverage multicast IP and to be shared by man
 One or more servers can use the same QUIC multicast channel to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
 (Note that QUIC connections are defined in {{Section 5 of RFC9000}} and are not changed in this document; each connection is a shared state between a client and a server.)
 
-Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels do not support any-source multicast (ASM) semantics.
+Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels only support source-specific multicast (SSM) and do not support any-source multicast (ASM) semantics.
 
 Channels carry only 1-RTT packets.
 Packets associated with a channel contain a Channel ID in place of a Destination Connection ID.
