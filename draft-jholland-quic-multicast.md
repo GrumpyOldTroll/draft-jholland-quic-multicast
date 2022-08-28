@@ -158,9 +158,9 @@ multicast_client_params {
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Hash Algorithms Supported (i),
-  Header Protection Algorithms Supported (i),
+  Encryption Algorithms Supported (i),
   Hash Algorithms List (16 * Hash Algorithms Supported),
-  Header Protection Algorithms List (16 * Header Protection Algorithms Supported)
+  Encryption Algorithms List (16 * Encryption Algorithms Supported)
 }
 ~~~
 {: #fig-transport-parameter-format title="multicast_client_params Format"}
@@ -169,7 +169,7 @@ The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, 
 
 A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not allowed according to the IPv4 and IPv6 Channels Allowed fields in the multicast_client_params, unless and until a later MC_LIMITS ({{client-limits-frame}}) frame adds permission for a different address family.
 
-The Header Protection Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
+The Encryption Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
 If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.
 
 The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:
@@ -192,7 +192,6 @@ The server asks the client to join channels with MC_JOIN ({{channel-join-frame}}
 
 The server uses the MC_ANNOUNCE ({{channel-announce-frame}}) frame before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the secrets necessary to decode the headers of packets in the channel.
 Sending an MC_ANNOUNCE before an MC_JOIN ensures the client can establish the necessary state required to join and retire any connection IDs that might collide with channel IDs.
-Separating announcement of channels from joining them allows clients to leave and later rejoining channels at their discretion without the cost of terminating a connection. This could, for example, be used by clients to temporarily disabling multicast reception in response to a high rate of loss or a switch to a network that does not support multicast.
 MC_KEY frames provide the secrets necessary to decode the payload of packets in the channel.
 {{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
@@ -916,7 +915,7 @@ TODO: lots
 # Acknowledgments
 {:numbered="false"}
 
-Thanks to Martin Duke, Sam Hurst and Michael Welzl for their reviews.
+Thanks to Martin Duke, Sam Hurst, Kyle Rose, Michael Welzl and Momoka Yamamoto for their helpful reviews and comments.
 
 This work has been supported by the Federal Ministry of Education and Research of Germany in the programme of “Souverän. Digital. Vernetzt.” Joint project 6G-RIC, project identification number (PIN): FKZ 16KISK030
 
