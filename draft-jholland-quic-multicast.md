@@ -121,7 +121,7 @@ Incoming packets received on the network path associated with a channel use the 
 A client with a matching joined channel always has at least one connection associated with the channel.
 If a client has no matching joined channel, the packet is discarded.
 
-Each channel has an independent packet number space.
+Each channel has an independent packet number space. To enable clients to detect lost packets, packet numbers in channels MUST be continuous.
 Since the network path for a channel is unidirectional and uses a different packet number space than the unicast part of the connection, packets associated with a channel are acknowledged with MC_ACK frames {{channel-ack-frame}} instead of ACK frames.
 
 The use of any particular channel is OPTIONAL for both the server and the client.
@@ -158,9 +158,9 @@ multicast_client_params {
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Hash Algorithms Supported (i),
-  AEAD Algorithms Supported (i),
+  Encryption Algorithms Supported (i),
   Hash Algorithms List (16 * Hash Algorithms Supported),
-  AEAD Algorithms List (16 * AEAD Algorithms Supported)
+  Encryption Algorithms List (16 * Encryption Algorithms Supported)
 }
 ~~~
 {: #fig-transport-parameter-format title="multicast_client_params Format"}
@@ -169,7 +169,7 @@ The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, 
 
 A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not allowed according to the IPv4 and IPv6 Channels Allowed fields in the multicast_client_params, unless and until a later MC_LIMITS ({{client-limits-frame}}) frame adds permission for a different address family.
 
-The AEAD Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
+The Encryption Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
 If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.
 
 The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:
@@ -191,6 +191,7 @@ The client tells its server about some restrictions on resources that it is capa
 The server asks the client to join channels with MC_JOIN ({{channel-join-frame}}) frames and to leave channels with MC_LEAVE ({{channel-leave-frame}}) frames.
 
 The server uses the MC_ANNOUNCE ({{channel-announce-frame}}) frame before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the secrets necessary to decode the headers of packets in the channel.
+Sending an MC_ANNOUNCE before an MC_JOIN ensures the client can establish the necessary state required to join and retire any connection IDs that might collide with channel IDs.
 MC_KEY frames provide the secrets necessary to decode the payload of packets in the channel.
 {{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
@@ -331,7 +332,7 @@ The server also advertises the expected maxima of the values that can contribute
 The client also monitors the packets received to ensure that channels don't exceed their advertised values, and leaves channels that do.
 
 If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back an MC_STATE frame ({{client-channel-state-frame}}) with "DECLINED_JOIN" and reason "PROPERTY_VIOLATION".
-If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Key Sequence Number that the client has not yet seen, the client should instead send back a "DECLINED_JOIN" with "Desynchronized Limit Violation".
+If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Key Sequence Number that the client has not yet seen, the client should instead send back a "DECLINED_JOIN" with "UNSYNCHRONIZED_PROPERTIES".
 If the actual contents sent in the channel exceed the advertised limits from the MC_ANNOUNCE, clients SHOULD leave the stream and send an MC_STATE(LEFT) frame, using the Limit Violated reason.
 
 # Congestion Control {#congestion-control}
@@ -407,7 +408,7 @@ MC_ANNOUNCE Frame {
   Source IP (32..128),
   Group IP (32..128),
   UDP Port (16),
-  Header AEAD Algorithm (16),
+  Header Protection Algorithm (16),
   Header Secret Length (i),
   Header Secret (..),
   AEAD Algorithm (16),
@@ -427,9 +428,9 @@ MC_ANNOUNCE frames contain the following fields:
   * Source IP: The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by the frame type (TBD-11 indicates IPv4, TBD-12 indicates IPv6).
   * Group IP: The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by the frame type (TBD-11 indicates IPv4, TBD-12 indicates IPv6).
   * UDP Port: The 16-bit UDP Port of traffic for the channel.
-  * Header AEAD Algorithm: A value from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>), used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
+  * Header Protection Algorithm: A value from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>), used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
   * Header Secret Length: Provides the length of the Secret field.
-  * Header Secret: A secret for use with the Header AEAD Algorithm for protecting the header fields of 1-RTT packets in the channel as described in {{RFC9001}}.  The Key and Initial Vector for the application data carried in the 1-RTT packet header fields are derived from this secret as described in {{Section 7.3 of RFC8446}}.
+  * Header Secret: A secret for use with the Header Protection Algorithm for protecting the header fields of 1-RTT packets in the channel as described in {{RFC9001}}.  The Key and Initial Vector for the application data carried in the 1-RTT packet header fields are derived from this secret as described in {{Section 7.3 of RFC8446}}.
   * AEAD Algorithm: A value from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>), used to protect the payloads in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
   * Integrity Hash Algorithm: The hash algorithm used in integrity frames.
     * **Author's Note:** Several candidate IANA registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:
@@ -662,7 +663,7 @@ MC_RETIRE Frame {
 Retires a channel by ID, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
 If After Packet Number is nonzero and the channel is joined and has received any data, the channel will be retired after receiving that packet or a higher valued number, otherwise it will be retired immediately.
 
-After retiring a channel, the client MUST send a new MC_STATE frame with reason RETIRED to the server.
+After receiving an MC_RETIRE and retiring a channel, the client MUST send a new MC_STATE frame with reason RETIRED to the server.
 
 If the client is still joined in the channel that is being retired, it MUST also leave it. If a channel is left this way, it does not need to send an additional MC_STATE frame with state LEFT, as state RETIRED also implies the channel was left.
 
@@ -781,7 +782,7 @@ Not permitted:
 
 Note that when a newly connected client joins a channel, the client will only be able to receive application data carried in stream frames delivered on that channel when they have received the stream data starting from offset 0 of the stream.
 
-This usually means that new streams must be started for application data carried in channel packets whenever there might be new clients that have joined since an earlier stream started.
+This usually means that new streams must be started for application data carried in channel packets whenever there might be new clients that have joined since an earlier stream started. If the server deems it convenient, it could also send preceding data for that stream over the unicast connection to catch the client up.
 
 With broadcast video, this usually means a new stream is necessary for every video segment or group of video frames since new clients will join throughout the broadcast, whereas for video conferencing, it could be possible to start a new stream whenever new clients join the conference without needing a new stream per object.
 
@@ -913,5 +914,9 @@ TODO: lots
 
 # Acknowledgments
 {:numbered="false"}
+
+Thanks to Martin Duke, Sam Hurst, Kyle Rose, Michael Welzl and Momoka Yamamoto for their helpful reviews and comments.
+
+This work has been supported by the Federal Ministry of Education and Research of Germany in the programme of “Souverän. Digital. Vernetzt.” Joint project 6G-RIC, project identification number (PIN): FKZ 16KISK030
 
 TODO acknowledge.
