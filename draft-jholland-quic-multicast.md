@@ -391,6 +391,15 @@ it MAY take the necessary steps to prevent the reception of further such packets
 
 If a server or client detect a stateless reset for a channel, they MUST ignore it.
 
+## Connection Migration
+
+If the unicast connection migrated, e.g. due to a change of the NAT binding or because the UE has changed to a different network, the client properties might change.
+For example, the client might switch from a network that supports both IPv6 and IPv4 multicast to a network that only support IPv4. As such, it MUST immediately send an MC_LIMITS frame after it has noticed that it migrated.
+The client MAY rejoin any previously joined channels, if its limits still allow it to. It MUST send MC_STATE(LEFT) frames with reason LIMIT_VIOLATION for any channels it does not rejoin.
+
+The server SHOULD take notice of migrating clients as the delay that is being caused by rejoining a multicast group can lead to exceeding the expected MAX_ACK_DELAY, which a server might interpret as a loss of multicast connectivity.
+Instead, the server SHOULD treat all multicast channels of a client whose unicast connection just migrated as if it had just joined these channels initially and allow for ample time before expecting the first MC_ACK frames.
+
 # New Frames
 
 ## MC_ANNOUNCE {#channel-announce-frame}
@@ -716,6 +725,7 @@ If State is LEFT or DECLINED_JOIN, for frames of type TBD-0b the Reason Code fie
  * 0x13: HIGH_LOSS
  * 0x14: EXCESSIVE_SPURIOUS_TRAFFIC
  * 0x15: MAX_STREAMS_EXCEEDED
+ * 0x16: LIMIT_VIOLATION
 
 (Author's note TODO: consider whether that these reasons should be added to the QUIC Transport Error Codes registry ({{Section 22.5 of RFC9000}}) instead of defining a new registry specific to multicast.)
 
