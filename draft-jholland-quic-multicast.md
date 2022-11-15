@@ -395,10 +395,10 @@ If a server or client detect a stateless reset for a channel, they MUST ignore i
 
 If the unicast connection migrated, e.g. due to a change of the NAT binding or because the UE has changed to a different network, the client properties might change.
 For example, the client might switch from a network that supports both IPv6 and IPv4 multicast to a network that only support IPv4. As such, it MUST immediately send an MC_LIMITS frame after it has noticed that it migrated.
-The client MAY rejoin any previously joined channels, if its limits still allow it to. It MUST send MC_STATE(LEFT) frames with reason LIMIT_VIOLATION for any channels it is not able to rejoin.
+The client MAY rejoin any previously joined channels, if its limits still allow it to. It MUST send MC_STATE(LEFT) frames with reason LIMIT_VIOLATION for any channels it does not rejoin.
 
-The server SHOULD take notice of migrating clients as the delay that is being caused by rejoining a multicast group can lead to exceeding the expected MAX_ACK_DELAY, which a server might interpret as a loss of multicast connectivity and react by sending an MC_LEAVE frame.
-Instead, the server SHOULD treat all multicast channels of a client whos unicast connection just migrated as if it had just joined these channels initially and allow for ample time before expecting the first MC_ACK frames.
+The server SHOULD take notice of migrating clients as the delay that is being caused by rejoining a multicast group can lead to exceeding the expected MAX_ACK_DELAY, which a server might interpret as a loss of multicast connectivity.
+Instead, the server SHOULD treat all multicast channels of a client whose unicast connection just migrated as if it had just joined these channels initially and allow for ample time before expecting the first MC_ACK frames.
 
 # New Frames
 
