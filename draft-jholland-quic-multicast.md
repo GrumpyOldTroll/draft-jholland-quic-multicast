@@ -375,6 +375,7 @@ All the new frames defined in this document except MC_ACK are ack-eliciting and 
 Note that recovery MAY be achieved either by retransmitting frame data that was lost and needs reliable transport either by sending the frame data on the unicast connection or by coordinating to cause an aggregated retransmission of widely dropped data on a multicast channel, at the server's discretion.
 However, the server in each connection is responsible for ensuring that any necessary server-to-client frame data lost by a multicast channel packet loss ultimately arrives at the client.
 
+
 # Connection Termination
 
 Termination of the unicast connection behaves as described in {{Section 10 of RFC9000}}, with the following notable differences:
@@ -737,6 +738,14 @@ A client might receive multicast packets that it can not associate with any chan
 This traffic is presumed either to have been corrupted in transit or to have been sent by someone other than the legitimate sender of traffic for the channel, possibly by an attacker or a misconfigured sender.
 If these packets are addressed to an (S,G) that is used for reception in one or more known channels, the client MAY leave these channels with reason "Excessive Spurious traffic".
 
+## Retransmission of information
+In addition to the mechanisms used for retransmission described in {{Section 13.3 of RFC9000}} and {{Section 5.2 of RFC9221}} the following rules apply to the newly introduced frames:
+
+- As the properties carried in MC_ANNOUNCE frames can not change during the lifetime of a channel, information contained in them can be retransmitted one to one.
+- Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission MUST only occur if the channel in question should still be joined/left/retired.
+- Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.
+- For the 4 remaining frames, MC_KEY, MC_INTEGRITY, MC_LIMITS and MC_STATE, retransmissions MUST include the most up to date information, i.e. the most recent key, integrity hash, client limits or state.
+
 # Frames Carried in Channel Packets
 
 Multicast channels will contain normal QUIC 1-RTT data packets (see {{Section 17.3.1 of RFC9000}}) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys derived from the secrets in MC_KEY frames for the corresponding channel.
@@ -877,6 +886,8 @@ Servers, possibly many of them, still will be required to maintain unicast conne
 Further, the use of multicast channels likely requires increased coordination between the different servers, relative to services that operate completely independently.
 
 For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.
+
+As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that packets are stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server.
 
 ## Address Collisions {#address-collisions}
 
