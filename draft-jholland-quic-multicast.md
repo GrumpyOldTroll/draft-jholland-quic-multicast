@@ -325,6 +325,8 @@ The same stream ID may be used in both one or more multicast channels and the un
 # Flow Control {#flow-control}
 
 The values used for unicast flow control cannot be used to limit the transmission rate of a multicast channel because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that channels responded to each client's limits.
+Instead of terminating a connection if its MAX_DATA gets exceeded (as described in {{Section 19.9 of RFC9000}}), a client must be able to robustly handle multicast packets that would exceed its MAX_DATA without aborting the connection, either by increasing its MAX_DATA as needed to keep up with received multicast packets or by dropping the packet and leaving the channel (resulting in unicast fallback).
+If a server detects that a clients MAX_DATA is about to be exceeded, it MUST instruct the client to leave channels to prevent any further MAX_DATA violations.
 
 Instead, clients advertise resource limits via MC_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
 The server is responsible for keeping the client within its advertised limits, by ensuring via MC_JOIN and MC_LEAVE frames that the set of channels the client is asked to be joined to will not, in aggregate, exceed the client's advertised limits.
