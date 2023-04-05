@@ -375,7 +375,6 @@ All the new frames defined in this document except MC_ACK are ack-eliciting and 
 Note that recovery MAY be achieved either by retransmitting frame data that was lost and needs reliable transport either by sending the frame data on the unicast connection or by coordinating to cause an aggregated retransmission of widely dropped data on a multicast channel, at the server's discretion.
 However, the server in each connection is responsible for ensuring that any necessary server-to-client frame data lost by a multicast channel packet loss ultimately arrives at the client.
 
-
 # Connection Termination
 
 Termination of the unicast connection behaves as described in {{Section 10 of RFC9000}}, with the following notable differences:
