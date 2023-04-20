@@ -681,7 +681,7 @@ If the client is still joined in the channel that is being retired, it MUST also
 ## MC_STATE {#client-channel-state-frame}
 
 MC_STATE frames (type=TBD-0b or TBD-0c) are sent from client to server to report changes in the client's channel state.
-Each time the channel state changes, the Client Channel State Sequence number is increased by one.
+Each time the channel state changes, the Client Channel State Sequence number is increased by one. Due to packet loss it is possible that Sequence numbers aren't continuous on the server side. As such, the server MUST only consider the frames with the highest Sequence number.
 It is a state change to the channel if the server requests that a client join a channel and the client declines the join, even though no join occurs on the network.
 
 Frames of type TBD-0b are used for cases in which the reason for the state change occur in the QUIC multicast layer while frames of type TBD-0c are used for reasons that are application specific.
@@ -742,8 +742,8 @@ If these packets are addressed to an (S,G) that is used for reception in one or 
 ## Retransmission of information
 In addition to the mechanisms used for retransmission described in {{Section 13.3 of RFC9000}} and {{Section 5.2 of RFC9221}} the following rules apply to the newly introduced frames:
 
-- As the properties carried in MC_ANNOUNCE frames can not change during the lifetime of a channel, information contained in them can be retransmitted one to one.
-- Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission MUST only occur if the channel in question should still be joined/left/retired.
+- As the properties carried in MC_ANNOUNCE frames can not change during the lifetime of a channel, information contained in them can be retransmitted without any special considerations.
+- Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission SHOULD only occur if the channel in question should still be joined/left/retired.
 - Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.
 - For the 4 remaining frames, MC_KEY, MC_INTEGRITY, MC_LIMITS and MC_STATE, retransmissions MUST include the most up to date information, i.e. the most recent key, integrity hash, client limits or state.
 
@@ -888,7 +888,7 @@ Further, the use of multicast channels likely requires increased coordination be
 
 For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.
 
-As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that packets are stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server.
+As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server.
 
 ## Address Collisions {#address-collisions}
 
