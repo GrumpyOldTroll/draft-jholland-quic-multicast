@@ -888,7 +888,7 @@ Further, the use of multicast channels likely requires increased coordination be
 
 For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.
 
-As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server.
+As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server. The guidance provided in {{Section 13.2 of RFC9000}} should still be followed on when to send ACKs.
 
 ## Address Collisions {#address-collisions}
 
