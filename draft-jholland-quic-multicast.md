@@ -289,7 +289,7 @@ MC_STATE frames are only sent for channels after the server has requested the cl
 
 Clients that receive and decode data on a multicast channel send acknowledgements for the data on the unicast connection using MC_ACK ({{channel-ack-frame}}) frames.
 
-A server can determine if a client receives packets for a multicast channel if it receives MC_ACK frames associated with that channel.
+A server can determine if a client receives packets for a multicast channel if it receives MC_ACK frames associated with that channel. Accordingly, a client MUST send an MC_ACK frame as soon as possible after receiving the first packets on a newly joined channel.
 As such, it is in general up to the server to decide on the time after which it deems a client to be unable to receive packets on a given channel and take appropriate steps, e.g. sending an MC_LEAVE frame to the client.
 Note that clients willing to join a channel SHOULD remain joined to the channel even if they receive no channel data for an extended period, to enable multicast-capable networks to perform popularity-based admission control for multicast channels.
 
