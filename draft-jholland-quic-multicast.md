@@ -52,6 +52,7 @@ informative:
 
   I-D.draft-ietf-webtrans-http3:
   I-D.draft-ietf-masque-h3-datagram:
+  I-D.draft-michel-quic-fec:
   RFC4607:
   RFC6363:
   RFC6726:
@@ -86,6 +87,7 @@ Thus, this specification has several design goals:
  - Provide flow control and congestion control mechanisms that work with multicast traffic
  - Maintain the confidentiality, integrity, and authentication guarantees of QUIC as appropriate for multicast traffic, fully meeting the security goals described in {{I-D.draft-krose-multicast-security}}
  - Leverage the scalability of multicast IP for data that is transmitted identically to many clients
+ - Rely on Multipath QUIC ({{I-D.draft-ietf-quic-multipath}}) to provide multicast as a service for clients
 
 This document does not define any multicast transport except server to client and only includes semantics for source-specific multicast.
 
@@ -376,6 +378,11 @@ All the new frames defined in this document except MC_ACK are ack-eliciting and 
 
 Note that recovery MAY be achieved either by retransmitting frame data that was lost and needs reliable transport either by sending the frame data on the unicast connection or by coordinating to cause an aggregated retransmission of widely dropped data on a multicast channel, at the server's discretion.
 However, the server in each connection is responsible for ensuring that any necessary server-to-client frame data lost by a multicast channel packet loss ultimately arrives at the client.
+
+LN:
+To minimize the amount of additional packets sent on a multicast channel when retransmiting frames, the server SHOULD use Forward Erasure Correction (FEC) techniques following guidelines from {{I-D.draft-michel-quic-fec}}. Instead of retransmitting the frames directly, the server sends FEC repair packets on the multicast channel. As such, an individual repair packet can recover different losses on distinct clients, thus minimizing the amount of data sent on a multicast channel. The scheduling of these repair packets is implementation-dependent and hence out of scope of this document.
+
+Clients MUST NOT send ACK_MP frames for ack-eliciting frames received on the multicast channel. Instead, this draft introduces the new MC_NACK frame. Clients send MC_NACK frames whenever they see a gap in the packet number sequence for packets received on the multicast path. MC_NACK frames MUST be sent on the unicast path between the client and the server, and are ack-eliciting. The server SHOULD use the ranges of missing packet numbers from received MC_NACK frames to generate the correct amount of FEC repair frames sent on the multicast path.
 
 # Connection Termination
 
@@ -739,6 +746,30 @@ A client might receive multicast packets that it can not associate with any chan
 This traffic is presumed either to have been corrupted in transit or to have been sent by someone other than the legitimate sender of traffic for the channel, possibly by an attacker or a misconfigured sender.
 If these packets are addressed to an (S,G) that is used for reception in one or more known channels, the client MAY leave these channels with reason "Excessive Spurious traffic".
 
+## MC_NACK {#channel-nack-frame}
+
+The MC_NACK frame (types TBD-13 and TBD-14) is a modified extension of the ACK frame defined by {{RFC9000}}. It is used to negatively acknowledge packets sent on a multicast channel. Negatively acknowledging packets means reporting only packet numbers that were not received from the peer.
+Similarly to ACK_MP frames from {{Section 12.2 of I-D.draft-ietf-quic-multipath}}, MC_NACK frames identify a different packet number space from the unicast path between the client and the server. MC_NACK frames MUST only be sent by the client on the unicast path.
+Clients indicate the largest packet number they received at the moment the MC_NACK frame was received. Client SHOULD also include the number of source symbols missing in the FEC receive window (see {{I-D.draft-michel-quic-fec}}) as an indicator for the source for the number of lost frames that should be reliable.
+
+MC_NACK frames are formatted as shown in {{fig-mc-channel-nack-format}}.
+
+~~~
+MC_NACK Frame {
+  Type (i) = TBD-13..TBD-14,
+  ID Length (8),
+  Channel ID (8..160),
+  Largest Received (i),
+  NACK Range Count (i),
+  First NACK Range (i),
+  NACK Range (..) ...,
+  [FEC NACK Range Count (i)],
+  [FEC first NACK Range (i)],
+  [FEC NACK Range (..) ...],
+}
+~~~
+{: #fig-mc-channel-nack-format title="MC_NACK Frame Format"}
+
 # Frames Carried in Channel Packets
 
 Multicast channels will contain normal QUIC 1-RTT data packets (see {{Section 17.3.1 of RFC9000}}) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys derived from the secrets in MC_KEY frames for the corresponding channel.
@@ -787,6 +818,7 @@ Not permitted:
  - MC_LIMITS
  - MC_STATE
  - MC_ACK
+ - MC_NACK
 
 # Implementation and Operational Considerations
 
