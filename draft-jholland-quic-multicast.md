@@ -121,16 +121,20 @@ Incoming packets received on the network path associated with a channel use the 
 A client with a matching joined channel always has at least one connection associated with the channel.
 If a client has no matching joined channel, the packet is discarded.
 
-Each channel has an independent packet number space. To enable clients to detect lost packets, packet numbers in channels MUST be continuous.
-Since the network path for a channel is unidirectional and uses a different packet number space than the unicast part of the connection, packets associated with a channel are acknowledged with MC_ACK frames {{channel-ack-frame}} instead of ACK frames.
+## Channel using Multipath QUIC
+
+From the point of view of the client, each Multicast QUIC channel is handled as a second path from the server. A client keeps its unicast connection with the server open during all the transmission. Additionally, it negotiates a second path with the server where it will receive multicast content. All mechanisms, except those listed below, follow {{I-D.draft-ietf-quic-multipath}}.
+
+The first major change concerns the encryption of the multicast path. To keep the unicast path between the client and the server secure, the multicast path must use a different cryptographic context that is common between all clients. As such, each path is encrypted differently, differing from the current version of {{I-D.draft-ietf-quic-multipath}}. NB: there are discussions within the Multipath QUIC draft to integrate this feature to strengthen the security of MPQUIC. Secondly, a client MUST NOT send any data on the multicast path with the server.
+
+Leveraging Multipath QUIC for Multicast QUIC provides interesting properties from the client's point of view. For example, the client can seamlessly receive data from the multicast and the unicast path. This enables efficient unicast fall-back and unicast retransmissions. Leaving the multicast channel is performed by closing the multicast path with the server.
+
+This draft imposes the Multiple Packet Number Space version of Multipath QUIC (See {{Section 5 of I-D.draft-ietf-quic-multipath}}). Each channel possesses its own packet number space. To enable clients to detect lost packets, packet numbers in channels SHOULD be continuous.
 
 The use of any particular channel is OPTIONAL for both the server and the client.
 It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceful degradation for endpoints that do not or cannot make use of the multicast functionality (see {{graceful-degradation}}).
 
 The server has access to all data transmitted on any multicast channel it uses, and could optionally send this data with unicast instead.
-
-No special handling of the data is required in a client application that has enabled multicast.
-A datagram or any particular bytes from a server-initiated unidirectional stream can be delivered over the unicast connection or a multicast channel transparently to a client application consuming the stream or datagram.
 
 Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in {{I-D.draft-krose-multicast-security}}.
 
