@@ -1144,7 +1144,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
-            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-multicast-channel" class="internal xref">Multicast Channel</a></p>
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-multicast-channel" class="internal xref">Multicast Channel</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1" class="keepWithNext"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-channel-using-multipath-qui" class="internal xref">Channel using Multipath QUIC</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
             <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-transport-parameters" class="internal xref">Transport Parameters</a></p>
@@ -1382,14 +1387,24 @@ This adds a layer of indirection to the process described in <span><a href="http
 Incoming packets received on the network path associated with a channel use the Channel ID to associate the packet with a joined channel.<a href="#section-2-5" class="pilcrow">¶</a></p>
 <p id="section-2-6">A client with a matching joined channel always has at least one connection associated with the channel.
 If a client has no matching joined channel, the packet is discarded.<a href="#section-2-6" class="pilcrow">¶</a></p>
-<p id="section-2-7">Each channel has an independent packet number space. To enable clients to detect lost packets, packet numbers in channels MUST be continuous.
-Since the network path for a channel is unidirectional and uses a different packet number space than the unicast part of the connection, packets associated with a channel are acknowledged with MC_ACK frames <a href="#channel-ack-frame" class="auto internal xref">Section 10.6</a> instead of ACK frames.<a href="#section-2-7" class="pilcrow">¶</a></p>
-<p id="section-2-8">The use of any particular channel is OPTIONAL for both the server and the client.
-It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceful degradation for endpoints that do not or cannot make use of the multicast functionality (see <a href="#graceful-degradation" class="auto internal xref">Section 12.4</a>).<a href="#section-2-8" class="pilcrow">¶</a></p>
-<p id="section-2-9">The server has access to all data transmitted on any multicast channel it uses, and could optionally send this data with unicast instead.<a href="#section-2-9" class="pilcrow">¶</a></p>
-<p id="section-2-10">No special handling of the data is required in a client application that has enabled multicast.
-A datagram or any particular bytes from a server-initiated unidirectional stream can be delivered over the unicast connection or a multicast channel transparently to a client application consuming the stream or datagram.<a href="#section-2-10" class="pilcrow">¶</a></p>
-<p id="section-2-11">Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in <span>[<a href="#I-D.draft-krose-multicast-security" class="cite xref">I-D.draft-krose-multicast-security</a>]</span>.<a href="#section-2-11" class="pilcrow">¶</a></p>
+<div id="channel-using-multipath-quic">
+<section id="section-2.1">
+        <h3 id="name-channel-using-multipath-qui">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-channel-using-multipath-qui" class="section-name selfRef">Channel using Multipath QUIC</a>
+        </h3>
+<p id="section-2.1-1">From the point of view of the client, each Multicast QUIC channel is handled as an additional path from the server. A client keeps its unicast connection with the server open during all the transmission. Additionally, the server can inform the client about an additional path where it will receive multicast content. All mechanisms, except those listed below, follow <span>[<a href="#I-D.draft-ietf-quic-multipath" class="cite xref">I-D.draft-ietf-quic-multipath</a>]</span>.
+TODO: either rely the current Multipath QUIC draft (the client must create the new path itself) or extend the draft to allow the server to initiate the creation of the second path.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<p id="section-2.1-2">The first major change concerns the encryption of the multicast path. To keep the unicast path between the client and the server secure, the multicast path MUST use a different key and MAY use a different algorithm, that is common between all clients. As such, each path is encrypted differently, differing from the current version of <span>[<a href="#I-D.draft-ietf-quic-multipath" class="cite xref">I-D.draft-ietf-quic-multipath</a>]</span>. NB: there are discussions within the Multipath QUIC draft to integrate this feature to strengthen the security of MPQUIC. Secondly, a client MUST NOT send any data on the multicast path with the server.<a href="#section-2.1-2" class="pilcrow">¶</a></p>
+<p id="section-2.1-3">Leveraging Multipath QUIC for Multicast QUIC provides interesting properties from the client's point of view. For example, the client can seamlessly receive data from the multicast and the unicast path. This enables efficient unicast fall-back and unicast retransmissions. Leaving the multicast channel is performed by closing the multicast path with the server.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
+<p id="section-2.1-4">This draft imposes the Multiple Packet Number Space version of Multipath QUIC (See <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-06#section-5" class="relref">Section 5</a> of [<a href="#I-D.draft-ietf-quic-multipath" class="cite xref">I-D.draft-ietf-quic-multipath</a>]</span>). Each channel possesses its own packet number space. To enable clients to detect lost packets, packet numbers in channels SHOULD be continuous.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
+<p id="section-2.1-5">The use of any particular channel is OPTIONAL for both the server and the client.
+It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceful degradation for endpoints that do not or cannot make use of the multicast functionality (see <a href="#graceful-degradation" class="auto internal xref">Section 12.4</a>).<a href="#section-2.1-5" class="pilcrow">¶</a></p>
+<p id="section-2.1-6">The server has access to all data transmitted on any multicast channel it uses, and could optionally send this data with unicast instead.<a href="#section-2.1-6" class="pilcrow">¶</a></p>
+<p id="section-2.1-7">No special handling of the data is required in a client application that has enabled multicast.
+A datagram or any particular bytes from a server-initiated unidirectional stream can be delivered over the unicast connection or a multicast channel transparently to a client application consuming the stream or datagram.<a href="#section-2.1-7" class="pilcrow">¶</a></p>
+<p id="section-2.1-8">Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in <span>[<a href="#I-D.draft-krose-multicast-security" class="cite xref">I-D.draft-krose-multicast-security</a>]</span>.<a href="#section-2.1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="transport-parameter">
