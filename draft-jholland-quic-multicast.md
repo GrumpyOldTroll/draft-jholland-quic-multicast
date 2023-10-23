@@ -87,7 +87,7 @@ Thus, this specification has several design goals:
  - Provide flow control and congestion control mechanisms that work with multicast traffic
  - Maintain the confidentiality, integrity, and authentication guarantees of QUIC as appropriate for multicast traffic, fully meeting the security goals described in {{I-D.draft-krose-multicast-security}}
  - Leverage the scalability of multicast IP for data that is transmitted identically to many clients
- - Rely on Multipath QUIC ({{I-D.draft-ietf-quic-multipath}}) to provide multicast as a service for clients
+ - Rely on Multipath QUIC ({{I-D.draft-ietf-quic-multipath}}) to provide multicast for clients
 
 This document does not define any multicast transport except server to client and only includes semantics for source-specific multicast.
 
