@@ -124,8 +124,9 @@ If a client has no matching joined channel, the packet is discarded.
 ## Channel using Multipath QUIC
 
 From the point of view of the client, each Multicast QUIC channel is handled as an additional path from the server. A client keeps its unicast connection with the server open during all the transmission. Additionally, the server can inform the client about an additional path where it will receive multicast content. All mechanisms, except those listed below, follow {{I-D.draft-ietf-quic-multipath}}.
+TODO: either rely the current Multipath QUIC draft (the client must create the new path itself) or extend the draft to allow the server to initiate the creation of the second path.
 
-The first major change concerns the encryption of the multicast path. To keep the unicast path between the client and the server secure, the multicast path must use a different cryptographic context that is common between all clients. As such, each path is encrypted differently, differing from the current version of {{I-D.draft-ietf-quic-multipath}}. NB: there are discussions within the Multipath QUIC draft to integrate this feature to strengthen the security of MPQUIC. Secondly, a client MUST NOT send any data on the multicast path with the server.
+The first major change concerns the encryption of the multicast path. To keep the unicast path between the client and the server secure, the multicast path MUST use a different key and MAY use a different algorithm, that is common between all clients. As such, each path is encrypted differently, differing from the current version of {{I-D.draft-ietf-quic-multipath}}. NB: there are discussions within the Multipath QUIC draft to integrate this feature to strengthen the security of MPQUIC. Secondly, a client MUST NOT send any data on the multicast path with the server.
 
 Leveraging Multipath QUIC for Multicast QUIC provides interesting properties from the client's point of view. For example, the client can seamlessly receive data from the multicast and the unicast path. This enables efficient unicast fall-back and unicast retransmissions. Leaving the multicast channel is performed by closing the multicast path with the server.
 
@@ -135,6 +136,9 @@ The use of any particular channel is OPTIONAL for both the server and the client
 It is recommended that applications designed to leverage the multicast capabilities of this extension also provide graceful degradation for endpoints that do not or cannot make use of the multicast functionality (see {{graceful-degradation}}).
 
 The server has access to all data transmitted on any multicast channel it uses, and could optionally send this data with unicast instead.
+
+No special handling of the data is required in a client application that has enabled multicast.
+A datagram or any particular bytes from a server-initiated unidirectional stream can be delivered over the unicast connection or a multicast channel transparently to a client application consuming the stream or datagram.
 
 Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in {{I-D.draft-krose-multicast-security}}.
 
