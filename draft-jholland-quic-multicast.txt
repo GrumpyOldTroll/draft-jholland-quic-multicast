@@ -5,10 +5,10 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 22 October 2023                                                
+Expires: 25 April 2024                                                  
                                                                M. Franke
                                                                TU Berlin
-                                                           20 April 2023
+                                                         23 October 2023
 
 
                       Multicast Extension for QUIC
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 October 2023.
+   This Internet-Draft will expire on 25 April 2024.
 
 Copyright Notice
 
@@ -154,6 +154,9 @@ Table of Contents
 
    *  Leverage the scalability of multicast IP for data that is
       transmitted identically to many clients
+
+   *  Rely on Multipath QUIC ([I-D.draft-ietf-quic-multipath]) to
+      provide multicast for clients
 
    This document does not define any multicast transport except server
    to client and only includes semantics for source-specific multicast.
@@ -676,6 +679,16 @@ Table of Contents
    connection is responsible for ensuring that any necessary server-to-
    client frame data lost by a multicast channel packet loss ultimately
    arrives at the client.
+
+   To minimize the amount of additional packets sent on a multicast
+   channel when retransmiting frames, the server SHOULD use Forward
+   Erasure Correction (FEC) techniques following guidelines from
+   [I-D.draft-michel-quic-fec].  Instead of retransmitting the frames
+   directly, the server sends FEC repair packets on the multicast
+   channel.  As such, an individual repair packet can recover different
+   losses on distinct clients, thus minimizing the amount of data sent
+   on a multicast channel.  The scheduling of these repair packets is
+   implementation-dependent and hence out of scope of this document.
 
 9.  Connection Termination
 
@@ -1700,19 +1713,19 @@ Table of Contents
               cbacc-04>.
 
    [I-D.draft-ietf-quic-multipath]
-              Liu, Y., Ma, Y., De Coninck, Q., Bonaventure, O., Huitema,
-              C., and M. Kühlewind, "Multipath Extension for QUIC", Work
-              in Progress, Internet-Draft, draft-ietf-quic-multipath-04,
-              13 March 2023, <https://datatracker.ietf.org/doc/html/
-              draft-ietf-quic-multipath-04>.
+              Liu, Y., 马云飞, M. Y., De Coninck, Q., Bonaventure, O.,
+              Huitema, C., and M. Kühlewind, "Multipath Extension for
+              QUIC", Work in Progress, Internet-Draft, draft-ietf-quic-
+              multipath-06, 23 October 2023,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-quic-
+              multipath-06>.
 
    [I-D.draft-krose-multicast-security]
               Rose, K. and J. Holland, "Security and Privacy
               Considerations for Multicast Transports", Work in
               Progress, Internet-Draft, draft-krose-multicast-security-
-              04, 3 January 2023,
-              <https://datatracker.ietf.org/doc/html/draft-krose-
-              multicast-security-04>.
+              05, 29 June 2023, <https://datatracker.ietf.org/doc/html/
+              draft-krose-multicast-security-05>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -1761,9 +1774,16 @@ Table of Contents
    [I-D.draft-ietf-webtrans-http3]
               Frindell, A., Kinnear, E., and V. Vasiliev, "WebTransport
               over HTTP/3", Work in Progress, Internet-Draft, draft-
-              ietf-webtrans-http3-05, 13 March 2023,
+              ietf-webtrans-http3-07, 13 June 2023,
               <https://datatracker.ietf.org/doc/html/draft-ietf-
-              webtrans-http3-05>.
+              webtrans-http3-07>.
+
+   [I-D.draft-michel-quic-fec]
+              Michel, F. and O. Bonaventure, "Forward Erasure Correction
+              for QUIC loss recovery", Work in Progress, Internet-Draft,
+              draft-michel-quic-fec-01, 23 October 2023,
+              <https://datatracker.ietf.org/doc/html/draft-michel-quic-
+              fec-01>.
 
    [MERKLE]   Merkle, R., "Secrecy, Authentication, and Public Key
               Systems", Computer Science Series, UMI Research Press,
