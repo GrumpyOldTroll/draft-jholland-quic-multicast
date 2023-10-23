@@ -123,7 +123,7 @@ If a client has no matching joined channel, the packet is discarded.
 
 ## Channel using Multipath QUIC
 
-From the point of view of the client, each Multicast QUIC channel is handled as a second path from the server. A client keeps its unicast connection with the server open during all the transmission. Additionally, it negotiates a second path with the server where it will receive multicast content. All mechanisms, except those listed below, follow {{I-D.draft-ietf-quic-multipath}}.
+From the point of view of the client, each Multicast QUIC channel is handled as an additional path from the server. A client keeps its unicast connection with the server open during all the transmission. Additionally, the server can inform the client about an additional path where it will receive multicast content. All mechanisms, except those listed below, follow {{I-D.draft-ietf-quic-multipath}}.
 
 The first major change concerns the encryption of the multicast path. To keep the unicast path between the client and the server secure, the multicast path must use a different cryptographic context that is common between all clients. As such, each path is encrypted differently, differing from the current version of {{I-D.draft-ietf-quic-multipath}}. NB: there are discussions within the Multipath QUIC draft to integrate this feature to strengthen the security of MPQUIC. Secondly, a client MUST NOT send any data on the multicast path with the server.
 
