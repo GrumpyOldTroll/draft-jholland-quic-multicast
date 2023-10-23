@@ -52,6 +52,7 @@ informative:
 
   I-D.draft-ietf-webtrans-http3:
   I-D.draft-ietf-masque-h3-datagram:
+  I-D.draft-michel-quic-fec:
   RFC4607:
   RFC6363:
   RFC6726:
@@ -86,6 +87,7 @@ Thus, this specification has several design goals:
  - Provide flow control and congestion control mechanisms that work with multicast traffic
  - Maintain the confidentiality, integrity, and authentication guarantees of QUIC as appropriate for multicast traffic, fully meeting the security goals described in {{I-D.draft-krose-multicast-security}}
  - Leverage the scalability of multicast IP for data that is transmitted identically to many clients
+ - Rely on Multipath QUIC ({{I-D.draft-ietf-quic-multipath}}) to provide multicast for clients
 
 This document does not define any multicast transport except server to client and only includes semantics for source-specific multicast.
 
@@ -376,6 +378,8 @@ All the new frames defined in this document except MC_ACK are ack-eliciting and 
 
 Note that recovery MAY be achieved either by retransmitting frame data that was lost and needs reliable transport either by sending the frame data on the unicast connection or by coordinating to cause an aggregated retransmission of widely dropped data on a multicast channel, at the server's discretion.
 However, the server in each connection is responsible for ensuring that any necessary server-to-client frame data lost by a multicast channel packet loss ultimately arrives at the client.
+
+To minimize the amount of additional packets sent on a multicast channel when retransmiting frames, the server SHOULD use Forward Erasure Correction (FEC) techniques following guidelines from {{I-D.draft-michel-quic-fec}}. Instead of retransmitting the frames directly, the server sends FEC repair packets on the multicast channel. As such, an individual repair packet can recover different losses on distinct clients, thus minimizing the amount of data sent on a multicast channel. The scheduling of these repair packets is implementation-dependent and hence out of scope of this document.
 
 # Connection Termination
 
