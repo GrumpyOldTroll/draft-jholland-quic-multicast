@@ -2,7 +2,7 @@
 
 This is the working area for the individual Internet-Draft, "Multicast Extension for QUIC".
 
-* [Editor's Copy](https://GrumpyOldTroll.github.io/draft-jholland-quic-multicast/#go.draft-jholland-quic-multicast.html)
+* [Editor's Copy](https://GrumpyOldTroll.github.io/draft-jholland-quic-multicast/#go.draft-jholland-quic-multicast.txt)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-jholland-quic-multicast)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-jholland-quic-multicast)
 * [Compare Editor's Copy to Individual Draft](https://GrumpyOldTroll.github.io/draft-jholland-quic-multicast/#go.draft-jholland-quic-multicast.diff)
