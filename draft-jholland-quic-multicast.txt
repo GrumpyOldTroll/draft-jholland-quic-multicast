@@ -8,6 +8,8 @@ Intended status: Experimental                                  L. Pardue
 Expires: 14 September 2026                                              
                                                                M. Franke
                                                                TU Berlin
+                                                                 K. Rose
+                                               Akamai Technologies, Inc.
                                                            13 March 2026
 
 
@@ -1880,6 +1882,9 @@ Table of Contents
 
 Acknowledgments
 
+   Thanks to Louis Navarre on his comments and text contributions to the
+   multipath and FEC sections.
+
    Thanks to Martin Duke, Sam Hurst, Kyle Rose, Michael Welzl and Momoka
    Yamamoto for their helpful reviews and comments.
 
@@ -1894,6 +1899,9 @@ Authors' Addresses
 
    Jake Holland
    Akamai Technologies, Inc.
+   150 Broadway
+   Cambridge, MA 02144,
+   United States of America
    Email: jakeholland.net@gmail.com
 
 
@@ -1903,4 +1911,13 @@ Authors' Addresses
 
    Max Franke
    TU Berlin
+   Germany
    Email: mfranke@inet.tu-berlin.de
+
+
+   Kyle Rose
+   Akamai Technologies, Inc.
+   145 Broadway
+   Cambridge, MA 02144,
+   United States of America
+   Email: krose@krose.org
