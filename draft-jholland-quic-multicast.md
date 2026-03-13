@@ -24,16 +24,30 @@ venue:
 
 author:
  -
-    fullname: Jake Holland
-    organization: Akamai Technologies, Inc.
+    ins: J. Holland
+    name: Jake Holland
+    org: Akamai Technologies, Inc.
+    street: 150 Broadway
+    city: Cambridge, MA 02144
+    country: United States of America
     email: jakeholland.net@gmail.com
  -
     fullname: Lucas Pardue
     email: lucaspardue.24.7@gmail.com
  -
-    fullname: Max Franke
-    organization: TU Berlin
+    ins: M. Franke
+    name: Max Franke
+    org: TU Berlin
     email: mfranke@inet.tu-berlin.de
+    country: Germany
+ -
+    ins: K. Rose
+    name: Kyle Rose
+    org: Akamai Technologies, Inc.
+    street: 145 Broadway
+    city: Cambridge, MA 02144
+    country: United States of America
+    email: krose@krose.org
 
 normative:
 
@@ -948,6 +962,7 @@ TODO: lots
 
 # Acknowledgments
 {:numbered="false"}
+Thanks to Louis Navarre on his comments and text contributions to the multipath and FEC sections.
 
 Thanks to Martin Duke, Sam Hurst, Kyle Rose, Michael Welzl and Momoka Yamamoto for their helpful reviews and comments.
 
