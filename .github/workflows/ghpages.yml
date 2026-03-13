@@ -20,17 +20,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: "Checkout"
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: "Cache Setup"
       id: cache-setup
       run: |
         mkdir -p "$HOME"/.cache/xml2rfc
-        echo "::set-output name=path::$HOME/.cache/xml2rfc"
-        date -u "+::set-output name=date::%FT%T"
+        echo "path=$HOME/.cache/xml2rfc" >> "$GITHUB_OUTPUT"
+        echo "date=$(date -u +%FT%T)" >> "$GITHUB_OUTPUT"
 
     - name: "Cache References"
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           ${{ steps.cache-setup.outputs.path }}
@@ -53,8 +53,9 @@ jobs:
         token: ${{ github.token }}
 
     - name: "Archive Built Drafts"
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
+        name: built-drafts-${{ github.run_id }}
         path: |
           draft-*.html
           draft-*.txt
