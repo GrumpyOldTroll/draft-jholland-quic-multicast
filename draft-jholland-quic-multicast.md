@@ -791,7 +791,7 @@ This includes, but is not limited to, frames whose semantics involve acknowledge
 
 A frame is also not permitted in a channel packet if it is defined only for client-to-server use, or if processing the frame would require a response to be sent on the multicast channel.
 
-A client that receives a frame in a channel packet that is not permitted SHOULD close the associated connection with a connection error of type MC_EXTENSION_ERROR.
+A client that receives a frame in a channel packet that is not permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.
 
 For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING, MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID, PATH_CHALLENGE, PATH_RESPONSE, CONNECTION_CLOSE, and HANDSHAKE_DONE are not permitted in channel packets because their semantics are tied to an individual QUIC connection.
 
