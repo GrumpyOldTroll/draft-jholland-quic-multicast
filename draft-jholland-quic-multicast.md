@@ -38,7 +38,7 @@ author:
     ins: M. Franke
     name: Max Franke
     org: TU Berlin
-    email: mfranke@inet.tu-berlin.de
+    email: m.franke@ravim.de
     country: Germany
  -
     ins: K. Rose
@@ -463,7 +463,7 @@ MC_ANNOUNCE frames contain the following fields:
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID of the channel that is getting announced.
   * Source IP: The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by the frame type (TBD-11 indicates IPv4, TBD-12 indicates IPv6).
-  * Group IP: The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by the frame type (TBD-11 indicates IPv4, TBD-12 indicates IPv6).
+  * Group IP: The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by the frame type (TBD-11 indicates IPv4, TBD-12 indicates IPv6). This address MUST be a valid SSM destination address as specified in {{RFC4607}}.
   * UDP Port: The 16-bit UDP Port of traffic for the channel.
   * Header Protection Algorithm: A value from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>), used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
   * Header Secret Length: Provides the length of the Secret field.
@@ -479,6 +479,8 @@ MC_ANNOUNCE frames contain the following fields:
 
 A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
 As the server knows which connection IDs are in use by the client, it MUST wait with the sending of an MC_JOIN frame until the channel ID associated with it has been retired by the client.
+
+If a client receives an MC_ANNOUNCE frame with a Group IP that is not within the SSM destination address range as outlined in {{RFC4607}}, it SHOULD close the connection with reason MC_EXTENSION_ERROR.
 
 As all the properties in MC_ANNOUNCE frames are immutable during the lifetime of a channel, a server SHOULD NOT send an MC_ANNOUNCE frame for the same channel more than once to each client except as needed for recovery.
 
