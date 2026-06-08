@@ -787,7 +787,7 @@ A server MUST NOT send a frame in a channel packet unless the frame is valid in 
 * the frame operates only on state that is shared by all receivers of the channel; receiving it will have the same effect for all receivers.
 
 A frame is not permitted in a channel packet if processing the frame depends on state that is specific to an individual receiver, path, or unicast connection.
-This includes, but is not limited to, frames whose semantics involve acknowledgements, the cryptographic handshake, address validation, connection ID migration, flow control or connection termination.
+This includes, but is not limited to, frames that are part of the cryptographic handshake, address validation, connection ID migration, flow control or connection termination.
 
 A frame is also not permitted in a channel packet if it is defined only for client-to-server use, or if processing the frame would require a response to be sent on the multicast channel.
 
