@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 14 September 2026                                              
+Expires: 10 December 2026                                               
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                           13 March 2026
+                                                             8 June 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 September 2026.
+   This Internet-Draft will expire on 10 December 2026.
 
 Copyright Notice
 
@@ -826,7 +826,8 @@ Table of Contents
    *  Group IP: The IP Address of the group of the (S,G) for the
       channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address,
       as indicated by the frame type (TBD-11 indicates IPv4, TBD-12
-      indicates IPv6).
+      indicates IPv6).  This address MUST be a valid SSM destination
+      address as specified in [RFC4607].
 
    *  UDP Port: The 16-bit UDP Port of traffic for the channel.
 
@@ -898,6 +899,10 @@ Table of Contents
    knows which connection IDs are in use by the client, it MUST wait
    with the sending of an MC_JOIN frame until the channel ID associated
    with it has been retired by the client.
+
+   If a client receives an MC_ANNOUNCE frame with a Group IP that is not
+   within the SSM destination address range as outlined in [RFC4607], it
+   SHOULD close the connection with reason MC_EXTENSION_ERROR.
 
    As all the properties in MC_ANNOUNCE frames are immutable during the
    lifetime of a channel, a server SHOULD NOT send an MC_ANNOUNCE frame
@@ -1784,9 +1789,9 @@ Table of Contents
               Liu, Y., Ma, Y., De Coninck, Q., Bonaventure, O., Huitema,
               C., and M. Kühlewind, "Managing multiple paths for a QUIC
               connection", Work in Progress, Internet-Draft, draft-ietf-
-              quic-multipath-20, 20 February 2026,
+              quic-multipath-21, 17 March 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-quic-
-              multipath-20>.
+              multipath-21>.
 
    [I-D.draft-krose-multicast-security]
               Rose, K., Franke, M., and J. Holland, "Security and
@@ -1912,7 +1917,7 @@ Authors' Addresses
    Max Franke
    TU Berlin
    Germany
-   Email: mfranke@inet.tu-berlin.de
+   Email: m.franke@ravim.de
 
 
    Kyle Rose
