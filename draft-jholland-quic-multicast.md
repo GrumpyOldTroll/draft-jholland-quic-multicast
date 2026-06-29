@@ -160,19 +160,95 @@ Client applications should have a mechanism that disables the use of multicast o
 
 # Transport Parameters {#transport-parameter}
 
-Support for multicast extensions in a client is advertised by means of QUIC transport parameters:
+Support for this extension is negotiated using the following two QUIC transport parameters:
 
- * name: multicast_server_support (TBD - experiments use 0xff3e808)
- * name: multicast_client_params (TBD - experiments use 0xff3e800)
+*  **multicast_capabilities (TBD - experiments use 0xff3e808):** This transport parameter can be sent by both client and server. It uses the format shown in {{fig-multicast_capabilities}}.
+It indicates that the sending side is capable and willing to receive and process frames defined by this extension. The included capabilities only show theoretical limits of the implementation, what is actually available to either endpoint might be further restricted by administrative of operational considerations.
+An endpoint MUST NOT send frames defined by this document unless it has received a multicast_capabilities transport parameter from its peer.
+An endpoint that receives a frame defined by this document without having sent a multicast_capabilities transport parameter MUST treat this as a connection error of type MC_EXTENSION_ERROR.
 
-If a multicast_server_support transport parameter is not included, clients MUST NOT send any frames defined in this document.
+*  **multicast_initial_limits (TBD - experiments use 0xff3e800):** This transport parameter is only optionally sent by the client.
+It establishes the client's initial multicast receiver limits.
+These limits can later be updated by MC_LIMITS frames; see {{client-limits-frame}}.
+A server MUST NOT send the multicast_initial_limits transport parameter.
+A client that receives the multicast_initial_limits transport parameter from a server MUST treat this as a connection error of type TRANSPORT_PARAMETER_ERROR.
+A client MUST NOT send multicast_initial_limits unless it also sends multicast_capabilities.
+A server that receives multicast_initial_limits from a client that did not also send multicast_capabilities MUST treat this as a connection error of type TRANSPORT_PARAMETER_ERROR.
+If a client does not send a multicast_initial_limits transport parameter, a server MUST NOT send any frames defined in this extension until it receives an MC_LIMITS frame from the client.
 
-If a multicast_client_params transport parameter is not included, servers MUST NOT send any frames defined in this document.
 
-The multicast_server_support parameter is a 0-length value.
-Presence indicates that multicast-capable clients MAY send frames defined in this document, and SHOULD send MC_LIMITS ({{client-limits-frame}}) frames as appropriate when their capabilities or client-side limitations change.
+## Multicast Capabilities Transport Parameter
 
-The multicast_client_params parameter has the structure shown below in {{fig-transport-parameter-format}}.
+The multicast_capabilities transport parameter has the following format:
+
+~~~
+multicast_capabilities {
+  Capability Entry (..) ...,
+}
+~~~
+{: #fig-multicast_capabilities title="multicast_capabilities Format"}
+
+Where each Capability Entry is:
+
+~~~
+Capability Entry {
+  Capability ID (i),
+  Capability Value Length (i),
+  Capability Value (..),
+}
+~~~
+{: #fig-capabilities title="Capability Entry Format"}
+
+The structure of multicast_capabilities is similar to other transport parameters defined by {{RFC9000}}.
+The Capability ID field is a QUIC variable-length integer that identifies a multicast capability.
+The Capability Value Length field is a QUIC variable-length integer that contains the length, in bytes, of the Capability Value field.
+The Capability Value field contains capability-specific data.
+
+Capability entries are parsed sequentially until the end of the transport parameter value.
+A malformed multicast_capabilities transport parameter MUST be treated as a connection error of type TRANSPORT_PARAMETER_ERROR.
+The order of Capability Entry values is not significant.
+An endpoint MUST ignore any unknown Capability ID.
+The presence of an unknown Capability ID MUST NOT cause a connection error.
+A sender MUST NOT include the same known non-GREASE Capability ID more than once in the same multicast_capabilities transport parameter.
+An endpoint that receives the same known non-GREASE Capability ID more than once MUST treat this as a connection error of type TRANSPORT_PARAMETER_ERROR.
+
+### Multicast Capability Identifiers
+
+This extension defines the following multicast capability identifiers:
+
+| Value | Name                         | Capability Value |
+|-------|------------------------------|------------------|
+| TBD-1 | ipv4_channels                | Empty            |
+| TBD-2 | ipv6_channels                | Empty            |
+| TBD-3 | supported_hash_algorithms    | Hash Algorithm List |
+| TBD-4 | supported_cipher_suites      | Cipher Suite List |
+
+The ipv4_channels capability indicates that the endpoint can process packets that use IPv4 multicast addresses. 
+The ipv6_channels capability indicates that the endpoint can process packets that use IPv6 multicast addresses.
+
+The ipv4_channels and ipv6_channels capabilities describe endpoint capability only.
+For a client, current permission to receive channels using an address family is controlled by the IPv4 Channels Allowed and IPv6 Channels Allowed flags in multicast_initial_limits and MC_LIMITS.
+For example, a client can advertise the ipv4_channels capability while setting the IPv4 Channels Allowed flag to zero.
+In that case, the client is capable of processing IPv4 multicast channels, but does not currently permit the server to announce or send such channels. 
+
+ * **multicast_support (TBD - experiments use 0xff3e808):**
+The multicast_server_support transport parameter can be included by either endpoint.
+It has a 0-length value.  A client MUST NOT send the multicast_server_support transport parameter.
+A server that receives this transport parameter from a client MUST treat this as a connection error of type TRANSPORT_PARAMETER_ERROR.
+Receipt of this transport parameter indicates that the server is capable and willing to use the multicast extension.
+A client MUST NOT send any frames defined by this extension if the multicast_server_support parameter is not present.
+A server that receives any frames defined by this extension without having sent multicast_server_support MUST treat it as a connection error of type MC_EXTENSION_ERROR.
+
+ * **multicast_client_params (TBD - experiments use 0xff3e800):**
+The multicast_client_params transport parameter is sent by a client.
+It has the structure shown below in {{fig-transport-parameter-format}}.
+A server MUST NOT send the multicast_client_params transport parameter.
+A client that receives this transport parameter from a server MUST treat this as a connection error of type TRANSPORT_PARAMETER_ERROR.
+Receipt of multicast_client_params indicates that the client is capable and willing to use the multicast extension with the limits and capabilities expressed in the parameter.
+A server MUST NOT send any frames defined by this extension if the multicast_client_params is not present.
+A client that receives any frames defined by this extension without having sent multicast_client_params MUST treat it as a connection error of type MC_EXTENSION_ERROR.
+
+Endpoints MUST NOT store these transport parameters for use with 0-RTT.
 
 ~~~
 multicast_client_params {
@@ -199,6 +275,7 @@ If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the cli
 The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:
 
  - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
+
 
 # Extension Overview
 
