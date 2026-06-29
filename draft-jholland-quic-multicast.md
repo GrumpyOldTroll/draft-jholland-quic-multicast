@@ -223,6 +223,16 @@ Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients. If a
 
 The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS ({{client-limits-frame}}) frame the server received.
 
+This extension does not define an application-layer catalogue or content-selection protocol.
+Application protocols determine what content, service, program, representation, or other application context is relevant to a connection.
+The multicast extension only provides a transport mechanism by which the server can describe channels that are available in that context and request that the client join or leave them.
+A server is not expected to announce every multicast channel that it operates to every client.
+The set of channels announced to any specific client can be limited by application-layer state, prior application requests, receiver limits, server policy, or any combination of these.
+
+For example, a server may provide a video stream in different resolutions, with each available resolution being carried in a different multicast channel.
+The server would only announce the channel that offers the best available quality while remaining under the limits set by the client.
+In this case, this could happen without any involvement of the client-side application.
+
 ~~~
                             o
                             |
