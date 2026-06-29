@@ -487,6 +487,11 @@ Each of these recommended orderings MAY occur within the same packet.
 
 ## MC_KEY {#channel-key-frame}
 
+Multicast channel keys are channel-scoped rather than connection-scoped.
+The same channel secret can be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends.
+This goes beyond the capabilities of the regular QUIC Key Update mechanism ({{Section 6 of RFC9001}}).
+Therefore, the server needs an explicit mechanism to provide the current channel secret to authorized receivers, identify the packet number from which that secret applies, and rotate channel keys independently of the unicast connection's 1-RTT keys.
+
 An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
 The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.
 
