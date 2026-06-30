@@ -677,7 +677,7 @@ IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can be joined a
 
 IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can be joined and 0 if IPv4 channels cannot be joined.
 
-It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero.
+It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero simultaneously.
 This indicates that the client does not currently permit joining multicast channels using either IP address family.
 This does not disable support for this extension on the connection and does not prevent the client from later sending an MC_LIMITS frame that permits one or both address families.
 
