@@ -2096,7 +2096,7 @@ Newer frames override older ones.<a href="#section-10.7-3" class="pilcrow">¶</a
 These are reserved to advertise future capabilities.<a href="#section-10.7-4" class="pilcrow">¶</a></p>
 <p id="section-10.7-5">IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can be joined and 0 if IPv6 channels cannot be joined.<a href="#section-10.7-5" class="pilcrow">¶</a></p>
 <p id="section-10.7-6">IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can be joined and 0 if IPv4 channels cannot be joined.<a href="#section-10.7-6" class="pilcrow">¶</a></p>
-<p id="section-10.7-7">It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero.
+<p id="section-10.7-7">It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero simultaneously.
 This indicates that the client does not currently permit joining multicast channels using either IP address family.
 This does not disable support for this extension on the connection and does not prevent the client from later sending an MC_LIMITS frame that permits one or both address families.<a href="#section-10.7-7" class="pilcrow">¶</a></p>
 <p id="section-10.7-8">After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN for a channel whose address family is not currently allowed by the client.
