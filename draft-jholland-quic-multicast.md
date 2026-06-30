@@ -38,7 +38,7 @@ author:
     ins: M. Franke
     name: Max Franke
     org: TU Berlin
-    email: mfranke@inet.tu-berlin.de
+    email: m.franke@tu-berlin.de
     country: Germany
  -
     ins: K. Rose
@@ -365,6 +365,9 @@ If the actual contents sent in the channel exceed the advertised limits from the
 
 Both the server and the client perform congestion control operations, so that according to the guidelines in {{Section 4.1 of RFC8085}}, mechanisms for both feedback-based and receiver-driven styles of congestion control are present and operational.
 
+All frames defined by this document other than MC_ACK are ack-eliciting.  Packets containing those frames are considered in-flight and count toward congestion control limits as described in {{RFC9002}}.
+MC_ACK frames are treated the same as ACK frames for congestion control and loss recovery purposes and do not make a packet ack-eliciting and thus a packet containing only them does not count as in-flight.
+
 The server maintains a full view of the traffic received by the client via the MC_ACK ({{channel-ack-frame}}) frames and ACK frames it receives, and can detect loss experienced by the client.
 Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.
 
@@ -396,7 +399,7 @@ TODO: Articulate key differences with {{RFC9002}}.
 The main known difference is that servers might not be running on the same devices that are sending the channel packets, therefore the RTT for channel packets might use an estimated send time that can vary according to the clock synchronization among servers and the deployment and implementation details of how the servers find out the sending timestamps of channel packets.
 Experience-based guidance on the recovery timing estimates is one anticipated outcome of experimenting with deployments of this experimental extension.
 
-All the new frames defined in this document except MC_ACK are ack-eliciting and are retransmitted until acknowledged to provide reliable, though possibly out of order, delivery.
+All frames defined in this document except MC_ACK are ack-eliciting and are retransmitted until acknowledged to provide reliable, though possibly out of order, delivery.
 
 Note that recovery MAY be achieved either by retransmitting frame data that was lost and needs reliable transport either by sending the frame data on the unicast connection or by coordinating to cause an aggregated retransmission of widely dropped data on a multicast channel, at the server's discretion.
 However, the server in each connection is responsible for ensuring that any necessary server-to-client frame data lost by a multicast channel packet loss ultimately arrives at the client.
