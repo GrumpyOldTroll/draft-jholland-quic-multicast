@@ -661,6 +661,9 @@ A client SHOULD use the Reordering Threshold to determine when receipt of out-of
 All channel packets that require acknowledgment MUST be acknowledged at least once.
 When MC_ACK frames are sent less frequently, clients need to retain ACK range information long enough to avoid permanently omitting acknowledgment of received channel packets.
 
+ACK_FREQUENCY and IMMEDIATE_ACK frames defined by {{I-D.ietf-quic-ack-frequency}} do not affect MC_ACK generation unless a future extension explicitly defines such behavior.
+The ACK policy for MC_ACK frames is instead defined by the MC_ANNOUNCE frame for the corresponding channel.
+
 (TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from {{Section 12.2 of I-D.draft-ietf-quic-multipath}}, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)
 
 MC_ACK frames are formatted as shown in {{fig-mc-channel-ack-format}}.
@@ -945,7 +948,12 @@ Further, the use of multicast channels likely requires increased coordination be
 
 For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.
 
-As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server. The guidance provided in {{Section 13.2 of RFC9000}} should still be followed on when to send ACKs.
+As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server.
+The MC_ACK policy advertised in MC_ANNOUNCE controls when clients send MC_ACK frames for a channel.
+Clients MAY send MC_ACK frames more frequently than this policy requires, but SHOULD avoid sending them less frequently.
+Servers should choose Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold values that balance uplink load against the need for timely loss, congestion, ECN, and liveness feedback.
+
+
 
 ## Address Collisions {#address-collisions}
 
