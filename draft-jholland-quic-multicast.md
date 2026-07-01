@@ -55,6 +55,7 @@ normative:
   I-D.draft-ietf-mboned-ambi:
   I-D.draft-ietf-mboned-cbacc:
   I-D.draft-ietf-quic-multipath:
+  I-D.ietf-quic-ack-frequency:
   RFC8085:
   RFC8446:
   RFC9000:
@@ -451,7 +452,9 @@ MC_ANNOUNCE Frame {
   AEAD Algorithm (16),
   Integrity Hash Algorithm (16),
   Max Rate (i),
-  Max ACK Delay (i)
+  Max ACK Delay (i),
+  Ack-Eliciting Threshold (i),
+  Reordering Threshold (i)
 }
 ~~~
 {: #fig-mc-channel-announce title="MC_ANNOUNCE Frame Format"}
@@ -475,7 +478,16 @@ MC_ANNOUNCE frames contain the following fields:
       - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
       - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
   * Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason "MAX_RATE_EXCEEDED".
-  * Max ACK Delay: A value used similarly to max_ack_delay ({{Section 18.2 of RFC9000}}) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds, and SHOULD NOT add any delay to the first MC_ACK of data packets for a channel.  As long as they stay inside these limits, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.
+  * Max ACK Delay: The maximum amount of time, in microseconds, that a client can intentionally delay sending an MC_ACK frame for ack-eliciting packets received on this channel.
+  This value is used similarly to max_ack_delay ({{Section 18.2 of RFC9000}}), but applies
+  only to MC_ACK frames for this channel.
+  A client SHOULD NOT intentionally delay an MC_ACK for this channel beyond this value.
+  * Ack-Eliciting Threshold: The maximum number of ack-eliciting channel packets that a client can receive on this channel without sending an MC_ACK.
+  This field has the same semantics as the Ack-Eliciting Threshold field of ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), except that it applies only to MC_ACK frame generation for this channel.
+  A value of 0 requests that every ack-eliciting channel packet be acknowledged immediately.
+  A value of 1 corresponds to the default QUIC behavior of acknowledging after receiving two ack-eliciting packets.
+  * Reordering Threshold: A packet-count threshold used to determine when receipt of out-of-order channel packets causes an immediate MC_ACK.
+  This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), except that it applies only to this channels packet number space and to MC_ACK frames for this channel.
 
 A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
 As the server knows which connection IDs are in use by the client, it MUST wait with the sending of an MC_JOIN frame until the channel ID associated with it has been retired by the client.
@@ -629,6 +641,25 @@ See {{packet-hashes}} for a description of the packet hash calculation.
 ## MC_ACK {#channel-ack-frame}
 
 The MC_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by {{RFC9000}}. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.
+
+MC_ACK generation is controlled by the MC_ACK policy advertised in the MC_ANNOUNCE frame of the corresponding channel.
+The Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold fields of MC_ANNOUNCE apply separately to each multicast channel packet number space.
+
+A client SHOULD send an MC_ACK for a channel when either:
+
+* the number of ack-eliciting channel packets received since the last MC_ACK for that channel is greater than the Ack-Eliciting Threshold;
+
+  or
+
+* Max ACK Delay has elapsed and at least one ack-eliciting channel packet has been received since the last MC_ACK for that channel.
+
+A client MAY send an MC_ACK earlier than required by these rules.
+A client MUST send the first MC_ACK for a newly joined channel without intentional delay after receiving ack-eliciting packets on that channel.
+
+A client SHOULD use the Reordering Threshold to determine when receipt of out-of-order channel packets causes an immediate MC_ACK, following the behavior defined for ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), applied to the channel packet number space.
+
+All channel packets that require acknowledgment MUST be acknowledged at least once.
+When MC_ACK frames are sent less frequently, clients need to retain ACK range information long enough to avoid permanently omitting acknowledgment of received channel packets.
 
 (TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from {{Section 12.2 of I-D.draft-ietf-quic-multipath}}, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)
 
