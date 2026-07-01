@@ -2072,11 +2072,13 @@ A client MUST send the first MC_ACK for a newly joined channel without intention
 <p id="section-10.6-6">A client SHOULD use the Reordering Threshold to determine when receipt of out-of-order channel packets causes an immediate MC_ACK, following the behavior defined for ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), applied to the channel packet number space.<a href="#section-10.6-6" class="pilcrow">¶</a></p>
 <p id="section-10.6-7">All channel packets that require acknowledgment MUST be acknowledged at least once.
 When MC_ACK frames are sent less frequently, clients need to retain ACK range information long enough to avoid permanently omitting acknowledgment of received channel packets.<a href="#section-10.6-7" class="pilcrow">¶</a></p>
-<p id="section-10.6-8">(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-21#section-12.2" class="relref">Section 12.2</a> of [<a href="#I-D.draft-ietf-quic-multipath" class="cite xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)<a href="#section-10.6-8" class="pilcrow">¶</a></p>
-<p id="section-10.6-9">MC_ACK frames are formatted as shown in <a href="#fig-mc-channel-ack-format" class="auto internal xref">Figure 9</a>.<a href="#section-10.6-9" class="pilcrow">¶</a></p>
+<p id="section-10.6-8">ACK_FREQUENCY and IMMEDIATE_ACK frames defined by <span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span> do not affect MC_ACK generation unless a future extension explicitly defines such behavior.
+The ACK policy for MC_ACK frames is instead defined by the MC_ANNOUNCE frame for the corresponding channel.<a href="#section-10.6-8" class="pilcrow">¶</a></p>
+<p id="section-10.6-9">(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-21#section-12.2" class="relref">Section 12.2</a> of [<a href="#I-D.draft-ietf-quic-multipath" class="cite xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)<a href="#section-10.6-9" class="pilcrow">¶</a></p>
+<p id="section-10.6-10">MC_ACK frames are formatted as shown in <a href="#fig-mc-channel-ack-format" class="auto internal xref">Figure 9</a>.<a href="#section-10.6-10" class="pilcrow">¶</a></p>
 <span id="name-mc_ack-frame-format"></span><div id="fig-mc-channel-ack-format">
 <figure id="figure-9">
-          <div class="alignLeft art-text artwork" id="section-10.6-10.1">
+          <div class="alignLeft art-text artwork" id="section-10.6-11.1">
 <pre>
 MC_ACK Frame {
   Type (i) = TBD-06..TBD-07 (experiments use 0xff3e806, 0xff3e807),
@@ -2527,7 +2529,10 @@ Although under ideal conditions it may often be possible using features like ser
 <p id="section-12.5-2">Servers, possibly many of them, still will be required to maintain unicast connections with all the clients and provide for handling MC_ACK frames from the clients, delivering MC_INTEGRITY frames, managing the clients' channel join states, and providing recovery for lost packets.<a href="#section-12.5-2" class="pilcrow">¶</a></p>
 <p id="section-12.5-3">Further, the use of multicast channels likely requires increased coordination between the different servers, relative to services that operate completely independently.<a href="#section-12.5-3" class="pilcrow">¶</a></p>
 <p id="section-12.5-4">For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.<a href="#section-12.5-4" class="pilcrow">¶</a></p>
-<p id="section-12.5-5">As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server. The guidance provided in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-13.2" class="relref">Section 13.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> should still be followed on when to send ACKs.<a href="#section-12.5-5" class="pilcrow">¶</a></p>
+<p id="section-12.5-5">As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server.
+The MC_ACK policy advertised in MC_ANNOUNCE controls when clients send MC_ACK frames for a channel.
+Clients MAY send MC_ACK frames more frequently than this policy requires, but SHOULD avoid sending them less frequently.
+Servers should choose Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold values that balance uplink load against the need for timely loss, congestion, ECN, and liveness feedback.<a href="#section-12.5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="address-collisions">
