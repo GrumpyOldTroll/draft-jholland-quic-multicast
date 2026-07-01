@@ -55,6 +55,7 @@ normative:
   I-D.draft-ietf-mboned-ambi:
   I-D.draft-ietf-mboned-cbacc:
   I-D.draft-ietf-quic-multipath:
+  IANA.tls-parameters:
   RFC8085:
   RFC8446:
   RFC9000:
@@ -181,22 +182,39 @@ multicast_client_params {
   IPv4 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
-  Hash Algorithms Supported (i),
-  Encryption Algorithms Supported (i),
-  Hash Algorithms List (16 * Hash Algorithms Supported),
-  Encryption Algorithms List (16 * Encryption Algorithms Supported)
+  Max Joined Count (i),
+  Hash Algorithms Count (i),
+  Cipher Suite Count (i),
+  Hash Algorithms List (16 * Hash Algorithms Count),
+  Cipher Suite List (16 * Cipher Suite Count)
 }
 ~~~
 {: #fig-transport-parameter-format title="multicast_client_params Format"}
 
-The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, and Max Channel ID fields are identical to their analogous fields in the MC_LIMITS frame ({{client-limits-frame}}) and hold the initial values.
+The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, Max Channel ID and Max Joined Count fields are identical to their analogous fields in the MC_LIMITS frame ({{client-limits-frame}}) and hold the initial values.
 
 A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not allowed according to the IPv4 and IPv6 Channels Allowed fields in the multicast_client_params, unless and until a later MC_LIMITS ({{client-limits-frame}}) frame adds permission for a different address family.
 
-The Encryption Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
+It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero in the transport parameter.
+This indicates that the client supports this extension but does not initially permit joining multicast channels using either IP address family.
+
+The Hash Algorithm Count field contains the number of entries in the Hash Algorithm List field.
+The Cipher Suite Count field contains the number of entries in the Cipher Suite List field.
+An endpoint MUST treat multicast_client_params as malformed if the parameter length is inconsistent with these counts.
+
+The Cipher Suite List field is in order of preference, with the most preferred value first.
+It contains values from the "TLS Cipher Suites" registry in the "Transport Layer Security (TLS) Parameters" registry group {{IANA.tls-parameters}}.
+It lists the cipher suites the client is willing to use for multicast channel packet protection and header
+protection.
+A server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported cipher suites.
 If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.
 
-The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:
+The Hash Algorithm List field is in order of preference, with the most preferred value first.
+It contains values from the Named Information Hash Algorithm Registry.
+It lists the hash algorithms the client is willing to use to check integrity of data in multicast channels.
+
+A server MUST NOT send an MC_ANNOUNCE to this client for a channel using a hash algorithm that was not included in the Hash Algorithm List.
+If the server sends such an MC_ANNOUNCE, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:
 
  - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
 
@@ -445,10 +463,9 @@ MC_ANNOUNCE Frame {
   Source IP (32..128),
   Group IP (32..128),
   UDP Port (16),
-  Header Protection Algorithm (16),
+  Cipher Suite (16),
   Header Secret Length (i),
   Header Secret (..),
-  AEAD Algorithm (16),
   Integrity Hash Algorithm (16),
   Max Rate (i),
   Max ACK Delay (i)
@@ -465,11 +482,15 @@ MC_ANNOUNCE frames contain the following fields:
   * Source IP: The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by the frame type (TBD-11 indicates IPv4, TBD-12 indicates IPv6).
   * Group IP: The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by the frame type (TBD-11 indicates IPv4, TBD-12 indicates IPv6).
   * UDP Port: The 16-bit UDP Port of traffic for the channel.
-  * Header Protection Algorithm: A value from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>), used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
-  * Header Secret Length: Provides the length of the Secret field.
-  * Header Secret: A secret for use with the Header Protection Algorithm for protecting the header fields of 1-RTT packets in the channel as described in {{RFC9001}}.  The Key and Initial Vector for the application data carried in the 1-RTT packet header fields are derived from this secret as described in {{Section 7.3 of RFC8446}}.
-  * AEAD Algorithm: A value from the TLS Cipher Suite registry (<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>), used to protect the payloads in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see {{transport-parameter}}).
-  * Integrity Hash Algorithm: The hash algorithm used in integrity frames.
+  * Cipher Suite: A value from the "TLS Cipher Suites" registry in the "Transport Layer Security (TLS)  Parameters" registry group {{IANA.tls-parameters}}.
+  The cipher suite determines the AEAD algorithm used for packet protection, the hash function used for key derivation, and the header protection algorithm for channel packets, as described in {{Section 5 of RFC9001}}.
+  The value MUST match a value provided in the Cipher Suite List of the multicast_client_params transport parameter; see {{transport-parameter}}.
+  * Header Secret Length: Provides the length of the Header Secret field.
+  * Header Secret: A secret used to derive the header protection key for channel packets.
+  The header protection key is derived from this secret using the cipher suite identified by the Cipher Suite field and the `"quic hp"` label, as described in {{Section 5.1 of RFC9001}}.
+  The header protection algorithm is the algorithm defined by {{RFC9001}} for the AEAD associated with the Cipher Suite used by this channel.
+  The Header Secret is not used to derive packet protection keys or IVs.
+  * Integrity Hash Algorithm: The hash algorithm used in MC_INTEGRITY frames.
     * **Author's Note:** Several candidate IANA registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:
       - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
       - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
@@ -525,8 +546,13 @@ MC_KEY frames contain the following fields:
   * Key Sequence Number: Increases by 1 each time the secret for the channel is changed by the server.  If there is a gap in sequence numbers due to reordering or retransmission of packets, on receipt of the older MC_KEY frame, the client MUST apply the secret contained and the packet numbers on which it applies as if they arrived in order.
   * From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.  The Packet Number MUST never decrease with an increased Key Sequence Number.
   * Secret Length: Provides the length of the secret field.
-  * Secret: Used to protect the packet contents of 1-RTT packets for the channel as described in {{RFC9001}}.  The Key and Initial Vector for the application data carried in the 1-RTT packet payloads are derived from the secret as described in {{Section 7.3 of RFC8446}}.
-    To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
+  * Secret: A channel packet protection secret.
+  Packet protection keys and IVs for channel packets are derived from this secret using the cipher suite identified in the corresponding MC_ANNOUNCE frame and the `"quic key"` and `"quic iv"` labels, as described in {{Section 5.1 of RFC9001}}.
+  This secret is not used to derive the header protection key.
+
+
+
+To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
 
 Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
 Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.
