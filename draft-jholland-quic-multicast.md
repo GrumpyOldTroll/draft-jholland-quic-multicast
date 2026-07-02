@@ -488,7 +488,7 @@ Each of these recommended orderings MAY occur within the same packet.
 ## MC_KEY {#channel-key-frame}
 
 Multicast channel keys are channel-scoped rather than connection-scoped.
-The same channel secret can be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends, or miss key updates while not joined.
+The same channel secret will be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends, or miss key updates while not joined.
 The regular QUIC Key Update mechanism ({{Section 6 of RFC9001}}) can not cover such cases.
 Therefore, the server needs an explicit mechanism to provide the current channel secret to authorized receivers, identify the packet number from which that secret applies, and rotate channel keys independently of the unicast connection's 1-RTT keys.
 
