@@ -321,12 +321,24 @@ Note that clients willing to join a channel SHOULD remain joined to the channel 
 
 Data transmitted in a multicast channel is encrypted with symmetric keys so that on-path observers without access to these keys cannot decode the data.
 However, since potentially many receivers receive identical packets and identical keys for the multicast channel and some receivers might be malicious, the packets are also protected by MC_INTEGRITY ({{channel-integrity-frame}}) frames transmitted over a separate integrity-protected path.
+A client MUST NOT process frames from a multicast channel packet until that packet has been authenticated by an accepted MC_INTEGRITY frame.
 
-A client MUST NOT decode packets on a multicast channel for which it has not received a matching hash in an MC_INTEGRITY frame over a different integrity-protected communication path.
-The different path can be either the unicast connection or another multicast channel with packets that were verified with an earlier MC_INTEGRITY frame.
+An MC_INTEGRITY frame received on the associated unicast connection is a root integrity frame.
+An MC_INTEGRITY frame carried in a multicast channel packet is accepted only after the packet carrying that frame has itself been authenticated.
+Therefore, the authentication chain for any accepted multicast channel packet MUST ultimately terminate in an MC_INTEGRITY frame received on the associated unicast connection.
 
-Note that MC_INTEGRITY frames MAY be carried in packets on multicast channels, however such packets will not be accepted unless another accepted MC_INTEGRITY frame contains its packet hash.
-Hashes of packets containing hashes of other packets can thus form a Merkle tree {{MERKLE}} with a root that is carried in the unicast connection.
+MC_INTEGRITY frames carried in multicast packets can form a finite authentication tree or directed acyclic graph.
+The graph MUST NOT contain circular dependencies.
+In particular, a packet MUST NOT authenticate itself, either directly or indirectly.
+
+Because packet hashes are computed over the final protected packet bytes, an MC_INTEGRITY frame can carry the hash of a packet only after the final protected form of that packet is known.
+For live traffic, this means that multicast-carried MC_INTEGRITY frames generally authenticate earlier packets, packets in a finite precomputed block, or packets for which the sender has sufficient lookahead.
+Receivers can buffer unauthenticated packets, but MUST NOT process frames from those packets
+until the packets have been authenticated.
+
+This document does not require a linear packet-by-packet hash chain.
+A packet can be authenticated by any accepted MC_INTEGRITY frame that contains the packet's hash.
+The same packet hash MAY appear in multiple MC_INTEGRITY frames to improve robustness against loss.
 
 See {{data-integrity}} for a more complete overview of the security issues involved here.
 
@@ -386,9 +398,15 @@ TODO: import the {{I-D.draft-krose-multicast-security}} explanation for why extr
 
 ## Packet Hashes {#packet-hashes}
 
-TODO: explanation and example for how to calculate the packet hash.
-Note that the hash is on the encrypted packet to avoid leaking data about the encrypted contents to those who can see a hash but not the key.
-(This approach also may help make better use of {{I-D.draft-ietf-mboned-ambi}} by making it possible to generate the same hashes for use in both AMBI and QUIC MC_INTEGRITY frames.)
+Packet hashes are computed over the complete protected QUIC packet as it is sent on the multicast channel, including the channel packet header and protected payload.
+The hash is computed after packet protection and header protection have been applied.
+
+Hashing the protected packet avoids exposing information about plaintext contents to entities that can observe MC_INTEGRITY frames but do not have the channel packet protection keys.
+
+Because the hash covers the final protected packet bytes, a sender needs to know the final encoded and protected form of a packet before it can include that packet's hash in an MC_INTEGRITY frame.
+
+A packet has exactly one valid packet hash for a given channel, packet number, and Integrity Hash Algorithm.
+Multiple MC_INTEGRITY frames can carry that hash, but they MUST NOT carry different hash values for the same packet.
 
 # Recovery {#recovery}
 
@@ -626,6 +644,21 @@ Subsequent hashes refer to the packets for the channel with packet numbers incre
 
 Packet hashes MUST have length with an integer multiple of the length indicated by the Hash Algorithm from the MC_ANNOUNCE frame.
 
+An MC_INTEGRITY frame authenticates the packets whose hashes it carries.
+It MUST NOT authenticate the packet carrying the MC_INTEGRITY frame itself.
+If an MC_INTEGRITY frame is carried in a multicast channel packet, that frame is usable only after the packet carrying it has already been authenticated by another accepted MC_INTEGRITY frame.
+
+The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
+This can be used to provide redundancy against loss of packets carrying MC_INTEGRITY frames.
+
+For a given channel and packet number, all accepted MC_INTEGRITY frames that carry a hash for that packet MUST carry the same hash value.
+An MC_INTEGRITY frame is accepted if it was received on the associated unicast connection, or if it was carried in a multicast packet that has itself already been authenticated as described in {{data-integrity}}.
+
+A client that receives an accepted MC_INTEGRITY frame containing a hash for a packet for which the client has already accepted a different hash value MUST treat this as a connection error of type MC_EXTENSION_ERROR.
+The client MUST NOT select between conflicting accepted hash values based on arrival order, path, or packet number.
+
+An MC_INTEGRITY frame carried in a multicast packet that has not yet been authenticated is not accepted and therefore cannot create such a conflict until the packet carrying it has been authenticated.
+
 See {{packet-hashes}} for a description of the packet hash calculation.
 
 ## MC_ACK {#channel-ack-frame}
@@ -773,7 +806,9 @@ In addition to the mechanisms used for retransmission described in {{Section 13.
 - As the properties carried in MC_ANNOUNCE frames can not change during the lifetime of a channel, information contained in them can be retransmitted without any special considerations.
 - Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission SHOULD only occur if the channel in question should still be joined/left/retired.
 - Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.
-- For the 4 remaining frames, MC_KEY, MC_INTEGRITY, MC_LIMITS and MC_STATE, retransmissions MUST include the most up to date information, i.e. the most recent key, integrity hash, client limits or state.
+- For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.
+- For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process.
+The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
 
 # Frames Carried in Channel Packets
 
@@ -795,7 +830,7 @@ Permitted:
  - DATAGRAM Frames (both types) ({{Section 4 of RFC9221}})
  - MC_KEY
  - MC_LEAVE (however, join must come over unicast?)
- - MC_INTEGRITY (not for this channel, only for another)
+ - MC_INTEGRITY, subject to the authentication rules in {{data-integrity}}
  - MC_RETIRE
 
 Not permitted:
