@@ -225,7 +225,7 @@ The server ensures that in aggregate, all channels that the client has currently
 
 This extension does not define an application-layer catalogue or content-selection protocol.
 Application protocols determine what content, service, program, representation, or other application context is relevant to a connection.
-The multicast extension only provides a transport mechanism by which the server can describe channels that are available in that context and request that the client join or leave them.
+The multicast extension merely provides a transport mechanism by which the server can describe channels that are available in that context and request that the client join or leave them.
 A server is not expected to announce every multicast channel that it operates to every client.
 The set of channels announced to any specific client can be limited by application-layer state, prior application requests, receiver limits, server policy, or any combination of these.
 
@@ -801,7 +801,7 @@ This includes, but is not limited to, frames that are part of the cryptographic 
 
 A frame is also not permitted in a channel packet if it is defined only for client-to-server use, or if it would require the server to respond to a single client via the multicast channel (e.g., PATH_CHALLENGE).
 
-A client that receives a frame in a channel packet that is not permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.
+A client that receives a frame in an authenticated channel packet that is not permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.
 
 For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING, MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID, PATH_CHALLENGE, PATH_RESPONSE, CONNECTION_CLOSE, and HANDSHAKE_DONE are not permitted in channel packets because their semantics are tied to an individual QUIC connection.
 
