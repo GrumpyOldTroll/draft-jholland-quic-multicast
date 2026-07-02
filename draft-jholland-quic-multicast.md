@@ -682,6 +682,7 @@ This indicates that the client does not currently permit joining multicast chann
 This does not disable support for this extension on the connection and does not prevent the client from later sending an MC_LIMITS frame that permits one or both address families.
 
 After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN for a channel whose address family is not currently allowed by the client.
+If a client receives such a join it SHOULD silently ignore it.
 If the client is currently joined to one or more channels that are no longer allowed by the updated limits, the server MUST send an MC_LEAVE frame for those channels unless it has already received MC_STATE indicating that the client has left those channels.
 
 Max Aggregate Rate allowed across all joined channels is in Kibps.
