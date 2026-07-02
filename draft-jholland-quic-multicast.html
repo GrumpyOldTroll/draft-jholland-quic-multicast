@@ -12,22 +12,23 @@
 <meta content="
        This document defines a multicast extension to QUIC to enable the efficient use of multicast-capable networks to send identical data streams to many clients at once, coordinated through individual unicast QUIC connections. 
     " name="description">
-<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="xml2rfc 3.34.0" name="generator">
 <meta content="Internet-Draft" name="keyword">
 <meta content="draft-jholland-quic-multicast-latest" name="ietf.draft">
 <!-- Generator version information:
-  xml2rfc 3.33.0
-    Python 3.12.13
-    ConfigArgParse 1.7
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
-    lxml 6.0.2
-    platformdirs 4.9.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.7.0
+    wcwidth 0.8.1
 -->
 <link href="draft-jholland-quic-multicast.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1046,11 +1047,11 @@ svg {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Multicast QUIC</td>
-<td class="right">June 2026</td>
+<td class="right">July 2026</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Holland, et al.</td>
-<td class="center">Expires 10 December 2026</td>
+<td class="center">Expires 3 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1063,12 +1064,12 @@ svg {
 <dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-06-08" class="published">8 June 2026</time>
+<time datetime="2026-07-02" class="published">2 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-12-10">10 December 2026</time></dd>
+<dd class="expires"><time datetime="2027-01-03">3 January 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1129,7 +1130,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 3 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1676,22 +1677,24 @@ If the actual contents sent in the channel exceed the advertised limits from the
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-congestion-control" class="section-name selfRef">Congestion Control</a>
       </h2>
 <p id="section-6-1">Both the server and the client perform congestion control operations, so that according to the guidelines in <span><a href="https://rfc-editor.org/rfc/rfc8085#section-4.1" class="relref">Section 4.1</a> of [<a href="#RFC8085" class="cite xref">RFC8085</a>]</span>, mechanisms for both feedback-based and receiver-driven styles of congestion control are present and operational.<a href="#section-6-1" class="pilcrow">¶</a></p>
-<p id="section-6-2">The server maintains a full view of the traffic received by the client via the MC_ACK (<a href="#channel-ack-frame" class="auto internal xref">Section 10.6</a>) frames and ACK frames it receives, and can detect loss experienced by the client.
-Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.<a href="#section-6-2" class="pilcrow">¶</a></p>
-<p id="section-6-3">Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the clients aggregate rate is below its advertised Max Rate.
-Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(LEFT) frame with the "HIGH_LOSS" reason, as well as reducing the Max Rate in MC_LIMITS.<a href="#section-6-3" class="pilcrow">¶</a></p>
-<p id="section-6-4">The unicast connection's congestion control is unaffected.
-However a few potential interactions with the unicast connection are worth highlighting:<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-2">All frames defined by this document other than MC_ACK are ack-eliciting.  Packets containing those frames are considered in-flight and count toward congestion control limits as described in <span>[<a href="#RFC9002" class="cite xref">RFC9002</a>]</span>.
+MC_ACK frames are treated the same as ACK frames for congestion control and loss recovery purposes and do not make a packet ack-eliciting and thus a packet containing only them does not count as in-flight.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">The server maintains a full view of the traffic received by the client via the MC_ACK (<a href="#channel-ack-frame" class="auto internal xref">Section 10.6</a>) frames and ACK frames it receives, and can detect loss experienced by the client.
+Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the clients aggregate rate is below its advertised Max Rate.
+Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(LEFT) frame with the "HIGH_LOSS" reason, as well as reducing the Max Rate in MC_LIMITS.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">The unicast connection's congestion control is unaffected.
+However a few potential interactions with the unicast connection are worth highlighting:<a href="#section-6-5" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6-5.1">
-          <p id="section-6-5.1.1">if the client notices high loss on the unicast connection while multicast channel packets are arriving, the client MAY leave channels with reason "HIGH_LOSS".<a href="#section-6-5.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-6-6.1">
+          <p id="section-6-6.1.1">if the client notices high loss on the unicast connection while multicast channel packets are arriving, the client MAY leave channels with reason "HIGH_LOSS".<a href="#section-6-6.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-5.2">
-          <p id="section-6-5.2.1">if the client notices congestion from unicast this MAY also drive reductions in the client's Max Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Rate (along with an updated MC_LIMITS frame).<a href="#section-6-5.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-6-6.2">
+          <p id="section-6-6.2.1">if the client notices congestion from unicast this MAY also drive reductions in the client's Max Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Rate (along with an updated MC_LIMITS frame).<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-6-6">Hybrid multicast-unicast congestion control is still an experimental research topic.
-Implementations SHOULD follow the guidelines given in <span><a href="https://rfc-editor.org/rfc/rfc8085#section-4.1.1" class="relref">Section 4.1.1</a> of [<a href="#RFC8085" class="cite xref">RFC8085</a>]</span> under the assumption that applications using QUIC multicast will operate as Bulk-Transfer applications.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">Hybrid multicast-unicast congestion control is still an experimental research topic.
+Implementations SHOULD follow the guidelines given in <span><a href="https://rfc-editor.org/rfc/rfc8085#section-4.1.1" class="relref">Section 4.1.1</a> of [<a href="#RFC8085" class="cite xref">RFC8085</a>]</span> under the assumption that applications using QUIC multicast will operate as Bulk-Transfer applications.<a href="#section-6-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="data-integrity">
@@ -1720,7 +1723,7 @@ Note that the hash is on the encrypted packet to avoid leaking data about the en
 <p id="section-8-1">TODO: Articulate key differences with <span>[<a href="#RFC9002" class="cite xref">RFC9002</a>]</span>.
 The main known difference is that servers might not be running on the same devices that are sending the channel packets, therefore the RTT for channel packets might use an estimated send time that can vary according to the clock synchronization among servers and the deployment and implementation details of how the servers find out the sending timestamps of channel packets.
 Experience-based guidance on the recovery timing estimates is one anticipated outcome of experimenting with deployments of this experimental extension.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">All the new frames defined in this document except MC_ACK are ack-eliciting and are retransmitted until acknowledged to provide reliable, though possibly out of order, delivery.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-2">All frames defined in this document except MC_ACK are ack-eliciting and are retransmitted until acknowledged to provide reliable, though possibly out of order, delivery.<a href="#section-8-2" class="pilcrow">¶</a></p>
 <p id="section-8-3">Note that recovery MAY be achieved either by retransmitting frame data that was lost and needs reliable transport either by sending the frame data on the unicast connection or by coordinating to cause an aggregated retransmission of widely dropped data on a multicast channel, at the server's discretion.
 However, the server in each connection is responsible for ensuring that any necessary server-to-client frame data lost by a multicast channel packet loss ultimately arrives at the client.<a href="#section-8-3" class="pilcrow">¶</a></p>
 <p id="section-8-4">To minimize the amount of additional packets sent on a multicast channel when retransmiting frames, the server SHOULD use Forward Erasure Correction (FEC) techniques following guidelines from <span>[<a href="#I-D.draft-michel-quic-fec" class="cite xref">I-D.draft-michel-quic-fec</a>]</span>. Instead of retransmitting the frames directly, the server sends FEC repair packets on the multicast channel. As such, an individual repair packet can recover different losses on distinct clients, thus minimizing the amount of data sent on a multicast channel. The scheduling of these repair packets is implementation-dependent and hence out of scope of this document.<a href="#section-8-4" class="pilcrow">¶</a></p>
@@ -1795,7 +1798,9 @@ MC_ANNOUNCE Frame {
   AEAD Algorithm (16),
   Integrity Hash Algorithm (16),
   Max Rate (i),
-  Max ACK Delay (i)
+  Max ACK Delay (i),
+  Ack-Eliciting Threshold (i),
+  Reordering Threshold (i)
 }
 </pre>
 </div>
@@ -1856,7 +1861,20 @@ MC_ANNOUNCE Frame {
             <p id="section-10.1-6.11.1">Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason "MAX_RATE_EXCEEDED".<a href="#section-10.1-6.11.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-6.12">
-            <p id="section-10.1-6.12.1">Max ACK Delay: A value used similarly to max_ack_delay (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-18.2" class="relref">Section 18.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) that applies to traffic in this channel.  Clients SHOULD NOT intentionally add delay to MC_ACK frames for traffic in this channel beyond this value, in milliseconds, and SHOULD NOT add any delay to the first MC_ACK of data packets for a channel.  As long as they stay inside these limits, clients can improve efficiency and network load for the uplink by aggregating MC_ACK frames whenever possible.<a href="#section-10.1-6.12.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-6.12.1">Max ACK Delay: The maximum amount of time, in microseconds, that a client can intentionally delay sending an MC_ACK frame for ack-eliciting packets received on this channel.
+  This value is used similarly to max_ack_delay (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-18.2" class="relref">Section 18.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>), but applies
+  only to MC_ACK frames for this channel.
+  A client SHOULD NOT intentionally delay an MC_ACK for this channel beyond this value.<a href="#section-10.1-6.12.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-6.13">
+            <p id="section-10.1-6.13.1">Ack-Eliciting Threshold: The maximum number of ack-eliciting channel packets that a client can receive on this channel without sending an MC_ACK.
+  This field has the same semantics as the Ack-Eliciting Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to MC_ACK frame generation for this channel.
+  A value of 0 requests that every ack-eliciting channel packet be acknowledged immediately.
+  A value of 1 corresponds to the default QUIC behavior of acknowledging after receiving two ack-eliciting packets.<a href="#section-10.1-6.13.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-6.14">
+            <p id="section-10.1-6.14.1">Reordering Threshold: A packet-count threshold used to determine when receipt of out-of-order channel packets causes an immediate MC_ACK.
+  This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to this channels packet number space and to MC_ACK frames for this channel.<a href="#section-10.1-6.14.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-10.1-7">A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
@@ -2039,11 +2057,31 @@ Subsequent hashes refer to the packets for the channel with packet numbers incre
 <a href="#section-10.6" class="section-number selfRef">10.6. </a><a href="#name-mc_ack" class="section-name selfRef">MC_ACK</a>
         </h3>
 <p id="section-10.6-1">The MC_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by <span>[<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.<a href="#section-10.6-1" class="pilcrow">¶</a></p>
-<p id="section-10.6-2">(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-21#section-12.2" class="relref">Section 12.2</a> of [<a href="#I-D.draft-ietf-quic-multipath" class="cite xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)<a href="#section-10.6-2" class="pilcrow">¶</a></p>
-<p id="section-10.6-3">MC_ACK frames are formatted as shown in <a href="#fig-mc-channel-ack-format" class="auto internal xref">Figure 9</a>.<a href="#section-10.6-3" class="pilcrow">¶</a></p>
+<p id="section-10.6-2">MC_ACK generation is controlled by the MC_ACK policy advertised in the MC_ANNOUNCE frame of the corresponding channel.
+The Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold fields of MC_ANNOUNCE apply separately to each multicast channel packet number space.<a href="#section-10.6-2" class="pilcrow">¶</a></p>
+<p id="section-10.6-3">A client SHOULD send an MC_ACK for a channel when either:<a href="#section-10.6-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.6-4.1">
+            <p id="section-10.6-4.1.1">the number of ack-eliciting channel packets received since the last MC_ACK for that channel is greater than the Ack-Eliciting Threshold;<a href="#section-10.6-4.1.1" class="pilcrow">¶</a></p>
+<p id="section-10.6-4.1.2">
+or<a href="#section-10.6-4.1.2" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.6-4.2">
+            <p id="section-10.6-4.2.1">Max ACK Delay has elapsed and at least one ack-eliciting channel packet has been received since the last MC_ACK for that channel.<a href="#section-10.6-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.6-5">A client MAY send an MC_ACK earlier than required by these rules.
+A client MUST send the first MC_ACK for a newly joined channel without intentional delay after receiving ack-eliciting packets on that channel.<a href="#section-10.6-5" class="pilcrow">¶</a></p>
+<p id="section-10.6-6">A client SHOULD use the Reordering Threshold to determine when receipt of out-of-order channel packets causes an immediate MC_ACK, following the behavior defined for ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), applied to the channel packet number space.<a href="#section-10.6-6" class="pilcrow">¶</a></p>
+<p id="section-10.6-7">All channel packets that require acknowledgment MUST be acknowledged at least once.
+When MC_ACK frames are sent less frequently, clients need to retain ACK range information long enough to avoid permanently omitting acknowledgment of received channel packets.<a href="#section-10.6-7" class="pilcrow">¶</a></p>
+<p id="section-10.6-8">ACK_FREQUENCY and IMMEDIATE_ACK frames defined by <span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span> do not affect MC_ACK generation unless a future extension explicitly defines such behavior.
+The ACK policy for MC_ACK frames is instead defined by the MC_ANNOUNCE frame for the corresponding channel.<a href="#section-10.6-8" class="pilcrow">¶</a></p>
+<p id="section-10.6-9">(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-multipath-21#section-12.2" class="relref">Section 12.2</a> of [<a href="#I-D.draft-ietf-quic-multipath" class="cite xref">I-D.draft-ietf-quic-multipath</a>]</span>, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)<a href="#section-10.6-9" class="pilcrow">¶</a></p>
+<p id="section-10.6-10">MC_ACK frames are formatted as shown in <a href="#fig-mc-channel-ack-format" class="auto internal xref">Figure 9</a>.<a href="#section-10.6-10" class="pilcrow">¶</a></p>
 <span id="name-mc_ack-frame-format"></span><div id="fig-mc-channel-ack-format">
 <figure id="figure-9">
-          <div class="alignLeft art-text artwork" id="section-10.6-4.1">
+          <div class="alignLeft art-text artwork" id="section-10.6-11.1">
 <pre>
 MC_ACK Frame {
   Type (i) = TBD-06..TBD-07 (experiments use 0xff3e806, 0xff3e807),
@@ -2494,7 +2532,10 @@ Although under ideal conditions it may often be possible using features like ser
 <p id="section-12.5-2">Servers, possibly many of them, still will be required to maintain unicast connections with all the clients and provide for handling MC_ACK frames from the clients, delivering MC_INTEGRITY frames, managing the clients' channel join states, and providing recovery for lost packets.<a href="#section-12.5-2" class="pilcrow">¶</a></p>
 <p id="section-12.5-3">Further, the use of multicast channels likely requires increased coordination between the different servers, relative to services that operate completely independently.<a href="#section-12.5-3" class="pilcrow">¶</a></p>
 <p id="section-12.5-4">For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.<a href="#section-12.5-4" class="pilcrow">¶</a></p>
-<p id="section-12.5-5">As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server. The guidance provided in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-13.2" class="relref">Section 13.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> should still be followed on when to send ACKs.<a href="#section-12.5-5" class="pilcrow">¶</a></p>
+<p id="section-12.5-5">As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server.
+The MC_ACK policy advertised in MC_ANNOUNCE controls when clients send MC_ACK frames for a channel.
+Clients MAY send MC_ACK frames more frequently than this policy requires, but SHOULD avoid sending them less frequently.
+Servers should choose Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold values that balance uplink load against the need for timely loss, congestion, ECN, and liveness feedback.<a href="#section-12.5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="address-collisions">
@@ -2585,6 +2626,10 @@ which was already checked on the unicast channel?)<a href="#section-13-3" class=
 <dt id="I-D.draft-krose-multicast-security">[I-D.draft-krose-multicast-security]</dt>
         <dd>
 <span class="refAuthor">Rose, K.</span>, <span class="refAuthor">Franke, M.</span>, and <span class="refAuthor">J. Holland</span>, <span class="refTitle">"Security and Privacy Considerations for Multicast Transports"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-krose-multicast-security-07</span>, <time datetime="2025-05-07" class="refDate">7 May 2025</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-krose-multicast-security-07">https://datatracker.ietf.org/doc/html/draft-krose-multicast-security-07</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-quic-ack-frequency">[I-D.ietf-quic-ack-frequency]</dt>
+        <dd>
+<span class="refAuthor">Iyengar, J.</span>, <span class="refAuthor">Swett, I.</span>, and <span class="refAuthor">M. Kühlewind</span>, <span class="refTitle">"QUIC Acknowledgment Frequency"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-quic-ack-frequency-14</span>, <time datetime="2026-02-05" class="refDate">5 February 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-ack-frequency-14">https://datatracker.ietf.org/doc/html/draft-ietf-quic-ack-frequency-14</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
