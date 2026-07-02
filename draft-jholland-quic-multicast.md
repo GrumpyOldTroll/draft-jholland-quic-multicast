@@ -338,7 +338,7 @@ Multicast channels do not define independent QUIC stream ID spaces.
 STREAM frames received on a multicast channel are processed as regular STREAM frames for the associated QUIC connection.
 Stream IDs are therefore allocated from the same connection-wide stream ID space, whether stream data is sent on the unicast path or on one or more multicast channels.
 
-A server that sends STREAM frames on one or more multicast channels associated with the same QUIC connection is responsible for coordinating stream ID allocation across the unicast path and all relevant multicast channels.
+A server that sends STREAM frames on one or more multicast channels associated with the same QUIC connection is responsible for coordinating stream ID allocation across the unicast paths of all potential multicast receivers, and across all relevant multicast channels.
 
 Using disjoint stream ID ranges for different channels is one possible implementation strategy, but is not required by this specification.
 
