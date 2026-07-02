@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 31 December 2026                                               
+Expires: 3 January 2027                                                 
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                            29 June 2026
+                                                             2 July 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 December 2026.
+   This Internet-Draft will expire on 3 January 2027.
 
 Copyright Notice
 
@@ -409,7 +409,7 @@ Table of Contents
    This extension does not define an application-layer catalogue or
    content-selection protocol.  Application protocols determine what
    content, service, program, representation, or other application
-   context is relevant to a connection.  The multicast extension only
+   context is relevant to a connection.  The multicast extension merely
    provides a transport mechanism by which the server can describe
    channels that are available in that context and request that the
    client join or leave them.  A server is not expected to announce
@@ -1407,8 +1407,9 @@ Table of Contents
    respond to a single client via the multicast channel (e.g.,
    PATH_CHALLENGE).
 
-   A client that receives a frame in a channel packet that is not
-   permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.
+   A client that receives a frame in an authenticated channel packet
+   that is not permitted SHOULD close the connection with reason
+   MC_EXTENSION_ERROR.
 
    For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING,
    MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID,
