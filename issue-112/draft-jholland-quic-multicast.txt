@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 31 December 2026                                               
+Expires: 3 January 2027                                                 
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                            29 June 2026
+                                                             2 July 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 December 2026.
+   This Internet-Draft will expire on 3 January 2027.
 
 Copyright Notice
 
@@ -563,8 +563,9 @@ Table of Contents
 
    A server that sends STREAM frames on one or more multicast channels
    associated with the same QUIC connection is responsible for
-   coordinating stream ID allocation across the unicast path and all
-   relevant multicast channels.
+   coordinating stream ID allocation across the unicast paths of all
+   potential multicast receivers, and across all relevant multicast
+   channels.
 
    Using disjoint stream ID ranges for different channels is one
    possible implementation strategy, but is not required by this
