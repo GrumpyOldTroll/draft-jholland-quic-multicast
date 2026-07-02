@@ -1463,10 +1463,11 @@ multicast_client_params {
   IPv4 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
-  Hash Algorithms Supported (i),
-  Encryption Algorithms Supported (i),
-  Hash Algorithms List (16 * Hash Algorithms Supported),
-  Encryption Algorithms List (16 * Encryption Algorithms Supported)
+  Max Joined Count (i),
+  Hash Algorithms Count (i),
+  Cipher Suite Count (i),
+  Hash Algorithms List (16 * Hash Algorithms Count),
+  Cipher Suite List (16 * Cipher Suite Count)
 }
 </pre>
 </div>
@@ -1474,14 +1475,27 @@ multicast_client_params {
 <a href="#name-multicast_client_params-for" class="selfRef">multicast_client_params Format</a>
         </figcaption></figure>
 </div>
-<p id="section-3-8">The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, and Max Channel ID fields are identical to their analogous fields in the MC_LIMITS frame (<a href="#client-limits-frame" class="auto internal xref">Section 10.7</a>) and hold the initial values.<a href="#section-3-8" class="pilcrow">¶</a></p>
+<p id="section-3-8">The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, Max Channel ID and Max Joined Count fields are identical to their analogous fields in the MC_LIMITS frame (<a href="#client-limits-frame" class="auto internal xref">Section 10.7</a>) and hold the initial values.<a href="#section-3-8" class="pilcrow">¶</a></p>
 <p id="section-3-9">A server MUST NOT send MC_ANNOUNCE (<a href="#channel-announce-frame" class="auto internal xref">Section 10.1</a>) frames with addresses using an IP Family that is not allowed according to the IPv4 and IPv6 Channels Allowed fields in the multicast_client_params, unless and until a later MC_LIMITS (<a href="#client-limits-frame" class="auto internal xref">Section 10.7</a>) frame adds permission for a different address family.<a href="#section-3-9" class="pilcrow">¶</a></p>
-<p id="section-3-10">The Encryption Algorithms List field is in order of preference (most preferred occurring first) using values from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>). It lists the algorithms the client is willing to use to decrypt data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms.
-If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.<a href="#section-3-10" class="pilcrow">¶</a></p>
-<p id="section-3-11">The Hash Algorithms List field is in order of preference (most preferred occurring first) using values from the registry below. It lists the algorithms the client is willing to use to check integrity of data in multicast channels, and the server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported algorithms, or the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:<a href="#section-3-11" class="pilcrow">¶</a></p>
+<p id="section-3-10">It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero in the transport parameter.
+This indicates that the client supports this extension but does not initially permit joining multicast channels using either IP address family.<a href="#section-3-10" class="pilcrow">¶</a></p>
+<p id="section-3-11">The Hash Algorithm Count field contains the number of entries in the Hash Algorithm List field.
+The Cipher Suite Count field contains the number of entries in the Cipher Suite List field.
+An endpoint MUST treat multicast_client_params as malformed if the parameter length is inconsistent with these counts.<a href="#section-3-11" class="pilcrow">¶</a></p>
+<p id="section-3-12">The Cipher Suite List field is in order of preference, with the most preferred value first.
+It contains values from the "TLS Cipher Suites" registry in the "Transport Layer Security (TLS) Parameters" registry group <span>[<a href="#IANA.tls-parameters" class="cite xref">IANA.tls-parameters</a>]</span>.
+It lists the cipher suites the client is willing to use for multicast channel packet protection and header
+protection.
+A server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported cipher suites.
+If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.<a href="#section-3-12" class="pilcrow">¶</a></p>
+<p id="section-3-13">The Hash Algorithm List field is in order of preference, with the most preferred value first.
+It contains values from the Named Information Hash Algorithm Registry.
+It lists the hash algorithms the client is willing to use to check integrity of data in multicast channels.<a href="#section-3-13" class="pilcrow">¶</a></p>
+<p id="section-3-14">A server MUST NOT send an MC_ANNOUNCE to this client for a channel using a hash algorithm that was not included in the Hash Algorithm List.
+If the server sends such an MC_ANNOUNCE, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:<a href="#section-3-14" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3-12.1">
-          <p id="section-3-12.1.1"><a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-3-12.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-3-15.1">
+          <p id="section-3-15.1.1"><a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-3-15.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -1792,10 +1806,9 @@ MC_ANNOUNCE Frame {
   Source IP (32..128),
   Group IP (32..128),
   UDP Port (16),
-  Header Protection Algorithm (16),
+  Cipher Suite (16),
   Header Secret Length (i),
   Header Secret (..),
-  AEAD Algorithm (16),
   Integrity Hash Algorithm (16),
   Max Rate (i),
   Max ACK Delay (i),
@@ -1827,54 +1840,56 @@ MC_ANNOUNCE Frame {
             <p id="section-10.1-6.5.1">UDP Port: The 16-bit UDP Port of traffic for the channel.<a href="#section-10.1-6.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-6.6">
-            <p id="section-10.1-6.6.1">Header Protection Algorithm: A value from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>), used to protect the header fields in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see <a href="#transport-parameter" class="auto internal xref">Section 3</a>).<a href="#section-10.1-6.6.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-6.6.1">Cipher Suite: A value from the "TLS Cipher Suites" registry in the "Transport Layer Security (TLS)  Parameters" registry group <span>[<a href="#IANA.tls-parameters" class="cite xref">IANA.tls-parameters</a>]</span>.
+  The cipher suite determines the AEAD algorithm used for packet protection, the hash function used for key derivation, and the header protection algorithm for channel packets, as described in <span><a href="https://rfc-editor.org/rfc/rfc9001#section-5" class="relref">Section 5</a> of [<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>.
+  The value MUST match a value provided in the Cipher Suite List of the multicast_client_params transport parameter; see <a href="#transport-parameter" class="auto internal xref">Section 3</a>.<a href="#section-10.1-6.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-6.7">
-            <p id="section-10.1-6.7.1">Header Secret Length: Provides the length of the Secret field.<a href="#section-10.1-6.7.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-6.7.1">Header Secret Length: Provides the length of the Header Secret field.<a href="#section-10.1-6.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-6.8">
-            <p id="section-10.1-6.8.1">Header Secret: A secret for use with the Header Protection Algorithm for protecting the header fields of 1-RTT packets in the channel as described in <span>[<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>.  The Key and Initial Vector for the application data carried in the 1-RTT packet header fields are derived from this secret as described in <span><a href="https://rfc-editor.org/rfc/rfc8446#section-7.3" class="relref">Section 7.3</a> of [<a href="#RFC8446" class="cite xref">RFC8446</a>]</span>.<a href="#section-10.1-6.8.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-6.8.1">Header Secret: A secret used to derive the header protection key for channel packets.
+  The header protection key is derived from this secret using the cipher suite identified by the Cipher Suite field and the <code>"quic hp"</code> label, as described in <span><a href="https://rfc-editor.org/rfc/rfc9001#section-5.1" class="relref">Section 5.1</a> of [<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>.
+  The header protection algorithm is the algorithm defined by <span>[<a href="#RFC9001" class="cite xref">RFC9001</a>]</span> for the AEAD associated with the Cipher Suite used by this channel.
+  The Header Secret is not used to derive packet protection keys or IVs.<a href="#section-10.1-6.8.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-6.9">
-            <p id="section-10.1-6.9.1">AEAD Algorithm: A value from the TLS Cipher Suite registry (<a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4</a>), used to protect the payloads in the channel packets.  The value MUST match a value provided in the "AEAD Algorithms List" of the transport parameter (see <a href="#transport-parameter" class="auto internal xref">Section 3</a>).<a href="#section-10.1-6.9.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-10.1-6.10">
-            <p id="section-10.1-6.10.1">Integrity Hash Algorithm: The hash algorithm used in integrity frames.<a href="#section-10.1-6.10.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-6.9.1">Integrity Hash Algorithm: The hash algorithm used in MC_INTEGRITY frames.<a href="#section-10.1-6.9.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10.1-6.10.2.1">
-                <p id="section-10.1-6.10.2.1.1"><strong>Author's Note:</strong> Several candidate IANA registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:<a href="#section-10.1-6.10.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10.1-6.9.2.1">
+                <p id="section-10.1-6.9.2.1.1"><strong>Author's Note:</strong> Several candidate IANA registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:<a href="#section-10.1-6.9.2.1.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10.1-6.10.2.1.2.1">
-                    <p id="section-10.1-6.10.2.1.2.1.1"><a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-10.1-6.10.2.1.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10.1-6.9.2.1.2.1">
+                    <p id="section-10.1-6.9.2.1.2.1.1"><a href="https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg">https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg</a><a href="#section-10.1-6.9.2.1.2.1.1" class="pilcrow">¶</a></p>
 </li>
-                  <li class="normal" id="section-10.1-6.10.2.1.2.2">
-                    <p id="section-10.1-6.10.2.1.2.2.1"><a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18</a><a href="#section-10.1-6.10.2.1.2.2.1" class="pilcrow">¶</a></p>
+                  <li class="normal" id="section-10.1-6.9.2.1.2.2">
+                    <p id="section-10.1-6.9.2.1.2.2.1"><a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18">https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18</a><a href="#section-10.1-6.9.2.1.2.2.1" class="pilcrow">¶</a></p>
 </li>
-                  <li class="normal" id="section-10.1-6.10.2.1.2.3">
-                    <p id="section-10.1-6.10.2.1.2.3.1">(text-only): <a href="https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml">https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml</a><a href="#section-10.1-6.10.2.1.2.3.1" class="pilcrow">¶</a></p>
+                  <li class="normal" id="section-10.1-6.9.2.1.2.3">
+                    <p id="section-10.1-6.9.2.1.2.3.1">(text-only): <a href="https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml">https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml</a><a href="#section-10.1-6.9.2.1.2.3.1" class="pilcrow">¶</a></p>
 </li>
                 </ul>
 </li>
             </ul>
 </li>
-          <li class="normal" id="section-10.1-6.11">
-            <p id="section-10.1-6.11.1">Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason "MAX_RATE_EXCEEDED".<a href="#section-10.1-6.11.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.1-6.10">
+            <p id="section-10.1-6.10.1">Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason "MAX_RATE_EXCEEDED".<a href="#section-10.1-6.10.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.1-6.12">
-            <p id="section-10.1-6.12.1">Max ACK Delay: The maximum amount of time, in microseconds, that a client can intentionally delay sending an MC_ACK frame for ack-eliciting packets received on this channel.
+          <li class="normal" id="section-10.1-6.11">
+            <p id="section-10.1-6.11.1">Max ACK Delay: The maximum amount of time, in microseconds, that a client can intentionally delay sending an MC_ACK frame for ack-eliciting packets received on this channel.
   This value is used similarly to max_ack_delay (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-18.2" class="relref">Section 18.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>), but applies
   only to MC_ACK frames for this channel.
-  A client SHOULD NOT intentionally delay an MC_ACK for this channel beyond this value.<a href="#section-10.1-6.12.1" class="pilcrow">¶</a></p>
+  A client SHOULD NOT intentionally delay an MC_ACK for this channel beyond this value.<a href="#section-10.1-6.11.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.1-6.13">
-            <p id="section-10.1-6.13.1">Ack-Eliciting Threshold: The maximum number of ack-eliciting channel packets that a client can receive on this channel without sending an MC_ACK.
+          <li class="normal" id="section-10.1-6.12">
+            <p id="section-10.1-6.12.1">Ack-Eliciting Threshold: The maximum number of ack-eliciting channel packets that a client can receive on this channel without sending an MC_ACK.
   This field has the same semantics as the Ack-Eliciting Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to MC_ACK frame generation for this channel.
   A value of 0 requests that every ack-eliciting channel packet be acknowledged immediately.
-  A value of 1 corresponds to the default QUIC behavior of acknowledging after receiving two ack-eliciting packets.<a href="#section-10.1-6.13.1" class="pilcrow">¶</a></p>
+  A value of 1 corresponds to the default QUIC behavior of acknowledging after receiving two ack-eliciting packets.<a href="#section-10.1-6.12.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.1-6.14">
-            <p id="section-10.1-6.14.1">Reordering Threshold: A packet-count threshold used to determine when receipt of out-of-order channel packets causes an immediate MC_ACK.
-  This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to this channels packet number space and to MC_ACK frames for this channel.<a href="#section-10.1-6.14.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.1-6.13">
+            <p id="section-10.1-6.13.1">Reordering Threshold: A packet-count threshold used to determine when receipt of out-of-order channel packets causes an immediate MC_ACK.
+  This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to this channels packet number space and to MC_ACK frames for this channel.<a href="#section-10.1-6.13.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-10.1-7">A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
@@ -1939,21 +1954,23 @@ MC_KEY Frame {
             <p id="section-10.2-9.5.1">Secret Length: Provides the length of the secret field.<a href="#section-10.2-9.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.2-9.6">
-            <p id="section-10.2-9.6.1">Secret: Used to protect the packet contents of 1-RTT packets for the channel as described in <span>[<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>.  The Key and Initial Vector for the application data carried in the 1-RTT packet payloads are derived from the secret as described in <span><a href="https://rfc-editor.org/rfc/rfc8446#section-7.3" class="relref">Section 7.3</a> of [<a href="#RFC8446" class="cite xref">RFC8446</a>]</span>.
-To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.<a href="#section-10.2-9.6.1" class="pilcrow">¶</a></p>
+            <p id="section-10.2-9.6.1">Secret: A channel packet protection secret.
+  Packet protection keys and IVs for channel packets are derived from this secret using the cipher suite identified in the corresponding MC_ANNOUNCE frame and the <code>"quic key"</code> and <code>"quic iv"</code> labels, as described in <span><a href="https://rfc-editor.org/rfc/rfc9001#section-5.1" class="relref">Section 5.1</a> of [<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>.
+  This secret is not used to derive the header protection key.<a href="#section-10.2-9.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-10.2-10">Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
-Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.<a href="#section-10.2-10" class="pilcrow">¶</a></p>
-<p id="section-10.2-11">Client implementations MAY institute a delay before deleting secrets to allow for decoding of packets for the channel that arrive shortly after a new MC_KEY frame.
+<p id="section-10.2-10">To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.<a href="#section-10.2-10" class="pilcrow">¶</a></p>
+<p id="section-10.2-11">Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
+Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.<a href="#section-10.2-11" class="pilcrow">¶</a></p>
+<p id="section-10.2-12">Client implementations MAY institute a delay before deleting secrets to allow for decoding of packets for the channel that arrive shortly after a new MC_KEY frame.
 For this experimental specification, it is RECOMMENDED that clients delete old keys 10 seconds after receiving a new key or after 3 seconds that elapse without receiving any new data to decode with the old key, whichever is shorter.
-Clients MUST NOT delay more than 60 seconds before deleting the old keys.<a href="#section-10.2-11" class="pilcrow">¶</a></p>
-<p id="section-10.2-12">The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
+Clients MUST NOT delay more than 60 seconds before deleting the old keys.<a href="#section-10.2-12" class="pilcrow">¶</a></p>
+<p id="section-10.2-13">The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
 One of the target discoveries for experimental evaluation is to determine good default delay values to use, and to understand whether there are use cases that would benefit from a negotiation between server and client to determine the delays to use dynamically.
-(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)<a href="#section-10.2-12" class="pilcrow">¶</a></p>
-<p id="section-10.2-13">The From Packet Number is used to indicate the starting packet number (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.1" class="relref">Section 17.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
-This secret is applicable to all future packets until it is updated by a new MC_KEY frame.<a href="#section-10.2-13" class="pilcrow">¶</a></p>
-<p id="section-10.2-14">A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.<a href="#section-10.2-14" class="pilcrow">¶</a></p>
+(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)<a href="#section-10.2-13" class="pilcrow">¶</a></p>
+<p id="section-10.2-14">The From Packet Number is used to indicate the starting packet number (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.1" class="relref">Section 17.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
+This secret is applicable to all future packets until it is updated by a new MC_KEY frame.<a href="#section-10.2-14" class="pilcrow">¶</a></p>
+<p id="section-10.2-15">A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.<a href="#section-10.2-15" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="channel-join-frame">
@@ -2630,6 +2647,10 @@ which was already checked on the unicast channel?)<a href="#section-13-3" class=
 <dt id="I-D.ietf-quic-ack-frequency">[I-D.ietf-quic-ack-frequency]</dt>
         <dd>
 <span class="refAuthor">Iyengar, J.</span>, <span class="refAuthor">Swett, I.</span>, and <span class="refAuthor">M. Kühlewind</span>, <span class="refTitle">"QUIC Acknowledgment Frequency"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-quic-ack-frequency-14</span>, <time datetime="2026-02-05" class="refDate">5 February 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-ack-frequency-14">https://datatracker.ietf.org/doc/html/draft-ietf-quic-ack-frequency-14</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="IANA.tls-parameters">[IANA.tls-parameters]</dt>
+        <dd>
+<span class="refAuthor">IANA</span>, <span class="refTitle">"Transport Layer Security (TLS) Parameters"</span>, <span>&lt;<a href="https://www.iana.org/assignments/tls-parameters">https://www.iana.org/assignments/tls-parameters</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
