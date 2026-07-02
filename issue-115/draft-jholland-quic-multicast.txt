@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 1 January 2027                                                 
+Expires: 3 January 2027                                                 
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                            30 June 2026
+                                                             2 July 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 January 2027.
+   This Internet-Draft will expire on 3 January 2027.
 
 Copyright Notice
 
@@ -1206,10 +1206,11 @@ Table of Contents
 
    After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN
    for a channel whose address family is not currently allowed by the
-   client.  If the client is currently joined to one or more channels
-   that are no longer allowed by the updated limits, the server MUST
-   send an MC_LEAVE frame for those channels unless it has already
-   received MC_STATE indicating that the client has left those channels.
+   client.  If a client receives such a join it SHOULD silently ignore
+   it.  If the client is currently joined to one or more channels that
+   are no longer allowed by the updated limits, the server MUST send an
+   MC_LEAVE frame for those channels unless it has already received
+   MC_STATE indicating that the client has left those channels.
 
    Max Aggregate Rate allowed across all joined channels is in Kibps.
 
