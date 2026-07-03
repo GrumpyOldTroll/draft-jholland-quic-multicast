@@ -654,18 +654,23 @@ MC_INTEGRITY Frame {
   ID Length (8),
   Channel ID (8..160),
   Packet Number Start (i),
-  [Length (i)],
+  [Packet Hashes Length (i)],
   Packet Hashes (..)
 }
 ~~~
 {: #fig-mc-channel-integrity-format title="MC_INTEGRITY Frame Format"}
 
-For type TBD-05, Length is present and is a count of packet hashes.  For TBD-04, Length is not present and the packet hashes extend to the end of the packet.
 
+For type TBD-05, Packet Hashes Length is present and is the length in bytes of the Packet Hashes field.
+For TBD-04, Packet Hashes Length is not present and the Packet Hashes field extends to the end of the packet.
+
+The Packet Hashes field contains a sequence of packet hashes.
 The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Channel ID equal to the Channel ID in the MC_INTEGRITY frame and packet number equal to the Packet Number Start field.
-Subsequent hashes refer to the packets for the channel with packet numbers increasing by 1.
+Subsequent hashes refer to the packets for that channel with packet numbers increasing by one.
 
-Packet hashes MUST have length with an integer multiple of the length indicated by the Hash Algorithm from the MC_ANNOUNCE frame.
+Each hash has its length determined by the Integrity Hash Algorithm in the corresponding MC_ANNOUNCE frame.
+The Packet Hashes field MUST contain a non-zero integer of complete packet hashes.
+A client that receives an MC_INTEGRITY frame whose Packet Hashes field length is zero, or whose Packet Hashes field length is not an integer multiple of the hash length for the channel, MUST treat this as a connection error of type MC_EXTENSION_ERROR.
 
 See {{packet-hashes}} for a description of the packet hash calculation.
 
