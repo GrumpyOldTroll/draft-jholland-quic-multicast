@@ -356,9 +356,7 @@ A client SHOULD use the channel's Max Rate and Max Authentication Delay values t
 If a packet has not become authenticated within Max Authentication Delay after it was received, the client MAY discard the packet.
 If this occurs persistently, or if the number of unauthenticated packets exceeds the client's local buffering capacity, the client SHOULD leave the channel and send MC_STATE(LEFT) with reason AUTHENTICATION_DELAY_EXCEEDED.
 
-A client MAY decline to join a channel, or MAY leave a joined channel,
-if the Max Authentication Delay value is larger than the client is
-willing to support.
+A client MAY decline to join a channel, or MAY leave a joined channel, if the Max Authentication Delay value is larger than the client is willing to support.
 
 ## Stream Processing
 
