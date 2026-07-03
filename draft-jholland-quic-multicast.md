@@ -372,7 +372,15 @@ A client MAY decline to join a channel, or MAY leave a joined channel, if the Ma
 
 Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see {{Section 2.1 of RFC9000}}).
 
-When a channel contains streams with IDs above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in {{Sections 4.6 and 19.14 of RFC9000}}.
+Multicast channels do not define independent QUIC stream ID spaces.
+STREAM frames received on a multicast channel are processed as regular STREAM frames for the associated QUIC connection.
+Stream IDs are therefore allocated from the same connection-wide stream ID space, whether stream data is sent on the unicast path or on one or more multicast channels.
+
+A server that sends STREAM frames on one or more multicast channels associated with the same QUIC connection is responsible for coordinating stream ID allocation across the unicast paths of all potential multicast receivers, and across all relevant multicast channels.
+
+Using disjoint stream ID ranges for different channels is one possible implementation strategy, but is not required by this specification.
+
+When a channel contains, or may soon contain, streams with IDs that exceed the stream ID limit implied by the client's server-initiated unidirectional MAX_STREAMS value, the server MUST NOT send MC_JOIN to instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in {{Sections 4.6 and 19.14 of RFC9000}}.
 
 If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send an MC_LEAVE frame.
 
@@ -382,7 +390,9 @@ Since clients can join later than a channel began, it is RECOMMENDED that client
 Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see {{Section 19.11 of RFC9000}}) with a high limit.
 Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.
 
-The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in {{Section 2.2 of RFC9000}}, stream data received multiple times for the same offset MUST be identical, even across different network paths; if it's not identical it MAY be treated as a connection error of type MC_EXTENSION_ERROR.
+The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in {{Section 2.2 of RFC9000}}, stream data received multiple times for the same offset MUST be identical, including when the data is received on different multicast channels or on both multicast and unicast paths.
+If it's not identical it MAY be treated as a connection error of type MC_EXTENSION_ERROR.
+
 
 # Flow Control {#flow-control}
 
