@@ -422,6 +422,25 @@ Table of Contents
    values in the transport parameter or last MC_LIMITS (Section 10.7)
    frame the server received.
 
+   This extension does not define an application-layer catalogue or
+   content-selection protocol.  Application protocols determine what
+   content, service, program, representation, or other application
+   context is relevant to a connection.  The multicast extension merely
+   provides a transport mechanism by which the server can describe
+   channels that are available in that context and request that the
+   client join or leave them.  A server is not expected to announce
+   every multicast channel that it operates to every client.  The set of
+   channels announced to any specific client can be limited by
+   application-layer state, prior application requests, receiver limits,
+   server policy, or any combination of these.
+
+   For example, a server may provide a video stream in different
+   resolutions, with each available resolution being carried in a
+   different multicast channel.  The server would only announce the
+   channel that offers the best available quality while remaining under
+   the limits set by the client.  In this case, this could happen
+   without any involvement of the client-side application.
+
                                o
                                |
    ----------------------->|   | Receive MC_ANNOUNCE and/or MC_KEY
@@ -1505,8 +1524,9 @@ Table of Contents
    respond to a single client via the multicast channel (e.g.,
    PATH_CHALLENGE).
 
-   A client that receives a frame in a channel packet that is not
-   permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.
+   A client that receives a frame in an authenticated channel packet
+   that is not permitted SHOULD close the connection with reason
+   MC_EXTENSION_ERROR.
 
    For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING,
    MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID,
