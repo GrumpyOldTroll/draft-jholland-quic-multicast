@@ -242,6 +242,16 @@ Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients. If a
 
 The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS ({{client-limits-frame}}) frame the server received.
 
+This extension does not define an application-layer catalogue or content-selection protocol.
+Application protocols determine what content, service, program, representation, or other application context is relevant to a connection.
+The multicast extension merely provides a transport mechanism by which the server can describe channels that are available in that context and request that the client join or leave them.
+A server is not expected to announce every multicast channel that it operates to every client.
+The set of channels announced to any specific client can be limited by application-layer state, prior application requests, receiver limits, server policy, or any combination of these.
+
+For example, a server may provide a video stream in different resolutions, with each available resolution being carried in a different multicast channel.
+The server would only announce the channel that offers the best available quality while remaining under the limits set by the client.
+In this case, this could happen without any involvement of the client-side application.
+
 ~~~
                             o
                             |
@@ -362,7 +372,15 @@ A client MAY decline to join a channel, or MAY leave a joined channel, if the Ma
 
 Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see {{Section 2.1 of RFC9000}}).
 
-When a channel contains streams with IDs above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in {{Sections 4.6 and 19.14 of RFC9000}}.
+Multicast channels do not define independent QUIC stream ID spaces.
+STREAM frames received on a multicast channel are processed as regular STREAM frames for the associated QUIC connection.
+Stream IDs are therefore allocated from the same connection-wide stream ID space, whether stream data is sent on the unicast path or on one or more multicast channels.
+
+A server that sends STREAM frames on one or more multicast channels associated with the same QUIC connection is responsible for coordinating stream ID allocation across the unicast paths of all potential multicast receivers, and across all relevant multicast channels.
+
+Using disjoint stream ID ranges for different channels is one possible implementation strategy, but is not required by this specification.
+
+When a channel contains, or may soon contain, streams with IDs that exceed the stream ID limit implied by the client's server-initiated unidirectional MAX_STREAMS value, the server MUST NOT send MC_JOIN to instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in {{Sections 4.6 and 19.14 of RFC9000}}.
 
 If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send an MC_LEAVE frame.
 
@@ -372,7 +390,9 @@ Since clients can join later than a channel began, it is RECOMMENDED that client
 Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see {{Section 19.11 of RFC9000}}) with a high limit.
 Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.
 
-The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in {{Section 2.2 of RFC9000}}, stream data received multiple times for the same offset MUST be identical, even across different network paths; if it's not identical it MAY be treated as a connection error of type MC_EXTENSION_ERROR.
+The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in {{Section 2.2 of RFC9000}}, stream data received multiple times for the same offset MUST be identical, including when the data is received on different multicast channels or on both multicast and unicast paths.
+If it's not identical it MAY be treated as a connection error of type MC_EXTENSION_ERROR.
+
 
 # Flow Control {#flow-control}
 
@@ -538,6 +558,11 @@ Each of these recommended orderings MAY occur within the same packet.
 
 ## MC_KEY {#channel-key-frame}
 
+Multicast channel keys are channel-scoped rather than connection-scoped.
+The same channel secret will be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends, or miss key updates while not joined.
+The regular QUIC Key Update mechanism ({{Section 6 of RFC9001}}) can not cover such cases.
+Therefore, the server needs an explicit mechanism to provide the current channel secret to authorized receivers, identify the packet number from which that secret applies, and rotate channel keys independently of the unicast connection's 1-RTT keys.
+
 An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
 The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.
 
@@ -679,18 +704,23 @@ MC_INTEGRITY Frame {
   ID Length (8),
   Channel ID (8..160),
   Packet Number Start (i),
-  [Length (i)],
+  [Packet Hashes Length (i)],
   Packet Hashes (..)
 }
 ~~~
 {: #fig-mc-channel-integrity-format title="MC_INTEGRITY Frame Format"}
 
-For type TBD-05, Length is present and is a count of packet hashes.  For TBD-04, Length is not present and the packet hashes extend to the end of the packet.
 
+For type TBD-05, Packet Hashes Length is present and is the length in bytes of the Packet Hashes field.
+For TBD-04, Packet Hashes Length is not present and the Packet Hashes field extends to the end of the packet.
+
+The Packet Hashes field contains a sequence of packet hashes.
 The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Channel ID equal to the Channel ID in the MC_INTEGRITY frame and packet number equal to the Packet Number Start field.
-Subsequent hashes refer to the packets for the channel with packet numbers increasing by 1.
+Subsequent hashes refer to the packets for that channel with packet numbers increasing by one.
 
-Packet hashes MUST have length with an integer multiple of the length indicated by the Hash Algorithm from the MC_ANNOUNCE frame.
+Each hash has its length determined by the Integrity Hash Algorithm in the corresponding MC_ANNOUNCE frame.
+The Packet Hashes field MUST contain a non-zero integer multiple of of the hash length for the channel.
+A client that receives an MC_INTEGRITY frame whose Packet Hashes field length is zero, or whose Packet Hashes field length is not an integer multiple of the hash length for the channel, MUST treat this as a connection error of type MC_EXTENSION_ERROR.
 
 See {{packet-hashes}} for a description of the packet hash calculation.
 
@@ -766,6 +796,14 @@ These are reserved to advertise future capabilities.
 IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can be joined and 0 if IPv6 channels cannot be joined.
 
 IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can be joined and 0 if IPv4 channels cannot be joined.
+
+It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero simultaneously.
+This indicates that the client does not currently permit joining multicast channels using either IP address family.
+This does not disable support for this extension on the connection and does not prevent the client from later sending an MC_LIMITS frame that permits one or both address families.
+
+After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN for a channel whose address family is not currently allowed by the client.
+If a client receives such a join it SHOULD silently ignore it.
+If the client is currently joined to one or more channels that are no longer allowed by the updated limits, the server MUST send an MC_LEAVE frame for those channels unless it has already received MC_STATE indicating that the client has left those channels.
 
 Max Aggregate Rate allowed across all joined channels is in Kibps.
 
@@ -873,48 +911,25 @@ Multicast channels will contain normal QUIC 1-RTT data packets (see {{Section 17
 
 Data packet hashes will also be sent in MC_INTEGRITY frames, as keys cannot be trusted for integrity due to giving them to too many receivers, as described in {{I-D.draft-krose-multicast-security}}.
 
-The 1-RTT packets in multicast channels will have a restricted set of frames.
-Since the channel is strictly 1-way server to client, the general principle is that broadcastable shared server->client data frames can be sent, but frames that make sense only for individualized connections or that are sent client-to-server cannot.
+The set of frames that can appear in a channel packet is restricted.
+A server MUST NOT send a frame in a channel packet unless the frame is valid in a QUIC 1-RTT packet and either:
 
-Should a not permitted frame arrive on a multicast channel, the connection MUST be closed with a connection error of type MC_EXTENSION_ERROR.
+* the definition of the frame explicitly permits its use in channel packets; or
 
-Permitted:
+* the frame operates only on state that is shared by all receivers of the channel; receiving it will have the same effect for all receivers.
 
- - PADDING Frames ({{Section 19.1 of RFC9000}} )
- - PING Frames ({{Section 19.2 of RFC9000}} )
- - RESET_STREAM Frames ({{Section 19.4 of RFC9000}} )
- - STREAM Frames ({{Section 19.8 of RFC9000}} )
- - DATAGRAM Frames (both types) ({{Section 4 of RFC9221}})
- - MC_KEY
- - MC_LEAVE (however, join must come over unicast?)
- - MC_INTEGRITY (not for this channel, only for another)
- - MC_RETIRE
+A frame is not permitted in a channel packet if processing the frame depends on state that is specific to an individual receiver, path, or unicast connection.
+This includes, but is not limited to, frames that are part of the cryptographic handshake, address validation, connection ID migration, flow control or connection termination.
 
-Not permitted:
+A frame is also not permitted in a channel packet if it is defined only for client-to-server use, or if it would require the server to respond to a single client via the multicast channel (e.g., PATH_CHALLENGE).
 
- - 19.3.  ACK Frames
- - 19.6.  CRYPTO Frames (crypto handshake does not happen on mc channels)
- - 19.7.  NEW_TOKEN Frames
- - Flow control is different:
-   - 19.5.  STOP_SENDING Frames
-   - 19.9.  MAX_DATA Frames  (flow control for mc channels is by rate)
-   - 19.10. MAX_STREAM_DATA Frames
-   - 19.11. MAX_STREAMS Frames
-   - 19.12. DATA_BLOCKED Frames
-   - 19.13. STREAM_DATA_BLOCKED Frames
-   - 19.14. STREAMS_BLOCKED Frames
- - Channel ID Migration can't use the "prior to" concept within a channel, not 0-starting
-   - 19.15. NEW_CONNECTION_ID Frames
-   - 19.16. RETIRE_CONNECTION_ID Frames
- - Channels don't have the same kind of path validation, as there's a unicast anchor with acks for the multicast packets:
-   - 19.17. PATH_CHALLENGE Frames
-   - 19.18. PATH_RESPONSE Frames
- - 19.19. CONNECTION_CLOSE Frames
- - 19.20. HANDSHAKE_DONE Frames
- - MC_ANNOUNCE
- - MC_LIMITS
- - MC_STATE
- - MC_ACK
+A client that receives a frame in an authenticated channel packet that is not permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.
+
+For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING, MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID, PATH_CHALLENGE, PATH_RESPONSE, CONNECTION_CLOSE, and HANDSHAKE_DONE are not permitted in channel packets because their semantics are tied to an individual QUIC connection.
+
+On the other hand, PADDING and PING frames are permitted in channel packets because they do not affect receiver-specific state.
+STREAM, RESET_STREAM, and DATAGRAM frames are permitted when they carry data scoped to the multicast channel.
+MC_ANNOUNCE, MC_JOIN, MC_INTEGRITY, MC_KEY, MC_LEAVE and MC_RETIRE frames are permitted as they act as control frames for the channel itself.
 
 # Implementation and Operational Considerations
 
