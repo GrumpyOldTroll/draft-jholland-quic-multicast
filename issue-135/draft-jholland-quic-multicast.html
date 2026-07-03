@@ -1657,7 +1657,9 @@ A client MAY discard unauthenticated packets when doing so is necessary to bound
 A client SHOULD use the channel's Max Rate and Max Authentication Delay values to size the buffer it is willing to allocate for unauthenticated packets on that channel.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
 <p id="section-4.3-6">If a packet has not become authenticated within Max Authentication Delay after it was received, the client MAY discard the packet.
 If this occurs persistently, or if the number of unauthenticated packets exceeds the client's local buffering capacity, the client SHOULD leave the channel and send MC_STATE(LEFT) with reason AUTHENTICATION_DELAY_EXCEEDED.<a href="#section-4.3-6" class="pilcrow">¶</a></p>
-<p id="section-4.3-7">A client MAY decline to join a channel, or MAY leave a joined channel, if the Max Authentication Delay value is larger than the client is willing to support.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
+<p id="section-4.3-7">A client MAY decline to join a channel, or MAY leave a joined channel,
+if the Max Authentication Delay value is larger than the client is
+willing to support.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stream-processing">
