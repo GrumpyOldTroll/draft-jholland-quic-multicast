@@ -2184,9 +2184,15 @@ Newer frames override older ones.<a href="#section-10.7-3" class="pilcrow">¶</a
 These are reserved to advertise future capabilities.<a href="#section-10.7-4" class="pilcrow">¶</a></p>
 <p id="section-10.7-5">IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can be joined and 0 if IPv6 channels cannot be joined.<a href="#section-10.7-5" class="pilcrow">¶</a></p>
 <p id="section-10.7-6">IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can be joined and 0 if IPv4 channels cannot be joined.<a href="#section-10.7-6" class="pilcrow">¶</a></p>
-<p id="section-10.7-7">Max Aggregate Rate allowed across all joined channels is in Kibps.<a href="#section-10.7-7" class="pilcrow">¶</a></p>
-<p id="section-10.7-8">Max Channel IDs is the count of channel IDs that can be announced to this client and have keys.  Retired Channel IDs don't count against this value.<a href="#section-10.7-8" class="pilcrow">¶</a></p>
-<p id="section-10.7-9">Max Joined Count is the count of channels that are allowed to be joined concurrently.<a href="#section-10.7-9" class="pilcrow">¶</a></p>
+<p id="section-10.7-7">It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero simultaneously.
+This indicates that the client does not currently permit joining multicast channels using either IP address family.
+This does not disable support for this extension on the connection and does not prevent the client from later sending an MC_LIMITS frame that permits one or both address families.<a href="#section-10.7-7" class="pilcrow">¶</a></p>
+<p id="section-10.7-8">After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN for a channel whose address family is not currently allowed by the client.
+If a client receives such a join it SHOULD silently ignore it.
+If the client is currently joined to one or more channels that are no longer allowed by the updated limits, the server MUST send an MC_LEAVE frame for those channels unless it has already received MC_STATE indicating that the client has left those channels.<a href="#section-10.7-8" class="pilcrow">¶</a></p>
+<p id="section-10.7-9">Max Aggregate Rate allowed across all joined channels is in Kibps.<a href="#section-10.7-9" class="pilcrow">¶</a></p>
+<p id="section-10.7-10">Max Channel IDs is the count of channel IDs that can be announced to this client and have keys.  Retired Channel IDs don't count against this value.<a href="#section-10.7-10" class="pilcrow">¶</a></p>
+<p id="section-10.7-11">Max Joined Count is the count of channels that are allowed to be joined concurrently.<a href="#section-10.7-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="channel-retire-frame">
