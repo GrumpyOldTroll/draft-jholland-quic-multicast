@@ -1934,21 +1934,25 @@ Each of these recommended orderings MAY occur within the same packet.<a href="#s
         <h3 id="name-mc_key">
 <a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-mc_key" class="section-name selfRef">MC_KEY</a>
         </h3>
-<p id="section-10.2-1">An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
-The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
-<p id="section-10.2-2">A server can send a new MC_KEY frame with a sequence number increased by one.
+<p id="section-10.2-1">Multicast channel keys are channel-scoped rather than connection-scoped.
+The same channel secret will be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends, or miss key updates while not joined.
+The regular QUIC Key Update mechanism (<span><a href="https://rfc-editor.org/rfc/rfc9001#section-6" class="relref">Section 6</a> of [<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>) can not cover such cases.
+Therefore, the server needs an explicit mechanism to provide the current channel secret to authorized receivers, identify the packet number from which that secret applies, and rotate channel keys independently of the unicast connection's 1-RTT keys.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
+The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<p id="section-10.2-3">A server can send a new MC_KEY frame with a sequence number increased by one.
 A server MUST generate continuous sequence numbers, and MAY start at a value higher than 0.
 Note that while not joined, a client will not receive updates to channel secrets, and thus may see jumps in the Key Sequence Number values between MC_KEY frames.
-However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
-<p id="section-10.2-3">Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1 in the 1-RTT packet.
+However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+<p id="section-10.2-4">Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1 in the 1-RTT packet.
 Secrets with a Key Phase indicating an unknown key SHOULD be discarded without attempting to decrypt them.
-(An unknown key might happen after loss of the latest MC_KEY frame, so that packets on a channel have an updated Key Phase starting at a particular packet number, but the client does not yet know about the key change.)<a href="#section-10.2-3" class="pilcrow">¶</a></p>
-<p id="section-10.2-4">Should a client receive two different Keys with the same Key Sequence Number and Channel ID, e.g. one over the unicast connection and one over the multicast channel, it SHOULD close the connection with reason MC_EXTENSION_ERROR.<a href="#section-10.2-4" class="pilcrow">¶</a></p>
-<p id="section-10.2-5">It is RECOMMENDED that servers send regular secret updates.<a href="#section-10.2-5" class="pilcrow">¶</a></p>
-<p id="section-10.2-6">MC_KEY frames are formatted as shown in <a href="#fig-mc-channel-key-format" class="auto internal xref">Figure 5</a>.<a href="#section-10.2-6" class="pilcrow">¶</a></p>
+(An unknown key might happen after loss of the latest MC_KEY frame, so that packets on a channel have an updated Key Phase starting at a particular packet number, but the client does not yet know about the key change.)<a href="#section-10.2-4" class="pilcrow">¶</a></p>
+<p id="section-10.2-5">Should a client receive two different Keys with the same Key Sequence Number and Channel ID, e.g. one over the unicast connection and one over the multicast channel, it SHOULD close the connection with reason MC_EXTENSION_ERROR.<a href="#section-10.2-5" class="pilcrow">¶</a></p>
+<p id="section-10.2-6">It is RECOMMENDED that servers send regular secret updates.<a href="#section-10.2-6" class="pilcrow">¶</a></p>
+<p id="section-10.2-7">MC_KEY frames are formatted as shown in <a href="#fig-mc-channel-key-format" class="auto internal xref">Figure 5</a>.<a href="#section-10.2-7" class="pilcrow">¶</a></p>
 <span id="name-mc_key-frame-format"></span><div id="fig-mc-channel-key-format">
 <figure id="figure-5">
-          <div class="alignLeft art-text artwork" id="section-10.2-7.1">
+          <div class="alignLeft art-text artwork" id="section-10.2-8.1">
 <pre>
 MC_KEY Frame {
   Type (i) = TBD-01 (experiments use 0xff3e801),
@@ -1965,41 +1969,41 @@ MC_KEY Frame {
 <a href="#name-mc_key-frame-format" class="selfRef">MC_KEY Frame Format</a>
           </figcaption></figure>
 </div>
-<p id="section-10.2-8">MC_KEY frames contain the following fields:<a href="#section-10.2-8" class="pilcrow">¶</a></p>
+<p id="section-10.2-9">MC_KEY frames contain the following fields:<a href="#section-10.2-9" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10.2-9.1">
-            <p id="section-10.2-9.1.1">ID Length: The length in bytes of the Channel ID field.<a href="#section-10.2-9.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10.2-10.1">
+            <p id="section-10.2-10.1.1">ID Length: The length in bytes of the Channel ID field.<a href="#section-10.2-10.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.2">
-            <p id="section-10.2-9.2.1">Channel ID: The channel ID for the channel associated with this frame.<a href="#section-10.2-9.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.2-10.2">
+            <p id="section-10.2-10.2.1">Channel ID: The channel ID for the channel associated with this frame.<a href="#section-10.2-10.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.3">
-            <p id="section-10.2-9.3.1">Key Sequence Number: Increases by 1 each time the secret for the channel is changed by the server.  If there is a gap in sequence numbers due to reordering or retransmission of packets, on receipt of the older MC_KEY frame, the client MUST apply the secret contained and the packet numbers on which it applies as if they arrived in order.<a href="#section-10.2-9.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.2-10.3">
+            <p id="section-10.2-10.3.1">Key Sequence Number: Increases by 1 each time the secret for the channel is changed by the server.  If there is a gap in sequence numbers due to reordering or retransmission of packets, on receipt of the older MC_KEY frame, the client MUST apply the secret contained and the packet numbers on which it applies as if they arrived in order.<a href="#section-10.2-10.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.4">
-            <p id="section-10.2-9.4.1">From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.  The Packet Number MUST never decrease with an increased Key Sequence Number.<a href="#section-10.2-9.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.2-10.4">
+            <p id="section-10.2-10.4.1">From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.  The Packet Number MUST never decrease with an increased Key Sequence Number.<a href="#section-10.2-10.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.5">
-            <p id="section-10.2-9.5.1">Secret Length: Provides the length of the secret field.<a href="#section-10.2-9.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.2-10.5">
+            <p id="section-10.2-10.5.1">Secret Length: Provides the length of the secret field.<a href="#section-10.2-10.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.6">
-            <p id="section-10.2-9.6.1">Secret: A channel packet protection secret.
+          <li class="normal" id="section-10.2-10.6">
+            <p id="section-10.2-10.6.1">Secret: A channel packet protection secret.
   Packet protection keys and IVs for channel packets are derived from this secret using the cipher suite identified in the corresponding MC_ANNOUNCE frame and the <code>"quic key"</code> and <code>"quic iv"</code> labels, as described in <span><a href="https://rfc-editor.org/rfc/rfc9001#section-5.1" class="relref">Section 5.1</a> of [<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>.
-  This secret is not used to derive the header protection key.<a href="#section-10.2-9.6.1" class="pilcrow">¶</a></p>
+  This secret is not used to derive the header protection key.<a href="#section-10.2-10.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-10.2-10">To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.<a href="#section-10.2-10" class="pilcrow">¶</a></p>
-<p id="section-10.2-11">Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
-Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.<a href="#section-10.2-11" class="pilcrow">¶</a></p>
-<p id="section-10.2-12">Client implementations MAY institute a delay before deleting secrets to allow for decoding of packets for the channel that arrive shortly after a new MC_KEY frame.
+<p id="section-10.2-11">To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.<a href="#section-10.2-11" class="pilcrow">¶</a></p>
+<p id="section-10.2-12">Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
+Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.<a href="#section-10.2-12" class="pilcrow">¶</a></p>
+<p id="section-10.2-13">Client implementations MAY institute a delay before deleting secrets to allow for decoding of packets for the channel that arrive shortly after a new MC_KEY frame.
 For this experimental specification, it is RECOMMENDED that clients delete old keys 10 seconds after receiving a new key or after 3 seconds that elapse without receiving any new data to decode with the old key, whichever is shorter.
-Clients MUST NOT delay more than 60 seconds before deleting the old keys.<a href="#section-10.2-12" class="pilcrow">¶</a></p>
-<p id="section-10.2-13">The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
+Clients MUST NOT delay more than 60 seconds before deleting the old keys.<a href="#section-10.2-13" class="pilcrow">¶</a></p>
+<p id="section-10.2-14">The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
 One of the target discoveries for experimental evaluation is to determine good default delay values to use, and to understand whether there are use cases that would benefit from a negotiation between server and client to determine the delays to use dynamically.
-(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)<a href="#section-10.2-13" class="pilcrow">¶</a></p>
-<p id="section-10.2-14">The From Packet Number is used to indicate the starting packet number (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.1" class="relref">Section 17.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
-This secret is applicable to all future packets until it is updated by a new MC_KEY frame.<a href="#section-10.2-14" class="pilcrow">¶</a></p>
-<p id="section-10.2-15">A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.<a href="#section-10.2-15" class="pilcrow">¶</a></p>
+(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)<a href="#section-10.2-14" class="pilcrow">¶</a></p>
+<p id="section-10.2-15">The From Packet Number is used to indicate the starting packet number (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.1" class="relref">Section 17.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
+This secret is applicable to all future packets until it is updated by a new MC_KEY frame.<a href="#section-10.2-15" class="pilcrow">¶</a></p>
+<p id="section-10.2-16">A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.<a href="#section-10.2-16" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="channel-join-frame">
