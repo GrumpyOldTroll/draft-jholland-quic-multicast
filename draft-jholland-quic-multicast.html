@@ -28,7 +28,7 @@
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.8.1
+    wcwidth 0.8.2
 -->
 <link href="draft-jholland-quic-multicast.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1051,7 +1051,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Holland, et al.</td>
-<td class="center">Expires 3 January 2027</td>
+<td class="center">Expires 4 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1064,12 +1064,12 @@ svg {
 <dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-02" class="published">2 July 2026</time>
+<time datetime="2026-07-03" class="published">3 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-03">3 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1130,7 +1130,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 3 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1297,6 +1297,9 @@ svg {
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.6">
                 <p id="section-toc.1-1.12.2.6.1"><a href="#section-12.6" class="auto internal xref">12.6</a>.  <a href="#name-address-collisions" class="internal xref">Address Collisions</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.7">
+                <p id="section-toc.1-1.12.2.7.1"><a href="#section-12.7" class="auto internal xref">12.7</a>.  <a href="#name-buffering-unauthenticated-p" class="internal xref">Buffering Unauthenticated Packets</a></p>
 </li>
             </ul>
 </li>
@@ -1649,6 +1652,12 @@ The different path can be either the unicast connection or another multicast cha
 <p id="section-4.3-3">Note that MC_INTEGRITY frames MAY be carried in packets on multicast channels, however such packets will not be accepted unless another accepted MC_INTEGRITY frame contains its packet hash.
 Hashes of packets containing hashes of other packets can thus form a Merkle tree <span>[<a href="#MERKLE" class="cite xref">MERKLE</a>]</span> with a root that is carried in the unicast connection.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
 <p id="section-4.3-4">See <a href="#data-integrity" class="auto internal xref">Section 7</a> for a more complete overview of the security issues involved here.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-5">A client is not required to buffer unauthenticated packets indefinitely.
+A client MAY discard unauthenticated packets when doing so is necessary to bound memory use.
+A client SHOULD use the channel's Max Rate and Max Authentication Delay values to size the buffer it is willing to allocate for unauthenticated packets on that channel.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
+<p id="section-4.3-6">If a packet has not become authenticated within Max Authentication Delay after it was received, the client MAY discard the packet.
+If this occurs persistently, or if the number of unauthenticated packets exceeds the client's local buffering capacity, the client SHOULD leave the channel and send MC_STATE(LEFT) with reason AUTHENTICATION_DELAY_EXCEEDED.<a href="#section-4.3-6" class="pilcrow">¶</a></p>
+<p id="section-4.3-7">A client MAY decline to join a channel, or MAY leave a joined channel, if the Max Authentication Delay value is larger than the client is willing to support.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stream-processing">
@@ -1811,6 +1820,7 @@ MC_ANNOUNCE Frame {
   Header Secret (..),
   Integrity Hash Algorithm (16),
   Max Rate (i),
+  Max Authentication Delay (i),
   Max ACK Delay (i),
   Ack-Eliciting Threshold (i),
   Reordering Threshold (i)
@@ -1876,20 +1886,25 @@ MC_ANNOUNCE Frame {
             <p id="section-10.1-6.10.1">Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason "MAX_RATE_EXCEEDED".<a href="#section-10.1-6.10.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-6.11">
-            <p id="section-10.1-6.11.1">Max ACK Delay: The maximum amount of time, in microseconds, that a client can intentionally delay sending an MC_ACK frame for ack-eliciting packets received on this channel.
-  This value is used similarly to max_ack_delay (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-18.2" class="relref">Section 18.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>), but applies
-  only to MC_ACK frames for this channel.
-  A client SHOULD NOT intentionally delay an MC_ACK for this channel beyond this value.<a href="#section-10.1-6.11.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-6.11.1">Max Authentication Delay: The maximum time, in microseconds, that a client is expected to buffer a multicast channel packet before the packet becomes authenticated by an accepted MC_INTEGRITY frame.
+  The delay is measured from receipt of the channel packet until the packet becomes authenticated.
+  See <a href="#buffering-unauthenticated-packets" class="auto internal xref">Section 12.7</a>.<a href="#section-10.1-6.11.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-6.12">
-            <p id="section-10.1-6.12.1">Ack-Eliciting Threshold: The maximum number of ack-eliciting channel packets that a client can receive on this channel without sending an MC_ACK.
-  This field has the same semantics as the Ack-Eliciting Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to MC_ACK frame generation for this channel.
-  A value of 0 requests that every ack-eliciting channel packet be acknowledged immediately.
-  A value of 1 corresponds to the default QUIC behavior of acknowledging after receiving two ack-eliciting packets.<a href="#section-10.1-6.12.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-6.12.1">Max ACK Delay: The maximum amount of time, in microseconds, that a client can intentionally delay sending an MC_ACK frame for ack-eliciting packets received on this channel.
+  This value is used similarly to max_ack_delay (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-18.2" class="relref">Section 18.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>), but applies
+  only to MC_ACK frames for this channel.
+  A client SHOULD NOT intentionally delay an MC_ACK for this channel beyond this value.<a href="#section-10.1-6.12.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-6.13">
-            <p id="section-10.1-6.13.1">Reordering Threshold: A packet-count threshold used to determine when receipt of out-of-order channel packets causes an immediate MC_ACK.
-  This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to this channels packet number space and to MC_ACK frames for this channel.<a href="#section-10.1-6.13.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-6.13.1">Ack-Eliciting Threshold: The maximum number of ack-eliciting channel packets that a client can receive on this channel without sending an MC_ACK.
+  This field has the same semantics as the Ack-Eliciting Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to MC_ACK frame generation for this channel.
+  A value of 0 requests that every ack-eliciting channel packet be acknowledged immediately.
+  A value of 1 corresponds to the default QUIC behavior of acknowledging after receiving two ack-eliciting packets.<a href="#section-10.1-6.13.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-6.14">
+            <p id="section-10.1-6.14.1">Reordering Threshold: A packet-count threshold used to determine when receipt of out-of-order channel packets causes an immediate MC_ACK.
+  This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to this channels packet number space and to MC_ACK frames for this channel.<a href="#section-10.1-6.14.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-10.1-7">A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
@@ -2272,6 +2287,9 @@ MC_STATE Frame {
           <li class="normal" id="section-10.9-10.13">
             <p id="section-10.9-10.13.1">0x16: LIMIT_VIOLATION<a href="#section-10.9-10.13.1" class="pilcrow">¶</a></p>
 </li>
+          <li class="normal" id="section-10.9-10.14">
+            <p id="section-10.9-10.14.1">0x17: AUTHENTICATION_DELAY_EXCEEDED<a href="#section-10.9-10.14.1" class="pilcrow">¶</a></p>
+</li>
         </ul>
 <p id="section-10.9-11">(Author's note TODO: consider whether that these reasons should be added to the QUIC Transport Error Codes registry (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-22.5" class="relref">Section 22.5</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) instead of defining a new registry specific to multicast.)<a href="#section-10.9-11" class="pilcrow">¶</a></p>
 <p id="section-10.9-12">For frames of type TBD-0c, the Reason Code is left to the application, as described in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-20.2" class="relref">Section 20.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span><a href="#section-10.9-12" class="pilcrow">¶</a></p>
@@ -2298,7 +2316,12 @@ If these packets are addressed to an (S,G) that is used for reception in one or 
             <p id="section-10.10-2.3.1">Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.<a href="#section-10.10-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.10-2.4">
-            <p id="section-10.10-2.4.1">For the 4 remaining frames, MC_KEY, MC_INTEGRITY, MC_LIMITS and MC_STATE, retransmissions MUST include the most up to date information, i.e. the most recent key, integrity hash, client limits or state.<a href="#section-10.10-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-10.10-2.4.1">For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.<a href="#section-10.10-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.10-2.5">
+            <p id="section-10.10-2.5.1">For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process.
+The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
+Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absence is likely to cause receivers to exceed the Max Authentication Delay advertised for the channel.<a href="#section-10.10-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -2578,6 +2601,20 @@ Servers should choose Max ACK Delay, Ack-Eliciting Threshold, and Reordering Thr
         </ol>
 </section>
 </div>
+<div id="buffering-unauthenticated-packets">
+<section id="section-12.7">
+        <h3 id="name-buffering-unauthenticated-p">
+<a href="#section-12.7" class="section-number selfRef">12.7. </a><a href="#name-buffering-unauthenticated-p" class="section-name selfRef">Buffering Unauthenticated Packets</a>
+        </h3>
+<p id="section-12.7-1">Clients need to buffer multicast packets that have been received but not yet authenticated if they want to process those packets after the corresponding MC_INTEGRITY information arrives.
+The amount of memory needed for this buffer is a function of the channel rate, the delay in receiving integrity information, packet reordering, and implementation policy.<a href="#section-12.7-1" class="pilcrow">¶</a></p>
+<p id="section-12.7-2">Max Authentication Delay is a channel property because the amount of receiver buffering required for unauthenticated packets depends on the channel's rate, the way integrity information is distributed for that channel, and the latency requirements of the application data carried on that channel.
+For example, a low-latency media channel might require integrity information to arrive quickly, while a file-transfer or software-update channel might tolerate a larger authentication delay in exchange for lower unicast integrity traffic or larger integrity blocks.<a href="#section-12.7-2" class="pilcrow">¶</a></p>
+<p id="section-12.7-3">Servers SHOULD choose Max Authentication Delay values that are appropriate for the channel's media or application latency requirements and for expected receiver memory constraints.
+Servers SHOULD send and retransmit MC_INTEGRITY information so that packets can be authenticated within the advertised Max Authentication Delay under normal operating conditions.
+Clients MAY use local policy to impose a smaller buffering limit than the value advertised by the server, in which case they might discard unauthenticated packets or leave the channel.<a href="#section-12.7-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="security-considerations">
@@ -2740,9 +2777,10 @@ which was already checked on the unicast channel?)<a href="#section-13-3" class=
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
 <p id="appendix-A-1">Thanks to Louis Navarre on his comments and text contributions to the multipath and FEC sections.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<p id="appendix-A-2">Thanks to Martin Duke, Sam Hurst, Kyle Rose, Michael Welzl and Momoka Yamamoto for their helpful reviews and comments.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
-<p id="appendix-A-3">This work has been supported by the Federal Ministry of Education and Research of Germany in the programme of “Souverän. Digital. Vernetzt.” Joint project 6G-RIC, project identification number (PIN): FKZ 16KISK030<a href="#appendix-A-3" class="pilcrow">¶</a></p>
-<p id="appendix-A-4">TODO acknowledge.<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">Thanks to Johannes Cram for his work on the picoquic reference implementation and helpful feedback.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<p id="appendix-A-3">Thanks to Martin Duke, Sam Hurst, Kyle Rose, Michael Welzl and Momoka Yamamoto for their helpful reviews and comments.<a href="#appendix-A-3" class="pilcrow">¶</a></p>
+<p id="appendix-A-4">This work has been supported by the Federal Ministry of Research, Technology and Space of Germany in the programme of “StartUpConnect”  Project QUICast, project identification number 16KIS2650 and programme “Souverän. Digital. Vernetzt.” Joint project 6G-RIC, project identification number (PIN): FKZ 16KISK030<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+<p id="appendix-A-5">TODO acknowledge.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
