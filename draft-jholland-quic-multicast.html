@@ -2335,117 +2335,24 @@ Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absen
       </h2>
 <p id="section-11-1">Multicast channels will contain normal QUIC 1-RTT data packets (see <span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.3.1" class="relref">Section 17.3.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys derived from the secrets in MC_KEY frames for the corresponding channel.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11-2">Data packet hashes will also be sent in MC_INTEGRITY frames, as keys cannot be trusted for integrity due to giving them to too many receivers, as described in <span>[<a href="#I-D.draft-krose-multicast-security" class="cite xref">I-D.draft-krose-multicast-security</a>]</span>.<a href="#section-11-2" class="pilcrow">¶</a></p>
-<p id="section-11-3">The 1-RTT packets in multicast channels will have a restricted set of frames.
-Since the channel is strictly 1-way server to client, the general principle is that broadcastable shared server-&gt;client data frames can be sent, but frames that make sense only for individualized connections or that are sent client-to-server cannot.<a href="#section-11-3" class="pilcrow">¶</a></p>
-<p id="section-11-4">Should a not permitted frame arrive on a multicast channel, the connection MUST be closed with a connection error of type MC_EXTENSION_ERROR.<a href="#section-11-4" class="pilcrow">¶</a></p>
-<p id="section-11-5">Permitted:<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-3">The set of frames that can appear in a channel packet is restricted.
+A server MUST NOT send a frame in a channel packet unless the frame is valid in a QUIC 1-RTT packet and either:<a href="#section-11-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-6.1">
-          <p id="section-11-6.1.1">PADDING Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.1" class="relref">Section 19.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> )<a href="#section-11-6.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-11-4.1">
+          <p id="section-11-4.1.1">the definition of the frame explicitly permits its use in channel packets; or<a href="#section-11-4.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-6.2">
-          <p id="section-11-6.2.1">PING Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.2" class="relref">Section 19.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> )<a href="#section-11-6.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.3">
-          <p id="section-11-6.3.1">RESET_STREAM Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.4" class="relref">Section 19.4</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> )<a href="#section-11-6.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.4">
-          <p id="section-11-6.4.1">STREAM Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.8" class="relref">Section 19.8</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> )<a href="#section-11-6.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.5">
-          <p id="section-11-6.5.1">DATAGRAM Frames (both types) (<span><a href="https://rfc-editor.org/rfc/rfc9221#section-4" class="relref">Section 4</a> of [<a href="#RFC9221" class="cite xref">RFC9221</a>]</span>)<a href="#section-11-6.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.6">
-          <p id="section-11-6.6.1">MC_KEY<a href="#section-11-6.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.7">
-          <p id="section-11-6.7.1">MC_LEAVE (however, join must come over unicast?)<a href="#section-11-6.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.8">
-          <p id="section-11-6.8.1">MC_INTEGRITY (not for this channel, only for another)<a href="#section-11-6.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.9">
-          <p id="section-11-6.9.1">MC_RETIRE<a href="#section-11-6.9.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-4.2">
+          <p id="section-11-4.2.1">the frame operates only on state that is shared by all receivers of the channel; receiving it will have the same effect for all receivers.<a href="#section-11-4.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-7">Not permitted:<a href="#section-11-7" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-8.1">
-          <p id="section-11-8.1.1">19.3.  ACK Frames<a href="#section-11-8.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.2">
-          <p id="section-11-8.2.1">19.6.  CRYPTO Frames (crypto handshake does not happen on mc channels)<a href="#section-11-8.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.3">
-          <p id="section-11-8.3.1">19.7.  NEW_TOKEN Frames<a href="#section-11-8.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.4">
-          <p id="section-11-8.4.1">Flow control is different:<a href="#section-11-8.4.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-8.4.2.1">
-              <p id="section-11-8.4.2.1.1">19.5.  STOP_SENDING Frames<a href="#section-11-8.4.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.2">
-              <p id="section-11-8.4.2.2.1">19.9.  MAX_DATA Frames  (flow control for mc channels is by rate)<a href="#section-11-8.4.2.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.3">
-              <p id="section-11-8.4.2.3.1">19.10. MAX_STREAM_DATA Frames<a href="#section-11-8.4.2.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.4">
-              <p id="section-11-8.4.2.4.1">19.11. MAX_STREAMS Frames<a href="#section-11-8.4.2.4.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.5">
-              <p id="section-11-8.4.2.5.1">19.12. DATA_BLOCKED Frames<a href="#section-11-8.4.2.5.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.6">
-              <p id="section-11-8.4.2.6.1">19.13. STREAM_DATA_BLOCKED Frames<a href="#section-11-8.4.2.6.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.7">
-              <p id="section-11-8.4.2.7.1">19.14. STREAMS_BLOCKED Frames<a href="#section-11-8.4.2.7.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</li>
-        <li class="normal" id="section-11-8.5">
-          <p id="section-11-8.5.1">Channel ID Migration can't use the "prior to" concept within a channel, not 0-starting<a href="#section-11-8.5.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-8.5.2.1">
-              <p id="section-11-8.5.2.1.1">19.15. NEW_CONNECTION_ID Frames<a href="#section-11-8.5.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.5.2.2">
-              <p id="section-11-8.5.2.2.1">19.16. RETIRE_CONNECTION_ID Frames<a href="#section-11-8.5.2.2.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</li>
-        <li class="normal" id="section-11-8.6">
-          <p id="section-11-8.6.1">Channels don't have the same kind of path validation, as there's a unicast anchor with acks for the multicast packets:<a href="#section-11-8.6.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-8.6.2.1">
-              <p id="section-11-8.6.2.1.1">19.17. PATH_CHALLENGE Frames<a href="#section-11-8.6.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.6.2.2">
-              <p id="section-11-8.6.2.2.1">19.18. PATH_RESPONSE Frames<a href="#section-11-8.6.2.2.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</li>
-        <li class="normal" id="section-11-8.7">
-          <p id="section-11-8.7.1">19.19. CONNECTION_CLOSE Frames<a href="#section-11-8.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.8">
-          <p id="section-11-8.8.1">19.20. HANDSHAKE_DONE Frames<a href="#section-11-8.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.9">
-          <p id="section-11-8.9.1">MC_ANNOUNCE<a href="#section-11-8.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.10">
-          <p id="section-11-8.10.1">MC_LIMITS<a href="#section-11-8.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.11">
-          <p id="section-11-8.11.1">MC_STATE<a href="#section-11-8.11.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.12">
-          <p id="section-11-8.12.1">MC_ACK<a href="#section-11-8.12.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
+<p id="section-11-5">A frame is not permitted in a channel packet if processing the frame depends on state that is specific to an individual receiver, path, or unicast connection.
+This includes, but is not limited to, frames that are part of the cryptographic handshake, address validation, connection ID migration, flow control or connection termination.<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-6">A frame is also not permitted in a channel packet if it is defined only for client-to-server use, or if it would require the server to respond to a single client via the multicast channel (e.g., PATH_CHALLENGE).<a href="#section-11-6" class="pilcrow">¶</a></p>
+<p id="section-11-7">A client that receives a frame in a channel packet that is not permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.<a href="#section-11-7" class="pilcrow">¶</a></p>
+<p id="section-11-8">For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING, MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID, PATH_CHALLENGE, PATH_RESPONSE, CONNECTION_CLOSE, and HANDSHAKE_DONE are not permitted in channel packets because their semantics are tied to an individual QUIC connection.<a href="#section-11-8" class="pilcrow">¶</a></p>
+<p id="section-11-9">On the other hand, PADDING and PING frames are permitted in channel packets because they do not affect receiver-specific state.
+STREAM, RESET_STREAM, and DATAGRAM frames are permitted when they carry data scoped to the multicast channel.
+MC_ANNOUNCE, MC_JOIN, MC_INTEGRITY, MC_KEY, MC_LEAVE and MC_RETIRE frames are permitted as they act as control frames for the channel itself.<a href="#section-11-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="implementation-and-operational-considerations">
