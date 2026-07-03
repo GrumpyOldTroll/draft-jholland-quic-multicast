@@ -669,7 +669,7 @@ The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Ch
 Subsequent hashes refer to the packets for that channel with packet numbers increasing by one.
 
 Each hash has its length determined by the Integrity Hash Algorithm in the corresponding MC_ANNOUNCE frame.
-The Packet Hashes field MUST contain a non-zero integer of complete packet hashes.
+The Packet Hashes field MUST contain a non-zero integer multiple of of the hash length for the channel.
 A client that receives an MC_INTEGRITY frame whose Packet Hashes field length is zero, or whose Packet Hashes field length is not an integer multiple of the hash length for the channel, MUST treat this as a connection error of type MC_EXTENSION_ERROR.
 
 See {{packet-hashes}} for a description of the packet hash calculation.
