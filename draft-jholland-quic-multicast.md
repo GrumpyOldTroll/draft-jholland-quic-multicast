@@ -632,15 +632,11 @@ If the client does join, it MUST send an MC_STATE frame with "JOINED".
 
 ## MC_LEAVE {#channel-leave-frame}
 
-An MC_LEAVE frame (type=TBD-03) is sent from server to client, and requests that a client leave the given channel.
+An MC_LEAVE frame (type=TBD-03) is sent by a server to request that the client leave the given channel.
+MC_LEAVE does not retire the channel and the server can later send another MC_JOIN for the same channel as long as it is not retired.
 
-If the client has already left or declined to join the channel, the MC_LEAVE is ignored.
-
-If an MC_JOIN or an MC_LEAVE with the same Channel ID and a higher MC_STATE Sequence number has previously been received, the MC_LEAVE is ignored.
-
-Otherwise, the client MUST leave the channel and send a new MC_STATE frame with reason LEFT as requested by server.
-
-MC_LEAVE frames are formatted as shown in {{fig-mc-channel-leave-format}}.
+MC_LEAVE frames are formatted as shown in
+{{fig-mc-channel-leave-format}}.
 
 ~~~
 MC_LEAVE Frame {
@@ -653,7 +649,23 @@ MC_LEAVE Frame {
 ~~~
 {: #fig-mc-channel-leave-format title="MC_LEAVE Frame Format"}
 
-If After Packet Number is nonzero, wait until receiving that packet or a higher valued number before leaving.
+MC_LEAVE frames contain the following fields:
+
+* ID Length: The length in bytes of the Channel ID field.
+
+* Channel ID: The channel ID for the channel that the client is requested to leave.
+
+* MC_STATE Sequence Number: The most recent Client Channel State Sequence Number processed by the server for this channel.
+This value allows the client to ignore leave requests that are based on stale client channel state.
+
+* After Packet Number: If non-zero, the client leaves the channel only after receiving a channel packet with this packet number or a higher packet number.
+If this field is zero, or if the client has already received a channel packet with this packet number or a higher packet number, the client leaves the channel immediately.
+
+A client that receives an MC_LEAVE for a channel that it has already left, declined to join, or retired MUST ignore the frame.
+
+A client that has received a MC_JOIN or MC_LEAVE for the same Channel ID with a greater MC_STATE Sequence Number MUST ignore the MC_LEAVE frame.?
+
+Otherwise, the client MUST leave the channel according to the After Packet Number field and send an MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.
 
 ## MC_INTEGRITY {#channel-integrity-frame}
 
