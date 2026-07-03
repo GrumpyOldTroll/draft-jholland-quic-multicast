@@ -349,6 +349,17 @@ Hashes of packets containing hashes of other packets can thus form a Merkle tree
 
 See {{data-integrity}} for a more complete overview of the security issues involved here.
 
+A client is not required to buffer unauthenticated packets indefinitely.
+A client MAY discard unauthenticated packets when doing so is necessary to bound memory use.
+A client SHOULD use the channel's Max Rate and Max Authentication Delay values to size the buffer it is willing to allocate for unauthenticated packets on that channel.
+
+If a packet has not become authenticated within Max Authentication Delay after it was received, the client MAY discard the packet.
+If this occurs persistently, or if the number of unauthenticated packets exceeds the client's local buffering capacity, the client SHOULD leave the channel and send MC_STATE(LEFT) with reason AUTHENTICATION_DELAY_EXCEEDED.
+
+A client MAY decline to join a channel, or MAY leave a joined channel,
+if the Max Authentication Delay value is larger than the client is
+willing to support.
+
 ## Stream Processing
 
 Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see {{Section 2.1 of RFC9000}}).
@@ -472,6 +483,7 @@ MC_ANNOUNCE Frame {
   Header Secret (..),
   Integrity Hash Algorithm (16),
   Max Rate (i),
+  Max Authentication Delay (i),
   Max ACK Delay (i),
   Ack-Eliciting Threshold (i),
   Reordering Threshold (i)
@@ -502,6 +514,9 @@ MC_ANNOUNCE frames contain the following fields:
       - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
       - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
   * Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason "MAX_RATE_EXCEEDED".
+  * Max Authentication Delay: The maximum time, in microseconds, that a client is expected to buffer a multicast channel packet before the packet becomes authenticated by an accepted MC_INTEGRITY frame.
+  The delay is measured from receipt of the channel packet until the packet becomes authenticated.
+  See {{buffering-unauthenticated-packets}}.
   * Max ACK Delay: The maximum amount of time, in microseconds, that a client can intentionally delay sending an MC_ACK frame for ack-eliciting packets received on this channel.
   This value is used similarly to max_ack_delay ({{Section 18.2 of RFC9000}}), but applies
   only to MC_ACK frames for this channel.
@@ -819,6 +834,7 @@ If State is LEFT or DECLINED_JOIN, for frames of type TBD-0b the Reason Code fie
  * 0x14: EXCESSIVE_SPURIOUS_TRAFFIC
  * 0x15: MAX_STREAMS_EXCEEDED
  * 0x16: LIMIT_VIOLATION
+ * 0x17: AUTHENTICATION_DELAY_EXCEEDED
 
 (Author's note TODO: consider whether that these reasons should be added to the QUIC Transport Error Codes registry ({{Section 22.5 of RFC9000}}) instead of defining a new registry specific to multicast.)
 
@@ -836,7 +852,9 @@ In addition to the mechanisms used for retransmission described in {{Section 13.
 - As the properties carried in MC_ANNOUNCE frames can not change during the lifetime of a channel, information contained in them can be retransmitted without any special considerations.
 - Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission SHOULD only occur if the channel in question should still be joined/left/retired.
 - Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.
-- For the 4 remaining frames, MC_KEY, MC_INTEGRITY, MC_LIMITS and MC_STATE, retransmissions MUST include the most up to date information, i.e. the most recent key, integrity hash, client limits or state.
+- For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.
+- For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process.  The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
+Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absence is likely to cause receivers to exceed the Max Authentication Delay advertised for the channel.
 
 # Frames Carried in Channel Packets
 
@@ -997,6 +1015,18 @@ These offers a number of potential address collision considerations that are wor
  3. Even though multicast QUIC uses only source-specific multicast, older networks with devices that don't have IGMPv3 or MLDv2 support can propagate the joins as any-source multicast. If there are active senders sending to that destination, this can cause network congestion and CPU load due to discarding packets from the wrong source, even though at the application layer the UDP socket won't receive those packets from the wrong source.
  4. If different channels use the same (S,G) but different UDP ports, they will share the same multicast forwarding tree in an IP network. This is often useful when the data in the channels are linked, for example if MC_INTEGRITY frames are carried on one channel for packets carried on another channel, because it provides some fate-sharing for the linked data.  However, for data that is not so linked, it would generally be a disadvantage to share the (S,G) because the network link of any receiver joined to one of those channels but not the other would receive both packets and throw away the data for the un-joined port, causing extra congestion and CPU load for the receiving device.
 
+## Buffering Unauthenticated Packets {#buffering-unauthenticated-packets}
+
+Clients need to buffer multicast packets that have been received but not yet authenticated if they want to process those packets after the corresponding MC_INTEGRITY information arrives.
+The amount of memory needed for this buffer is a function of the channel rate, the delay in receiving integrity information, packet reordering, and implementation policy.
+
+Max Authentication Delay is a channel property because the amount of receiver buffering required for unauthenticated packets depends on the channel's rate, the way integrity information is distributed for that channel, and the latency requirements of the application data carried on that channel.
+For example, a low-latency media channel might require integrity information to arrive quickly, while a file-transfer or software-update channel might tolerate a larger authentication delay in exchange for lower unicast integrity traffic or larger integrity blocks.
+
+Servers SHOULD choose Max Authentication Delay values that are appropriate for the channel's media or application latency requirements and for expected receiver memory constraints.
+Servers SHOULD send and retransmit MC_INTEGRITY information so that packets can be authenticated within the advertised Max Authentication Delay under normal operating conditions.
+Clients MAY use local policy to impose a smaller buffering limit than the value advertised by the server, in which case they might discard unauthenticated packets or leave the channel.
+
 # Security Considerations
 
 (Authors comment: Mostly incorporate {{I-D.draft-krose-multicast-security}}.  Anything else?
@@ -1034,8 +1064,10 @@ TODO: lots
 {:numbered="false"}
 Thanks to Louis Navarre on his comments and text contributions to the multipath and FEC sections.
 
+Thanks to Johannes Cram for his work on the picoquic reference implementation and helpful feedback.
+
 Thanks to Martin Duke, Sam Hurst, Kyle Rose, Michael Welzl and Momoka Yamamoto for their helpful reviews and comments.
 
-This work has been supported by the Federal Ministry of Education and Research of Germany in the programme of “Souverän. Digital. Vernetzt.” Joint project 6G-RIC, project identification number (PIN): FKZ 16KISK030
+This work has been supported by the Federal Ministry of Research, Technology and Space of Germany in the programme of “StartUpConnect”  Project QUICast, project identification number 16KIS2650 and programme “Souverän. Digital. Vernetzt.” Joint project 6G-RIC, project identification number (PIN): FKZ 16KISK030
 
 TODO acknowledge.
