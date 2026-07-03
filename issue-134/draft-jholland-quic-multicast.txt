@@ -1178,11 +1178,11 @@ Table of Contents
 
    Each hash has its length determined by the Integrity Hash Algorithm
    in the corresponding MC_ANNOUNCE frame.  The Packet Hashes field MUST
-   contain a non-zero integer of complete packet hashes.  A client that
-   receives an MC_INTEGRITY frame whose Packet Hashes field length is
-   zero, or whose Packet Hashes field length is not an integer multiple
-   of the hash length for the channel, MUST treat this as a connection
-   error of type MC_EXTENSION_ERROR.
+   contain a non-zero integer multiple of of the hash length for the
+   channel.  A client that receives an MC_INTEGRITY frame whose Packet
+   Hashes field length is zero, or whose Packet Hashes field length is
+   not an integer multiple of the hash length for the channel, MUST
+   treat this as a connection error of type MC_EXTENSION_ERROR.
 
    See Section 7.1 for a description of the packet hash calculation.
 

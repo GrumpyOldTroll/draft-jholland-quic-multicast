@@ -2067,7 +2067,7 @@ For TBD-04, Packet Hashes Length is not present and the Packet Hashes field exte
 The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Channel ID equal to the Channel ID in the MC_INTEGRITY frame and packet number equal to the Packet Number Start field.
 Subsequent hashes refer to the packets for that channel with packet numbers increasing by one.<a href="#section-10.5-5" class="pilcrow">¶</a></p>
 <p id="section-10.5-6">Each hash has its length determined by the Integrity Hash Algorithm in the corresponding MC_ANNOUNCE frame.
-The Packet Hashes field MUST contain a non-zero integer of complete packet hashes.
+The Packet Hashes field MUST contain a non-zero integer multiple of of the hash length for the channel.
 A client that receives an MC_INTEGRITY frame whose Packet Hashes field length is zero, or whose Packet Hashes field length is not an integer multiple of the hash length for the channel, MUST treat this as a connection error of type MC_EXTENSION_ERROR.<a href="#section-10.5-6" class="pilcrow">¶</a></p>
 <p id="section-10.5-7">See <a href="#packet-hashes" class="auto internal xref">Section 7.1</a> for a description of the packet hash calculation.<a href="#section-10.5-7" class="pilcrow">¶</a></p>
 </section>
