@@ -861,48 +861,25 @@ Multicast channels will contain normal QUIC 1-RTT data packets (see {{Section 17
 
 Data packet hashes will also be sent in MC_INTEGRITY frames, as keys cannot be trusted for integrity due to giving them to too many receivers, as described in {{I-D.draft-krose-multicast-security}}.
 
-The 1-RTT packets in multicast channels will have a restricted set of frames.
-Since the channel is strictly 1-way server to client, the general principle is that broadcastable shared server->client data frames can be sent, but frames that make sense only for individualized connections or that are sent client-to-server cannot.
+The set of frames that can appear in a channel packet is restricted.
+A server MUST NOT send a frame in a channel packet unless the frame is valid in a QUIC 1-RTT packet and either:
 
-Should a not permitted frame arrive on a multicast channel, the connection MUST be closed with a connection error of type MC_EXTENSION_ERROR.
+* the definition of the frame explicitly permits its use in channel packets; or
 
-Permitted:
+* the frame operates only on state that is shared by all receivers of the channel; receiving it will have the same effect for all receivers.
 
- - PADDING Frames ({{Section 19.1 of RFC9000}} )
- - PING Frames ({{Section 19.2 of RFC9000}} )
- - RESET_STREAM Frames ({{Section 19.4 of RFC9000}} )
- - STREAM Frames ({{Section 19.8 of RFC9000}} )
- - DATAGRAM Frames (both types) ({{Section 4 of RFC9221}})
- - MC_KEY
- - MC_LEAVE (however, join must come over unicast?)
- - MC_INTEGRITY (not for this channel, only for another)
- - MC_RETIRE
+A frame is not permitted in a channel packet if processing the frame depends on state that is specific to an individual receiver, path, or unicast connection.
+This includes, but is not limited to, frames that are part of the cryptographic handshake, address validation, connection ID migration, flow control or connection termination.
 
-Not permitted:
+A frame is also not permitted in a channel packet if it is defined only for client-to-server use, or if it would require the server to respond to a single client via the multicast channel (e.g., PATH_CHALLENGE).
 
- - 19.3.  ACK Frames
- - 19.6.  CRYPTO Frames (crypto handshake does not happen on mc channels)
- - 19.7.  NEW_TOKEN Frames
- - Flow control is different:
-   - 19.5.  STOP_SENDING Frames
-   - 19.9.  MAX_DATA Frames  (flow control for mc channels is by rate)
-   - 19.10. MAX_STREAM_DATA Frames
-   - 19.11. MAX_STREAMS Frames
-   - 19.12. DATA_BLOCKED Frames
-   - 19.13. STREAM_DATA_BLOCKED Frames
-   - 19.14. STREAMS_BLOCKED Frames
- - Channel ID Migration can't use the "prior to" concept within a channel, not 0-starting
-   - 19.15. NEW_CONNECTION_ID Frames
-   - 19.16. RETIRE_CONNECTION_ID Frames
- - Channels don't have the same kind of path validation, as there's a unicast anchor with acks for the multicast packets:
-   - 19.17. PATH_CHALLENGE Frames
-   - 19.18. PATH_RESPONSE Frames
- - 19.19. CONNECTION_CLOSE Frames
- - 19.20. HANDSHAKE_DONE Frames
- - MC_ANNOUNCE
- - MC_LIMITS
- - MC_STATE
- - MC_ACK
+A client that receives a frame in a channel packet that is not permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.
+
+For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING, MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID, PATH_CHALLENGE, PATH_RESPONSE, CONNECTION_CLOSE, and HANDSHAKE_DONE are not permitted in channel packets because their semantics are tied to an individual QUIC connection.
+
+On the other hand, PADDING and PING frames are permitted in channel packets because they do not affect receiver-specific state.
+STREAM, RESET_STREAM, and DATAGRAM frames are permitted when they carry data scoped to the multicast channel.
+MC_ANNOUNCE, MC_JOIN, MC_INTEGRITY, MC_KEY, MC_LEAVE and MC_RETIRE frames are permitted as they act as control frames for the channel itself.
 
 # Implementation and Operational Considerations
 
