@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 4 January 2027                                                 
+Expires: 5 January 2027                                                 
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                             3 July 2026
+                                                             4 July 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 January 2027.
+   This Internet-Draft will expire on 5 January 2027.
 
 Copyright Notice
 
@@ -422,6 +422,25 @@ Table of Contents
    values in the transport parameter or last MC_LIMITS (Section 10.7)
    frame the server received.
 
+   This extension does not define an application-layer catalogue or
+   content-selection protocol.  Application protocols determine what
+   content, service, program, representation, or other application
+   context is relevant to a connection.  The multicast extension merely
+   provides a transport mechanism by which the server can describe
+   channels that are available in that context and request that the
+   client join or leave them.  A server is not expected to announce
+   every multicast channel that it operates to every client.  The set of
+   channels announced to any specific client can be limited by
+   application-layer state, prior application requests, receiver limits,
+   server policy, or any combination of these.
+
+   For example, a server may provide a video stream in different
+   resolutions, with each available resolution being carried in a
+   different multicast channel.  The server would only announce the
+   channel that offers the best available quality while remaining under
+   the limits set by the client.  In this case, this could happen
+   without any involvement of the client-side application.
+
                                o
                                |
    ----------------------->|   | Receive MC_ANNOUNCE and/or MC_KEY
@@ -588,10 +607,29 @@ Table of Contents
    initiated streams, or those with the least significant 2 bits of the
    stream ID equal to 3 (see Section 2.1 of [RFC9000]).
 
-   When a channel contains streams with IDs above the client's
-   unidirectional MAX_STREAMS, the server MUST NOT instruct the client
-   to join that channel and SHOULD send a STREAMS_BLOCKED frame, as
-   described in Sections 4.6 and 19.14 of [RFC9000].
+   Multicast channels do not define independent QUIC stream ID spaces.
+   STREAM frames received on a multicast channel are processed as
+   regular STREAM frames for the associated QUIC connection.  Stream IDs
+   are therefore allocated from the same connection-wide stream ID
+   space, whether stream data is sent on the unicast path or on one or
+   more multicast channels.
+
+   A server that sends STREAM frames on one or more multicast channels
+   associated with the same QUIC connection is responsible for
+   coordinating stream ID allocation across the unicast paths of all
+   potential multicast receivers, and across all relevant multicast
+   channels.
+
+   Using disjoint stream ID ranges for different channels is one
+   possible implementation strategy, but is not required by this
+   specification.
+
+   When a channel contains, or may soon contain, streams with IDs that
+   exceed the stream ID limit implied by the client's server-initiated
+   unidirectional MAX_STREAMS value, the server MUST NOT send MC_JOIN to
+   instruct the client to join that channel and SHOULD send a
+   STREAMS_BLOCKED frame, as described in Sections 4.6 and 19.14 of
+   [RFC9000].
 
    If the client is already joined to a channel that carries streams
    that exceed or will soon exceed the client's unidirectional
@@ -616,8 +654,9 @@ Table of Contents
    The same stream ID may be used in both one or more multicast channels
    and the unicast connection.  As described in Section 2.2 of
    [RFC9000], stream data received multiple times for the same offset
-   MUST be identical, even across different network paths; if it's not
-   identical it MAY be treated as a connection error of type
+   MUST be identical, including when the data is received on different
+   multicast channels or on both multicast and unicast paths.  If it's
+   not identical it MAY be treated as a connection error of type
    MC_EXTENSION_ERROR.
 
 5.  Flow Control
@@ -651,17 +690,29 @@ Table of Contents
    packets received to ensure that channels don't exceed their
    advertised values, and leaves channels that do.
 
-   If the server asks the client to join a channel that would exceed the
-   client's limits with an up-to-date Client Limit Sequence Number, the
-   client should send back an MC_STATE frame (Section 10.9) with
-   "DECLINED_JOIN" and reason "PROPERTY_VIOLATION".  If the server asks
-   the client to join a channel that would exceed the client's limits
-   with an out-of-date Client Limit Sequence Number or a Channel Key
-   Sequence Number that the client has not yet seen, the client should
-   instead send back a "DECLINED_JOIN" with "UNSYNCHRONIZED_PROPERTIES".
-   If the actual contents sent in the channel exceed the advertised
-   limits from the MC_ANNOUNCE, clients SHOULD leave the stream and send
-   an MC_STATE(LEFT) frame, using the Limit Violated reason.
+   The sequence numbers carried in MC_JOIN allow the client to determine
+   whether a join request is based on state that is synchronized between
+   the client and server.
+
+   If the server asks the client to join a channel that would violate
+   the client's limits, and the MC_JOIN frame contains the client's
+   current MC_LIMITS Sequence Number, the client SHOULD send an MC_STATE
+   frame (Section 10.9) with State DECLINED_JOIN and Reason Code
+   PROPERTY_VIOLATION.
+
+   If the server asks the client to join a channel that would violate
+   the client's current limits, but the MC_JOIN frame contains an older
+   MC_LIMITS Sequence Number, the client SHOULD send an MC_STATE frame
+   with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+   If the MC_JOIN frame refers to an MC_KEY Sequence Number that the
+   client has not yet received, the client SHOULD send an MC_STATE frame
+   with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+   If the actual contents sent in the channel violate the advertised
+   properties from MC_ANNOUNCE, clients SHOULD leave the channel and
+   send an MC_STATE frame with State LEFT and Reason Code
+   LIMIT_VIOLATION.
 
 6.  Congestion Control
 
@@ -957,7 +1008,7 @@ Table of Contents
 
    A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame
    as a connection ID for the unicast connection.  If it is already in
-   use, the client should retire it as soon as possible.  As the server
+   use, the client SHOULD retire it as soon as possible.  As the server
    knows which connection IDs are in use by the client, it MUST wait
    with the sending of an MC_JOIN frame until the channel ID associated
    with it has been retired by the client.
@@ -972,11 +1023,24 @@ Table of Contents
    for recovery.
 
    A server SHOULD send an MC_ANNOUNCE frame for a channel before
-   sending an MC_KEY and SHOULD send an MC_KEY frame for a channel
-   before sending an MC_JOIN frame for it.  Each of these recommended
-   orderings MAY occur within the same packet.
+   sending an MC_KEY frame for that channel.
+
+   A server MUST NOT send an MC_JOIN frame for a channel unless it has
+   sent, or is sending in the same packet, both an applicable
+   MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.
 
 10.2.  MC_KEY
+
+   Multicast channel keys are channel-scoped rather than connection-
+   scoped.  The same channel secret will be shared by receivers on many
+   different QUIC connections, and clients can join a channel after it
+   has started or leave before it ends, or miss key updates while not
+   joined.  The regular QUIC Key Update mechanism (Section 6 of
+   [RFC9001]) can not cover such cases.  Therefore, the server needs an
+   explicit mechanism to provide the current channel secret to
+   authorized receivers, identify the packet number from which that
+   secret applies, and rotate channel keys independently of the unicast
+   connection's 1-RTT keys.
 
    An MC_KEY frame (type=TBD-01) is sent from server to client, either
    with the unicast connection or in an existing joined multicast
@@ -1094,21 +1158,15 @@ Table of Contents
 10.3.  MC_JOIN
 
    An MC_JOIN frame (type TBD-02) is sent from server to client and
-   requests that a client join the given transport addresses and ports
-   and process packets with the given Channel ID according to the
-   corresponding MC_ANNOUNCE frame and the latest MC_KEY frame for the
-   channel.
+   requests that the client join the channel identified by Channel ID.
+   The client uses the channel's transport addresses and properties from
+   the corresponding MC_ANNOUNCE frame.  The MC_KEY Sequence Number
+   field identifies the channel key generation that the server expects
+   the client to have available when processing channel packets.
 
    A client cannot join a multicast channel without first receiving an
-   MC_ANNOUNCE frame and an MC_KEY frame, which together set all the
-   values necessary to process the channel.
-
-   If a client receives an MC_JOIN for a channel for which it has not
-   received both an MC_ANNOUNCE frame and an MC_KEY frame, it MUST
-   respond with an MC_STATE with State "DECLINED_JOIN" and reason
-   "Missing Properties".  The server MAY send another MC_JOIN after
-   receiving an acknowledgement indicating receipt of the MC_ANNOUNCE
-   frame and the MC_KEY frame.
+   applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that
+   channel.
 
    MC_JOIN frames are formatted as shown in Figure 6.
 
@@ -1123,23 +1181,33 @@ Table of Contents
 
                        Figure 6: MC_JOIN Frame Format
 
-   The sequence numbers are the most recently processed sequence number
-   by the server from the respective frame type.  They are present to
-   allow the client to distinguish between a broken server that has
-   performed an illegal action and an instruction that's based on
-   updates that are out of sync (either one or more missing updates to
-   MC_KEY not yet received by the client or one or more missing updates
-   to MC_LIMITS or MC_STATE not yet received by the server).
+   MC_JOIN frames contain the following fields:
 
-   A client MAY perform the join if it has the sequence number of the
-   corresponding channel properties and the client's limits will not be
-   exceeded, even if the client sequence numbers are not up-to-date.
+   *  ID Length: The length in bytes of the Channel ID field.
 
-   If the client does not join, it MUST send an MC_STATE frame with
-   "DECLINED_JOIN" and a reason.
+   *  Channel ID: The channel ID for the channel that the client is
+      requested to join.
 
-   If the client does join, it MUST send an MC_STATE frame with
-   "JOINED".
+   *  MC_LIMITS Sequence Number: The most recent Client Limits Sequence
+      Number processed by the server when constructing this join
+      request.
+
+   *  MC_STATE Sequence Number: The most recent Client Channel State
+      Sequence Number for this channel processed by the server when
+      constructing this join request.
+
+   *  MC_KEY Sequence Number: The Key Sequence Number for the channel
+      key generation that the server expects the client to use when
+      joining the channel.
+
+   If a client receives an MC_JOIN for a channel for which it has not
+   received both an applicable MC_ANNOUNCE frame and an applicable
+   MC_KEY frame, it MUST send an MC_STATE frame with State DECLINED_JOIN
+   and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+   If the client joins, it MUST send an MC_STATE frame with State
+   JOINED.  If the client does not join, it MUST send an MC_STATE frame
+   with State DECLINED_JOIN and an appropriate Reason Code.
 
 10.4.  MC_LEAVE
 
@@ -1181,9 +1249,9 @@ Table of Contents
    A client that receives an MC_LEAVE for a channel that it has already
    left, declined to join, or retired MUST ignore the frame.
 
-   A client that has received a MC_JOIN or MC_LEAVE for the same Channel
-   ID with a greater MC_STATE Sequence Number MUST ignore the MC_LEAVE
-   frame.?
+   A client that has received an MC_JOIN or MC_LEAVE for the same
+   Channel ID with a greater MC_STATE Sequence Number MUST ignore the
+   MC_LEAVE frame.
 
    Otherwise, the client MUST leave the channel according to the After
    Packet Number field and send an MC_STATE frame with State LEFT and
@@ -1202,24 +1270,31 @@ Table of Contents
      ID Length (8),
      Channel ID (8..160),
      Packet Number Start (i),
-     [Length (i)],
+     [Packet Hashes Length (i)],
      Packet Hashes (..)
    }
 
                     Figure 8: MC_INTEGRITY Frame Format
 
-   For type TBD-05, Length is present and is a count of packet hashes.
-   For TBD-04, Length is not present and the packet hashes extend to the
-   end of the packet.
+   For type TBD-05, Packet Hashes Length is present and is the length in
+   bytes of the Packet Hashes field.  For TBD-04, Packet Hashes Length
+   is not present and the Packet Hashes field extends to the end of the
+   packet.
 
-   The first hash in the Packet Hashes list is a hash of a 1-RTT packet
-   with the Channel ID equal to the Channel ID in the MC_INTEGRITY frame
-   and packet number equal to the Packet Number Start field.  Subsequent
-   hashes refer to the packets for the channel with packet numbers
-   increasing by 1.
+   The Packet Hashes field contains a sequence of packet hashes.  The
+   first hash in the Packet Hashes list is a hash of a 1-RTT packet with
+   the Channel ID equal to the Channel ID in the MC_INTEGRITY frame and
+   packet number equal to the Packet Number Start field.  Subsequent
+   hashes refer to the packets for that channel with packet numbers
+   increasing by one.
 
-   Packet hashes MUST have length with an integer multiple of the length
-   indicated by the Hash Algorithm from the MC_ANNOUNCE frame.
+   Each hash has its length determined by the Integrity Hash Algorithm
+   in the corresponding MC_ANNOUNCE frame.  The Packet Hashes field MUST
+   contain a non-zero integer multiple of of the hash length for the
+   channel.  A client that receives an MC_INTEGRITY frame whose Packet
+   Hashes field length is zero, or whose Packet Hashes field length is
+   not an integer multiple of the hash length for the channel, MUST
+   treat this as a connection error of type MC_EXTENSION_ERROR.
 
    See Section 7.1 for a description of the packet hash calculation.
 
@@ -1323,6 +1398,21 @@ Table of Contents
 
    IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can
    be joined and 0 if IPv4 channels cannot be joined.
+
+   It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed
+   to be set to zero simultaneously.  This indicates that the client
+   does not currently permit joining multicast channels using either IP
+   address family.  This does not disable support for this extension on
+   the connection and does not prevent the client from later sending an
+   MC_LIMITS frame that permits one or both address families.
+
+   After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN
+   for a channel whose address family is not currently allowed by the
+   client.  If a client receives such an MC_JOIN responds as described
+   in Section 5.  If the client is currently joined to one or more
+   channels that are no longer allowed by the updated limits, the server
+   MUST send an MC_LEAVE frame for those channels unless it has already
+   received MC_STATE indicating that the client has left those channels.
 
    Max Aggregate Rate allowed across all joined channels is in Kibps.
 
@@ -1501,87 +1591,49 @@ Table of Contents
    cannot be trusted for integrity due to giving them to too many
    receivers, as described in [I-D.draft-krose-multicast-security].
 
-   The 1-RTT packets in multicast channels will have a restricted set of
-   frames.  Since the channel is strictly 1-way server to client, the
-   general principle is that broadcastable shared server->client data
-   frames can be sent, but frames that make sense only for
-   individualized connections or that are sent client-to-server cannot.
+   The set of frames that can appear in a channel packet is restricted.
+   A server MUST NOT send a frame in a channel packet unless the frame
+   is valid in a QUIC 1-RTT packet and either:
 
-   Should a not permitted frame arrive on a multicast channel, the
-   connection MUST be closed with a connection error of type
+   *  the definition of the frame explicitly permits its use in channel
+      packets; or
+
+   *  the frame operates only on state that is shared by all receivers
+      of the channel; receiving it will have the same effect for all
+      receivers.
+
+   A frame is not permitted in a channel packet if processing the frame
+   depends on state that is specific to an individual receiver, path, or
+   unicast connection.  This includes, but is not limited to, frames
+   that are part of the cryptographic handshake, address validation,
+   connection ID migration, flow control or connection termination.
+
+   A frame is also not permitted in a channel packet if it is defined
+   only for client-to-server use, or if it would require the server to
+   respond to a single client via the multicast channel (e.g.,
+   PATH_CHALLENGE).
+
+   A client that receives a frame in an authenticated channel packet
+   that is not permitted SHOULD close the connection with reason
    MC_EXTENSION_ERROR.
 
-   Permitted:
+   For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING,
+   MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID,
+   PATH_CHALLENGE, PATH_RESPONSE, CONNECTION_CLOSE, and HANDSHAKE_DONE
+   are not permitted in channel packets because their semantics are tied
+   to an individual QUIC connection.
 
-   *  PADDING Frames (Section 19.1 of [RFC9000] )
+   On the other hand, PADDING and PING frames are permitted in channel
+   packets because they do not affect receiver-specific state.  STREAM,
+   RESET_STREAM, and DATAGRAM frames are permitted when they carry data
+   scoped to the multicast channel.  MC_ANNOUNCE, MC_INTEGRITY, MC_KEY
+   and MC_RETIRE frames are permitted because they operate on multicast
+   channel state independently of any individual associated unicast
+   connection.
 
-   *  PING Frames (Section 19.2 of [RFC9000] )
-
-   *  RESET_STREAM Frames (Section 19.4 of [RFC9000] )
-
-   *  STREAM Frames (Section 19.8 of [RFC9000] )
-
-   *  DATAGRAM Frames (both types) (Section 4 of [RFC9221])
-
-   *  MC_KEY
-
-   *  MC_LEAVE (however, join must come over unicast?)
-
-   *  MC_INTEGRITY (not for this channel, only for another)
-
-   *  MC_RETIRE
-
-   Not permitted:
-
-   *  19.3.  ACK Frames
-
-   *  19.6.  CRYPTO Frames (crypto handshake does not happen on mc
-      channels)
-
-   *  19.7.  NEW_TOKEN Frames
-
-   *  Flow control is different:
-
-      -  19.5.  STOP_SENDING Frames
-
-      -  19.9.  MAX_DATA Frames (flow control for mc channels is by
-         rate)
-
-      -  19.10.  MAX_STREAM_DATA Frames
-
-      -  19.11.  MAX_STREAMS Frames
-
-      -  19.12.  DATA_BLOCKED Frames
-
-      -  19.13.  STREAM_DATA_BLOCKED Frames
-
-      -  19.14.  STREAMS_BLOCKED Frames
-
-   *  Channel ID Migration can't use the "prior to" concept within a
-      channel, not 0-starting
-
-      -  19.15.  NEW_CONNECTION_ID Frames
-
-      -  19.16.  RETIRE_CONNECTION_ID Frames
-
-   *  Channels don't have the same kind of path validation, as there's a
-      unicast anchor with acks for the multicast packets:
-
-      -  19.17.  PATH_CHALLENGE Frames
-
-      -  19.18.  PATH_RESPONSE Frames
-
-   *  19.19.  CONNECTION_CLOSE Frames
-
-   *  19.20.  HANDSHAKE_DONE Frames
-
-   *  MC_ANNOUNCE
-
-   *  MC_LIMITS
-
-   *  MC_STATE
-
-   *  MC_ACK
+   MC_JOIN and MC_LEAVE are not permitted in channel packets because
+   their semantics depend on state specific to an individual associated
+   connection, including MC_LIMITS and MC_STATE sequence numbers.
 
 12.  Implementation and Operational Considerations
 

@@ -1051,7 +1051,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Holland, et al.</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1064,12 +1064,12 @@ svg {
 <dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1130,7 +1130,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1487,8 +1487,7 @@ The Cipher Suite Count field contains the number of entries in the Cipher Suite 
 An endpoint MUST treat multicast_client_params as malformed if the parameter length is inconsistent with these counts.<a href="#section-3-11" class="pilcrow">¶</a></p>
 <p id="section-3-12">The Cipher Suite List field is in order of preference, with the most preferred value first.
 It contains values from the "TLS Cipher Suites" registry in the "Transport Layer Security (TLS) Parameters" registry group <span>[<a href="#IANA.tls-parameters" class="cite xref">IANA.tls-parameters</a>]</span>.
-It lists the cipher suites the client is willing to use for multicast channel packet protection and header
-protection.
+It lists the cipher suites the client is willing to use for multicast channel packet protection and header protection.
 A server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported cipher suites.
 If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.<a href="#section-3-12" class="pilcrow">¶</a></p>
 <p id="section-3-13">The Hash Algorithm List field is in order of preference, with the most preferred value first.
@@ -1533,9 +1532,17 @@ MC_KEY frames provide the secrets necessary to decode the payload of packets in 
 <a href="#fig-client-channel-states" class="auto internal xref">Figure 2</a> shows the states a channel has from the clients point of view.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
 <p id="section-4.1-4">Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients. If a client decides not to join after being asked to do so, it can indicate this decision by sending an MC_STATE (<a href="#client-channel-state-frame" class="auto internal xref">Section 10.9</a>) frame with state DECLINED_JOIN and an appropriate reason.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 <p id="section-4.1-5">The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS (<a href="#client-limits-frame" class="auto internal xref">Section 10.7</a>) frame the server received.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+<p id="section-4.1-6">This extension does not define an application-layer catalogue or content-selection protocol.
+Application protocols determine what content, service, program, representation, or other application context is relevant to a connection.
+The multicast extension merely provides a transport mechanism by which the server can describe channels that are available in that context and request that the client join or leave them.
+A server is not expected to announce every multicast channel that it operates to every client.
+The set of channels announced to any specific client can be limited by application-layer state, prior application requests, receiver limits, server policy, or any combination of these.<a href="#section-4.1-6" class="pilcrow">¶</a></p>
+<p id="section-4.1-7">For example, a server may provide a video stream in different resolutions, with each available resolution being carried in a different multicast channel.
+The server would only announce the channel that offers the best available quality while remaining under the limits set by the client.
+In this case, this could happen without any involvement of the client-side application.<a href="#section-4.1-7" class="pilcrow">¶</a></p>
 <span id="name-states-a-channel-from-the-c"></span><div id="fig-client-channel-states">
 <figure id="figure-2">
-          <div class="alignLeft art-text artwork" id="section-4.1-6.1">
+          <div class="alignLeft art-text artwork" id="section-4.1-8.1">
 <pre>
                             o
                             |
@@ -1574,12 +1581,12 @@ MC_KEY frames provide the secrets necessary to decode the payload of packets in 
 <a href="#name-states-a-channel-from-the-c" class="selfRef">States a channel from the clients point of view.</a>
           </figcaption></figure>
 </div>
-<p id="section-4.1-7">When the server has asked the client to join a channel and has not received any MC_STATE frames <a href="#client-channel-state-frame" class="auto internal xref">Section 10.9</a> with state DECLINED_JOIN or LEFT, it also sends MC_INTEGRITY frames (<a href="#channel-integrity-frame" class="auto internal xref">Section 10.5</a>) to enable the client to verify packet integrity before processing the packet.
-A client MUST NOT decode packets for a channel for which it has not received an applicable MC_ANNOUNCE (<a href="#channel-announce-frame" class="auto internal xref">Section 10.1</a>), or for which it has not received a matching packet hash in an MC_INTEGRITY (<a href="#channel-integrity-frame" class="auto internal xref">Section 10.5</a>) frame, or for which it has not received an applicable MC_KEY frame <a href="#channel-key-frame" class="auto internal xref">Section 10.2</a>.<a href="#section-4.1-7" class="pilcrow">¶</a></p>
-<p id="section-4.1-8"><a href="#fig-frame-exchange" class="auto internal xref">Figure 3</a> shows the frames that are being exchanged about and over a channel during the lifetime of an example channel.<a href="#section-4.1-8" class="pilcrow">¶</a></p>
+<p id="section-4.1-9">When the server has asked the client to join a channel and has not received any MC_STATE frames <a href="#client-channel-state-frame" class="auto internal xref">Section 10.9</a> with state DECLINED_JOIN or LEFT, it also sends MC_INTEGRITY frames (<a href="#channel-integrity-frame" class="auto internal xref">Section 10.5</a>) to enable the client to verify packet integrity before processing the packet.
+A client MUST NOT decode packets for a channel for which it has not received an applicable MC_ANNOUNCE (<a href="#channel-announce-frame" class="auto internal xref">Section 10.1</a>), or for which it has not received a matching packet hash in an MC_INTEGRITY (<a href="#channel-integrity-frame" class="auto internal xref">Section 10.5</a>) frame, or for which it has not received an applicable MC_KEY frame <a href="#channel-key-frame" class="auto internal xref">Section 10.2</a>.<a href="#section-4.1-9" class="pilcrow">¶</a></p>
+<p id="section-4.1-10"><a href="#fig-frame-exchange" class="auto internal xref">Figure 3</a> shows the frames that are being exchanged about and over a channel during the lifetime of an example channel.<a href="#section-4.1-10" class="pilcrow">¶</a></p>
 <span id="name-example-flow-of-frames-for-"></span><div id="fig-frame-exchange">
 <figure id="figure-3">
-          <div class="alignLeft art-text artwork" id="section-4.1-9.1">
+          <div class="alignLeft art-text artwork" id="section-4.1-11.1">
 <pre>
 Client                                        Server
 
@@ -1624,7 +1631,7 @@ MC_STATE(RETIRED)  ---&gt;
 <a href="#name-example-flow-of-frames-for-" class="selfRef">Example flow of frames for a channel. Frames in square brackets are sent over multicast.</a>
           </figcaption></figure>
 </div>
-<p id="section-4.1-10">TODO: incorporate server-side state diagram and explanation, latest proposed sketch at <a href="https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/62">https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/62</a><a href="#section-4.1-10" class="pilcrow">¶</a></p>
+<p id="section-4.1-12">TODO: incorporate server-side state diagram and explanation, latest proposed sketch at <a href="https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/62">https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/62</a><a href="#section-4.1-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="client-response">
@@ -1666,13 +1673,19 @@ If this occurs persistently, or if the number of unauthenticated packets exceeds
 <a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-stream-processing" class="section-name selfRef">Stream Processing</a>
         </h3>
 <p id="section-4.4-1">Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see <span><a href="https://rfc-editor.org/rfc/rfc9000#section-2.1" class="relref">Section 2.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>).<a href="#section-4.4-1" class="pilcrow">¶</a></p>
-<p id="section-4.4-2">When a channel contains streams with IDs above the client's unidirectional MAX_STREAMS, the server MUST NOT instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in Sections <a href="https://rfc-editor.org/rfc/rfc9000#section-4.6" class="relref">4.6</a> and <a href="https://rfc-editor.org/rfc/rfc9000#section-19.14" class="relref">19.14</a> of <span>[<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
-<p id="section-4.4-3">If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send an MC_LEAVE frame.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
-<p id="section-4.4-4">If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason "MAX_STREAMS_EXCEEDED".<a href="#section-4.4-4" class="pilcrow">¶</a></p>
-<p id="section-4.4-5">Since clients can join later than a channel began, it is RECOMMENDED that clients supporting the multicast extensions to QUIC be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream ID count might have been increasing for a long time.
+<p id="section-4.4-2">Multicast channels do not define independent QUIC stream ID spaces.
+STREAM frames received on a multicast channel are processed as regular STREAM frames for the associated QUIC connection.
+Stream IDs are therefore allocated from the same connection-wide stream ID space, whether stream data is sent on the unicast path or on one or more multicast channels.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+<p id="section-4.4-3">A server that sends STREAM frames on one or more multicast channels associated with the same QUIC connection is responsible for coordinating stream ID allocation across the unicast paths of all potential multicast receivers, and across all relevant multicast channels.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
+<p id="section-4.4-4">Using disjoint stream ID ranges for different channels is one possible implementation strategy, but is not required by this specification.<a href="#section-4.4-4" class="pilcrow">¶</a></p>
+<p id="section-4.4-5">When a channel contains, or may soon contain, streams with IDs that exceed the stream ID limit implied by the client's server-initiated unidirectional MAX_STREAMS value, the server MUST NOT send MC_JOIN to instruct the client to join that channel and SHOULD send a STREAMS_BLOCKED frame, as described in Sections <a href="https://rfc-editor.org/rfc/rfc9000#section-4.6" class="relref">4.6</a> and <a href="https://rfc-editor.org/rfc/rfc9000#section-19.14" class="relref">19.14</a> of <span>[<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
+<p id="section-4.4-6">If the client is already joined to a channel that carries streams that exceed or will soon exceed the client's unidirectional MAX_STREAMS, the server SHOULD send an MC_LEAVE frame.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
+<p id="section-4.4-7">If a client receives a STREAM frame with an ID above its MAX_STREAMS on a channel, the client MAY increase its unidirectional MAX_STREAMS to a value greater than the new ID and send an update to the server, otherwise it MUST drop the packet and leave the channel with reason "MAX_STREAMS_EXCEEDED".<a href="#section-4.4-7" class="pilcrow">¶</a></p>
+<p id="section-4.4-8">Since clients can join later than a channel began, it is RECOMMENDED that clients supporting the multicast extensions to QUIC be prepared to handle stream IDs that do not begin at early values, since by the time a client joins a channel in progress the stream ID count might have been increasing for a long time.
 Clients should therefore begin with a high initial_max_streams_uni or send an early MAX_STREAMS type 0x13 value (see <span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.11" class="relref">Section 19.11</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) with a high limit.
-Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
-<p id="section-4.4-6">The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>, stream data received multiple times for the same offset MUST be identical, even across different network paths; if it's not identical it MAY be treated as a connection error of type MC_EXTENSION_ERROR.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
+Clients MAY use the maximum 2^60 for this high initial limit, but the specific choice is implementation-dependent.<a href="#section-4.4-8" class="pilcrow">¶</a></p>
+<p id="section-4.4-9">The same stream ID may be used in both one or more multicast channels and the unicast connection.  As described in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>, stream data received multiple times for the same offset MUST be identical, including when the data is received on different multicast channels or on both multicast and unicast paths.
+If it's not identical it MAY be treated as a connection error of type MC_EXTENSION_ERROR.<a href="#section-4.4-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1689,9 +1702,11 @@ If a server detects that a clients MAX_DATA is about to be exceeded, it MUST ins
 The server is responsible for keeping the client within its advertised limits, by ensuring via MC_JOIN and MC_LEAVE frames that the set of channels the client is asked to be joined to will not, in aggregate, exceed the client's advertised limits.
 The server also advertises the expected maxima of the values that can contribute toward client resource limits within a channel in an MC_ANNOUNCE (<a href="#channel-announce-frame" class="auto internal xref">Section 10.1</a>) frame, and the client also ensures that the set of channels it's joined to does not exceed its limits, according to the advertised values.
 The client also monitors the packets received to ensure that channels don't exceed their advertised values, and leaves channels that do.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<p id="section-5-3">If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back an MC_STATE frame (<a href="#client-channel-state-frame" class="auto internal xref">Section 10.9</a>) with "DECLINED_JOIN" and reason "PROPERTY_VIOLATION".
-If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Key Sequence Number that the client has not yet seen, the client should instead send back a "DECLINED_JOIN" with "UNSYNCHRONIZED_PROPERTIES".
-If the actual contents sent in the channel exceed the advertised limits from the MC_ANNOUNCE, clients SHOULD leave the stream and send an MC_STATE(LEFT) frame, using the Limit Violated reason.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-3">The sequence numbers carried in MC_JOIN allow the client to determine whether a join request is based on state that is synchronized between the client and server.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">If the server asks the client to join a channel that would violate the client's limits, and the MC_JOIN frame contains the client's current MC_LIMITS Sequence Number, the client SHOULD send an MC_STATE frame (<a href="#client-channel-state-frame" class="auto internal xref">Section 10.9</a>) with State DECLINED_JOIN and Reason Code PROPERTY_VIOLATION.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">If the server asks the client to join a channel that would violate the client's current limits, but the MC_JOIN frame contains an older MC_LIMITS Sequence Number, the client SHOULD send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">If the MC_JOIN frame refers to an MC_KEY Sequence Number that the client has not yet received, the client SHOULD send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">If the actual contents sent in the channel violate the advertised properties from MC_ANNOUNCE, clients SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code LIMIT_VIOLATION.<a href="#section-5-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="congestion-control">
@@ -1907,12 +1922,13 @@ MC_ANNOUNCE Frame {
   This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY (<span>[<a href="#I-D.ietf-quic-ack-frequency" class="cite xref">I-D.ietf-quic-ack-frequency</a>]</span>), except that it applies only to this channels packet number space and to MC_ACK frames for this channel.<a href="#section-10.1-6.14.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-10.1-7">A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
+<p id="section-10.1-7">A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection.
+If it is already in use, the client SHOULD retire it as soon as possible.
 As the server knows which connection IDs are in use by the client, it MUST wait with the sending of an MC_JOIN frame until the channel ID associated with it has been retired by the client.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
 <p id="section-10.1-8">If a client receives an MC_ANNOUNCE frame with a Group IP that is not within the SSM destination address range as outlined in <span>[<a href="#RFC4607" class="cite xref">RFC4607</a>]</span>, it SHOULD close the connection with reason MC_EXTENSION_ERROR.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
 <p id="section-10.1-9">As all the properties in MC_ANNOUNCE frames are immutable during the lifetime of a channel, a server SHOULD NOT send an MC_ANNOUNCE frame for the same channel more than once to each client except as needed for recovery.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
-<p id="section-10.1-10">A server SHOULD send an MC_ANNOUNCE frame for a channel before sending an MC_KEY and SHOULD send an MC_KEY frame for a channel before sending an MC_JOIN frame for it.
-Each of these recommended orderings MAY occur within the same packet.<a href="#section-10.1-10" class="pilcrow">¶</a></p>
+<p id="section-10.1-10">A server SHOULD send an MC_ANNOUNCE frame for a channel before sending an MC_KEY frame for that channel.<a href="#section-10.1-10" class="pilcrow">¶</a></p>
+<p id="section-10.1-11">A server MUST NOT send an MC_JOIN frame for a channel unless it has sent, or is sending in the same packet, both an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.<a href="#section-10.1-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="channel-key-frame">
@@ -1920,21 +1936,25 @@ Each of these recommended orderings MAY occur within the same packet.<a href="#s
         <h3 id="name-mc_key">
 <a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-mc_key" class="section-name selfRef">MC_KEY</a>
         </h3>
-<p id="section-10.2-1">An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
-The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
-<p id="section-10.2-2">A server can send a new MC_KEY frame with a sequence number increased by one.
+<p id="section-10.2-1">Multicast channel keys are channel-scoped rather than connection-scoped.
+The same channel secret will be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends, or miss key updates while not joined.
+The regular QUIC Key Update mechanism (<span><a href="https://rfc-editor.org/rfc/rfc9001#section-6" class="relref">Section 6</a> of [<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>) can not cover such cases.
+Therefore, the server needs an explicit mechanism to provide the current channel secret to authorized receivers, identify the packet number from which that secret applies, and rotate channel keys independently of the unicast connection's 1-RTT keys.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
+The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<p id="section-10.2-3">A server can send a new MC_KEY frame with a sequence number increased by one.
 A server MUST generate continuous sequence numbers, and MAY start at a value higher than 0.
 Note that while not joined, a client will not receive updates to channel secrets, and thus may see jumps in the Key Sequence Number values between MC_KEY frames.
-However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
-<p id="section-10.2-3">Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1 in the 1-RTT packet.
+However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+<p id="section-10.2-4">Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1 in the 1-RTT packet.
 Secrets with a Key Phase indicating an unknown key SHOULD be discarded without attempting to decrypt them.
-(An unknown key might happen after loss of the latest MC_KEY frame, so that packets on a channel have an updated Key Phase starting at a particular packet number, but the client does not yet know about the key change.)<a href="#section-10.2-3" class="pilcrow">¶</a></p>
-<p id="section-10.2-4">Should a client receive two different Keys with the same Key Sequence Number and Channel ID, e.g. one over the unicast connection and one over the multicast channel, it SHOULD close the connection with reason MC_EXTENSION_ERROR.<a href="#section-10.2-4" class="pilcrow">¶</a></p>
-<p id="section-10.2-5">It is RECOMMENDED that servers send regular secret updates.<a href="#section-10.2-5" class="pilcrow">¶</a></p>
-<p id="section-10.2-6">MC_KEY frames are formatted as shown in <a href="#fig-mc-channel-key-format" class="auto internal xref">Figure 5</a>.<a href="#section-10.2-6" class="pilcrow">¶</a></p>
+(An unknown key might happen after loss of the latest MC_KEY frame, so that packets on a channel have an updated Key Phase starting at a particular packet number, but the client does not yet know about the key change.)<a href="#section-10.2-4" class="pilcrow">¶</a></p>
+<p id="section-10.2-5">Should a client receive two different Keys with the same Key Sequence Number and Channel ID, e.g. one over the unicast connection and one over the multicast channel, it SHOULD close the connection with reason MC_EXTENSION_ERROR.<a href="#section-10.2-5" class="pilcrow">¶</a></p>
+<p id="section-10.2-6">It is RECOMMENDED that servers send regular secret updates.<a href="#section-10.2-6" class="pilcrow">¶</a></p>
+<p id="section-10.2-7">MC_KEY frames are formatted as shown in <a href="#fig-mc-channel-key-format" class="auto internal xref">Figure 5</a>.<a href="#section-10.2-7" class="pilcrow">¶</a></p>
 <span id="name-mc_key-frame-format"></span><div id="fig-mc-channel-key-format">
 <figure id="figure-5">
-          <div class="alignLeft art-text artwork" id="section-10.2-7.1">
+          <div class="alignLeft art-text artwork" id="section-10.2-8.1">
 <pre>
 MC_KEY Frame {
   Type (i) = TBD-01 (experiments use 0xff3e801),
@@ -1951,41 +1971,41 @@ MC_KEY Frame {
 <a href="#name-mc_key-frame-format" class="selfRef">MC_KEY Frame Format</a>
           </figcaption></figure>
 </div>
-<p id="section-10.2-8">MC_KEY frames contain the following fields:<a href="#section-10.2-8" class="pilcrow">¶</a></p>
+<p id="section-10.2-9">MC_KEY frames contain the following fields:<a href="#section-10.2-9" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10.2-9.1">
-            <p id="section-10.2-9.1.1">ID Length: The length in bytes of the Channel ID field.<a href="#section-10.2-9.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10.2-10.1">
+            <p id="section-10.2-10.1.1">ID Length: The length in bytes of the Channel ID field.<a href="#section-10.2-10.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.2">
-            <p id="section-10.2-9.2.1">Channel ID: The channel ID for the channel associated with this frame.<a href="#section-10.2-9.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.2-10.2">
+            <p id="section-10.2-10.2.1">Channel ID: The channel ID for the channel associated with this frame.<a href="#section-10.2-10.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.3">
-            <p id="section-10.2-9.3.1">Key Sequence Number: Increases by 1 each time the secret for the channel is changed by the server.  If there is a gap in sequence numbers due to reordering or retransmission of packets, on receipt of the older MC_KEY frame, the client MUST apply the secret contained and the packet numbers on which it applies as if they arrived in order.<a href="#section-10.2-9.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.2-10.3">
+            <p id="section-10.2-10.3.1">Key Sequence Number: Increases by 1 each time the secret for the channel is changed by the server.  If there is a gap in sequence numbers due to reordering or retransmission of packets, on receipt of the older MC_KEY frame, the client MUST apply the secret contained and the packet numbers on which it applies as if they arrived in order.<a href="#section-10.2-10.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.4">
-            <p id="section-10.2-9.4.1">From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.  The Packet Number MUST never decrease with an increased Key Sequence Number.<a href="#section-10.2-9.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.2-10.4">
+            <p id="section-10.2-10.4.1">From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.  The Packet Number MUST never decrease with an increased Key Sequence Number.<a href="#section-10.2-10.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.5">
-            <p id="section-10.2-9.5.1">Secret Length: Provides the length of the secret field.<a href="#section-10.2-9.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.2-10.5">
+            <p id="section-10.2-10.5.1">Secret Length: Provides the length of the secret field.<a href="#section-10.2-10.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.2-9.6">
-            <p id="section-10.2-9.6.1">Secret: A channel packet protection secret.
+          <li class="normal" id="section-10.2-10.6">
+            <p id="section-10.2-10.6.1">Secret: A channel packet protection secret.
   Packet protection keys and IVs for channel packets are derived from this secret using the cipher suite identified in the corresponding MC_ANNOUNCE frame and the <code>"quic key"</code> and <code>"quic iv"</code> labels, as described in <span><a href="https://rfc-editor.org/rfc/rfc9001#section-5.1" class="relref">Section 5.1</a> of [<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>.
-  This secret is not used to derive the header protection key.<a href="#section-10.2-9.6.1" class="pilcrow">¶</a></p>
+  This secret is not used to derive the header protection key.<a href="#section-10.2-10.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-10.2-10">To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.<a href="#section-10.2-10" class="pilcrow">¶</a></p>
-<p id="section-10.2-11">Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
-Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.<a href="#section-10.2-11" class="pilcrow">¶</a></p>
-<p id="section-10.2-12">Client implementations MAY institute a delay before deleting secrets to allow for decoding of packets for the channel that arrive shortly after a new MC_KEY frame.
+<p id="section-10.2-11">To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.<a href="#section-10.2-11" class="pilcrow">¶</a></p>
+<p id="section-10.2-12">Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
+Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.<a href="#section-10.2-12" class="pilcrow">¶</a></p>
+<p id="section-10.2-13">Client implementations MAY institute a delay before deleting secrets to allow for decoding of packets for the channel that arrive shortly after a new MC_KEY frame.
 For this experimental specification, it is RECOMMENDED that clients delete old keys 10 seconds after receiving a new key or after 3 seconds that elapse without receiving any new data to decode with the old key, whichever is shorter.
-Clients MUST NOT delay more than 60 seconds before deleting the old keys.<a href="#section-10.2-12" class="pilcrow">¶</a></p>
-<p id="section-10.2-13">The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
+Clients MUST NOT delay more than 60 seconds before deleting the old keys.<a href="#section-10.2-13" class="pilcrow">¶</a></p>
+<p id="section-10.2-14">The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
 One of the target discoveries for experimental evaluation is to determine good default delay values to use, and to understand whether there are use cases that would benefit from a negotiation between server and client to determine the delays to use dynamically.
-(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)<a href="#section-10.2-13" class="pilcrow">¶</a></p>
-<p id="section-10.2-14">The From Packet Number is used to indicate the starting packet number (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.1" class="relref">Section 17.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
-This secret is applicable to all future packets until it is updated by a new MC_KEY frame.<a href="#section-10.2-14" class="pilcrow">¶</a></p>
-<p id="section-10.2-15">A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.<a href="#section-10.2-15" class="pilcrow">¶</a></p>
+(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)<a href="#section-10.2-14" class="pilcrow">¶</a></p>
+<p id="section-10.2-15">The From Packet Number is used to indicate the starting packet number (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.1" class="relref">Section 17.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
+This secret is applicable to all future packets until it is updated by a new MC_KEY frame.<a href="#section-10.2-15" class="pilcrow">¶</a></p>
+<p id="section-10.2-16">A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.<a href="#section-10.2-16" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="channel-join-frame">
@@ -1993,13 +2013,14 @@ This secret is applicable to all future packets until it is updated by a new MC_
         <h3 id="name-mc_join">
 <a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-mc_join" class="section-name selfRef">MC_JOIN</a>
         </h3>
-<p id="section-10.3-1">An MC_JOIN frame (type TBD-02) is sent from server to client and requests that a client join the given transport addresses and ports and process packets with the given Channel ID according to the corresponding MC_ANNOUNCE frame and the latest MC_KEY frame for the channel.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
-<p id="section-10.3-2">A client cannot join a multicast channel without first receiving an MC_ANNOUNCE frame and an MC_KEY frame, which together set all the values necessary to process the channel.<a href="#section-10.3-2" class="pilcrow">¶</a></p>
-<p id="section-10.3-3">If a client receives an MC_JOIN for a channel for which it has not received both an MC_ANNOUNCE frame and an MC_KEY frame, it MUST respond with an MC_STATE with State "DECLINED_JOIN" and reason "Missing Properties". The server MAY send another MC_JOIN after receiving an acknowledgement indicating receipt of the MC_ANNOUNCE frame and the MC_KEY frame.<a href="#section-10.3-3" class="pilcrow">¶</a></p>
-<p id="section-10.3-4">MC_JOIN frames are formatted as shown in <a href="#fig-mc-channel-join-format" class="auto internal xref">Figure 6</a>.<a href="#section-10.3-4" class="pilcrow">¶</a></p>
+<p id="section-10.3-1">An MC_JOIN frame (type TBD-02) is sent from server to client and requests that the client join the channel identified by Channel ID.
+The client uses the channel's transport addresses and properties from the corresponding MC_ANNOUNCE frame.
+The MC_KEY Sequence Number field identifies the channel key generation that the server expects the client to have available when processing channel packets.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10.3-2">A client cannot join a multicast channel without first receiving an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.<a href="#section-10.3-2" class="pilcrow">¶</a></p>
+<p id="section-10.3-3">MC_JOIN frames are formatted as shown in <a href="#fig-mc-channel-join-format" class="auto internal xref">Figure 6</a>.<a href="#section-10.3-3" class="pilcrow">¶</a></p>
 <span id="name-mc_join-frame-format"></span><div id="fig-mc-channel-join-format">
 <figure id="figure-6">
-          <div class="alignLeft art-text artwork" id="section-10.3-5.1">
+          <div class="alignLeft art-text artwork" id="section-10.3-4.1">
 <pre>
 MC_JOIN Frame {
   Type (i) = TBD-02 (experiments use 0xff3e802),
@@ -2015,10 +2036,27 @@ MC_JOIN Frame {
 <a href="#name-mc_join-frame-format" class="selfRef">MC_JOIN Frame Format</a>
           </figcaption></figure>
 </div>
-<p id="section-10.3-6">The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_KEY not yet received by the client or one or more missing updates to MC_LIMITS or MC_STATE not yet received by the server).<a href="#section-10.3-6" class="pilcrow">¶</a></p>
-<p id="section-10.3-7">A client MAY perform the join if it has the sequence number of the corresponding channel properties and the client's limits will not be exceeded, even if the client sequence numbers are not up-to-date.<a href="#section-10.3-7" class="pilcrow">¶</a></p>
-<p id="section-10.3-8">If the client does not join, it MUST send an MC_STATE frame with "DECLINED_JOIN" and a reason.<a href="#section-10.3-8" class="pilcrow">¶</a></p>
-<p id="section-10.3-9">If the client does join, it MUST send an MC_STATE frame with "JOINED".<a href="#section-10.3-9" class="pilcrow">¶</a></p>
+<p id="section-10.3-5">MC_JOIN frames contain the following fields:<a href="#section-10.3-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.3-6.1">
+            <p id="section-10.3-6.1.1">ID Length: The length in bytes of the Channel ID field.<a href="#section-10.3-6.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.3-6.2">
+            <p id="section-10.3-6.2.1">Channel ID: The channel ID for the channel that the client is requested to join.<a href="#section-10.3-6.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.3-6.3">
+            <p id="section-10.3-6.3.1">MC_LIMITS Sequence Number: The most recent Client Limits Sequence Number processed by the server when constructing this join request.<a href="#section-10.3-6.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.3-6.4">
+            <p id="section-10.3-6.4.1">MC_STATE Sequence Number: The most recent Client Channel State Sequence Number for this channel processed by the server when constructing this join request.<a href="#section-10.3-6.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.3-6.5">
+            <p id="section-10.3-6.5.1">MC_KEY Sequence Number: The Key Sequence Number for the channel key generation that the server expects the client to use when joining the channel.<a href="#section-10.3-6.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.3-7">If a client receives an MC_JOIN for a channel for which it has not received both an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame, it MUST send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.<a href="#section-10.3-7" class="pilcrow">¶</a></p>
+<p id="section-10.3-8">If the client joins, it MUST send an MC_STATE frame with State JOINED.
+If the client does not join, it MUST send an MC_STATE frame with State DECLINED_JOIN and an appropriate Reason Code.<a href="#section-10.3-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="channel-leave-frame">
@@ -2065,7 +2103,7 @@ If this field is zero, or if the client has already received a channel packet wi
 </li>
         </ul>
 <p id="section-10.4-6">A client that receives an MC_LEAVE for a channel that it has already left, declined to join, or retired MUST ignore the frame.<a href="#section-10.4-6" class="pilcrow">¶</a></p>
-<p id="section-10.4-7">A client that has received a MC_JOIN or MC_LEAVE for the same Channel ID with a greater MC_STATE Sequence Number MUST ignore the MC_LEAVE frame.?<a href="#section-10.4-7" class="pilcrow">¶</a></p>
+<p id="section-10.4-7">A client that has received an MC_JOIN or MC_LEAVE for the same Channel ID with a greater MC_STATE Sequence Number MUST ignore the MC_LEAVE frame.<a href="#section-10.4-7" class="pilcrow">¶</a></p>
 <p id="section-10.4-8">Otherwise, the client MUST leave the channel according to the After Packet Number field and send an MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.<a href="#section-10.4-8" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2085,7 +2123,7 @@ MC_INTEGRITY Frame {
   ID Length (8),
   Channel ID (8..160),
   Packet Number Start (i),
-  [Length (i)],
+  [Packet Hashes Length (i)],
   Packet Hashes (..)
 }
 </pre>
@@ -2094,10 +2132,14 @@ MC_INTEGRITY Frame {
 <a href="#name-mc_integrity-frame-format" class="selfRef">MC_INTEGRITY Frame Format</a>
           </figcaption></figure>
 </div>
-<p id="section-10.5-4">For type TBD-05, Length is present and is a count of packet hashes.  For TBD-04, Length is not present and the packet hashes extend to the end of the packet.<a href="#section-10.5-4" class="pilcrow">¶</a></p>
-<p id="section-10.5-5">The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Channel ID equal to the Channel ID in the MC_INTEGRITY frame and packet number equal to the Packet Number Start field.
-Subsequent hashes refer to the packets for the channel with packet numbers increasing by 1.<a href="#section-10.5-5" class="pilcrow">¶</a></p>
-<p id="section-10.5-6">Packet hashes MUST have length with an integer multiple of the length indicated by the Hash Algorithm from the MC_ANNOUNCE frame.<a href="#section-10.5-6" class="pilcrow">¶</a></p>
+<p id="section-10.5-4">For type TBD-05, Packet Hashes Length is present and is the length in bytes of the Packet Hashes field.
+For TBD-04, Packet Hashes Length is not present and the Packet Hashes field extends to the end of the packet.<a href="#section-10.5-4" class="pilcrow">¶</a></p>
+<p id="section-10.5-5">The Packet Hashes field contains a sequence of packet hashes.
+The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Channel ID equal to the Channel ID in the MC_INTEGRITY frame and packet number equal to the Packet Number Start field.
+Subsequent hashes refer to the packets for that channel with packet numbers increasing by one.<a href="#section-10.5-5" class="pilcrow">¶</a></p>
+<p id="section-10.5-6">Each hash has its length determined by the Integrity Hash Algorithm in the corresponding MC_ANNOUNCE frame.
+The Packet Hashes field MUST contain a non-zero integer multiple of of the hash length for the channel.
+A client that receives an MC_INTEGRITY frame whose Packet Hashes field length is zero, or whose Packet Hashes field length is not an integer multiple of the hash length for the channel, MUST treat this as a connection error of type MC_EXTENSION_ERROR.<a href="#section-10.5-6" class="pilcrow">¶</a></p>
 <p id="section-10.5-7">See <a href="#packet-hashes" class="auto internal xref">Section 7.1</a> for a description of the packet hash calculation.<a href="#section-10.5-7" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2184,9 +2226,15 @@ Newer frames override older ones.<a href="#section-10.7-3" class="pilcrow">¶</a
 These are reserved to advertise future capabilities.<a href="#section-10.7-4" class="pilcrow">¶</a></p>
 <p id="section-10.7-5">IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can be joined and 0 if IPv6 channels cannot be joined.<a href="#section-10.7-5" class="pilcrow">¶</a></p>
 <p id="section-10.7-6">IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can be joined and 0 if IPv4 channels cannot be joined.<a href="#section-10.7-6" class="pilcrow">¶</a></p>
-<p id="section-10.7-7">Max Aggregate Rate allowed across all joined channels is in Kibps.<a href="#section-10.7-7" class="pilcrow">¶</a></p>
-<p id="section-10.7-8">Max Channel IDs is the count of channel IDs that can be announced to this client and have keys.  Retired Channel IDs don't count against this value.<a href="#section-10.7-8" class="pilcrow">¶</a></p>
-<p id="section-10.7-9">Max Joined Count is the count of channels that are allowed to be joined concurrently.<a href="#section-10.7-9" class="pilcrow">¶</a></p>
+<p id="section-10.7-7">It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero simultaneously.
+This indicates that the client does not currently permit joining multicast channels using either IP address family.
+This does not disable support for this extension on the connection and does not prevent the client from later sending an MC_LIMITS frame that permits one or both address families.<a href="#section-10.7-7" class="pilcrow">¶</a></p>
+<p id="section-10.7-8">After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN for a channel whose address family is not currently allowed by the client.
+If a client receives such an MC_JOIN responds as described in <a href="#flow-control" class="auto internal xref">Section 5</a>.
+If the client is currently joined to one or more channels that are no longer allowed by the updated limits, the server MUST send an MC_LEAVE frame for those channels unless it has already received MC_STATE indicating that the client has left those channels.<a href="#section-10.7-8" class="pilcrow">¶</a></p>
+<p id="section-10.7-9">Max Aggregate Rate allowed across all joined channels is in Kibps.<a href="#section-10.7-9" class="pilcrow">¶</a></p>
+<p id="section-10.7-10">Max Channel IDs is the count of channel IDs that can be announced to this client and have keys.  Retired Channel IDs don't count against this value.<a href="#section-10.7-10" class="pilcrow">¶</a></p>
+<p id="section-10.7-11">Max Joined Count is the count of channels that are allowed to be joined concurrently.<a href="#section-10.7-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="channel-retire-frame">
@@ -2353,117 +2401,25 @@ Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absen
       </h2>
 <p id="section-11-1">Multicast channels will contain normal QUIC 1-RTT data packets (see <span><a href="https://rfc-editor.org/rfc/rfc9000#section-17.3.1" class="relref">Section 17.3.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) except using the Channel ID instead of a Connection ID.  The packets are protected with the keys derived from the secrets in MC_KEY frames for the corresponding channel.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11-2">Data packet hashes will also be sent in MC_INTEGRITY frames, as keys cannot be trusted for integrity due to giving them to too many receivers, as described in <span>[<a href="#I-D.draft-krose-multicast-security" class="cite xref">I-D.draft-krose-multicast-security</a>]</span>.<a href="#section-11-2" class="pilcrow">¶</a></p>
-<p id="section-11-3">The 1-RTT packets in multicast channels will have a restricted set of frames.
-Since the channel is strictly 1-way server to client, the general principle is that broadcastable shared server-&gt;client data frames can be sent, but frames that make sense only for individualized connections or that are sent client-to-server cannot.<a href="#section-11-3" class="pilcrow">¶</a></p>
-<p id="section-11-4">Should a not permitted frame arrive on a multicast channel, the connection MUST be closed with a connection error of type MC_EXTENSION_ERROR.<a href="#section-11-4" class="pilcrow">¶</a></p>
-<p id="section-11-5">Permitted:<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-3">The set of frames that can appear in a channel packet is restricted.
+A server MUST NOT send a frame in a channel packet unless the frame is valid in a QUIC 1-RTT packet and either:<a href="#section-11-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-6.1">
-          <p id="section-11-6.1.1">PADDING Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.1" class="relref">Section 19.1</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> )<a href="#section-11-6.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-11-4.1">
+          <p id="section-11-4.1.1">the definition of the frame explicitly permits its use in channel packets; or<a href="#section-11-4.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-6.2">
-          <p id="section-11-6.2.1">PING Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.2" class="relref">Section 19.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> )<a href="#section-11-6.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.3">
-          <p id="section-11-6.3.1">RESET_STREAM Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.4" class="relref">Section 19.4</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> )<a href="#section-11-6.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.4">
-          <p id="section-11-6.4.1">STREAM Frames (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-19.8" class="relref">Section 19.8</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> )<a href="#section-11-6.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.5">
-          <p id="section-11-6.5.1">DATAGRAM Frames (both types) (<span><a href="https://rfc-editor.org/rfc/rfc9221#section-4" class="relref">Section 4</a> of [<a href="#RFC9221" class="cite xref">RFC9221</a>]</span>)<a href="#section-11-6.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.6">
-          <p id="section-11-6.6.1">MC_KEY<a href="#section-11-6.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.7">
-          <p id="section-11-6.7.1">MC_LEAVE (however, join must come over unicast?)<a href="#section-11-6.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.8">
-          <p id="section-11-6.8.1">MC_INTEGRITY (not for this channel, only for another)<a href="#section-11-6.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-6.9">
-          <p id="section-11-6.9.1">MC_RETIRE<a href="#section-11-6.9.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-4.2">
+          <p id="section-11-4.2.1">the frame operates only on state that is shared by all receivers of the channel; receiving it will have the same effect for all receivers.<a href="#section-11-4.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-7">Not permitted:<a href="#section-11-7" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-8.1">
-          <p id="section-11-8.1.1">19.3.  ACK Frames<a href="#section-11-8.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.2">
-          <p id="section-11-8.2.1">19.6.  CRYPTO Frames (crypto handshake does not happen on mc channels)<a href="#section-11-8.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.3">
-          <p id="section-11-8.3.1">19.7.  NEW_TOKEN Frames<a href="#section-11-8.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.4">
-          <p id="section-11-8.4.1">Flow control is different:<a href="#section-11-8.4.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-8.4.2.1">
-              <p id="section-11-8.4.2.1.1">19.5.  STOP_SENDING Frames<a href="#section-11-8.4.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.2">
-              <p id="section-11-8.4.2.2.1">19.9.  MAX_DATA Frames  (flow control for mc channels is by rate)<a href="#section-11-8.4.2.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.3">
-              <p id="section-11-8.4.2.3.1">19.10. MAX_STREAM_DATA Frames<a href="#section-11-8.4.2.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.4">
-              <p id="section-11-8.4.2.4.1">19.11. MAX_STREAMS Frames<a href="#section-11-8.4.2.4.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.5">
-              <p id="section-11-8.4.2.5.1">19.12. DATA_BLOCKED Frames<a href="#section-11-8.4.2.5.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.6">
-              <p id="section-11-8.4.2.6.1">19.13. STREAM_DATA_BLOCKED Frames<a href="#section-11-8.4.2.6.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.4.2.7">
-              <p id="section-11-8.4.2.7.1">19.14. STREAMS_BLOCKED Frames<a href="#section-11-8.4.2.7.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</li>
-        <li class="normal" id="section-11-8.5">
-          <p id="section-11-8.5.1">Channel ID Migration can't use the "prior to" concept within a channel, not 0-starting<a href="#section-11-8.5.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-8.5.2.1">
-              <p id="section-11-8.5.2.1.1">19.15. NEW_CONNECTION_ID Frames<a href="#section-11-8.5.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.5.2.2">
-              <p id="section-11-8.5.2.2.1">19.16. RETIRE_CONNECTION_ID Frames<a href="#section-11-8.5.2.2.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</li>
-        <li class="normal" id="section-11-8.6">
-          <p id="section-11-8.6.1">Channels don't have the same kind of path validation, as there's a unicast anchor with acks for the multicast packets:<a href="#section-11-8.6.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-8.6.2.1">
-              <p id="section-11-8.6.2.1.1">19.17. PATH_CHALLENGE Frames<a href="#section-11-8.6.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-11-8.6.2.2">
-              <p id="section-11-8.6.2.2.1">19.18. PATH_RESPONSE Frames<a href="#section-11-8.6.2.2.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</li>
-        <li class="normal" id="section-11-8.7">
-          <p id="section-11-8.7.1">19.19. CONNECTION_CLOSE Frames<a href="#section-11-8.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.8">
-          <p id="section-11-8.8.1">19.20. HANDSHAKE_DONE Frames<a href="#section-11-8.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.9">
-          <p id="section-11-8.9.1">MC_ANNOUNCE<a href="#section-11-8.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.10">
-          <p id="section-11-8.10.1">MC_LIMITS<a href="#section-11-8.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.11">
-          <p id="section-11-8.11.1">MC_STATE<a href="#section-11-8.11.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-8.12">
-          <p id="section-11-8.12.1">MC_ACK<a href="#section-11-8.12.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
+<p id="section-11-5">A frame is not permitted in a channel packet if processing the frame depends on state that is specific to an individual receiver, path, or unicast connection.
+This includes, but is not limited to, frames that are part of the cryptographic handshake, address validation, connection ID migration, flow control or connection termination.<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-6">A frame is also not permitted in a channel packet if it is defined only for client-to-server use, or if it would require the server to respond to a single client via the multicast channel (e.g., PATH_CHALLENGE).<a href="#section-11-6" class="pilcrow">¶</a></p>
+<p id="section-11-7">A client that receives a frame in an authenticated channel packet that is not permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.<a href="#section-11-7" class="pilcrow">¶</a></p>
+<p id="section-11-8">For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING, MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID, PATH_CHALLENGE, PATH_RESPONSE, CONNECTION_CLOSE, and HANDSHAKE_DONE are not permitted in channel packets because their semantics are tied to an individual QUIC connection.<a href="#section-11-8" class="pilcrow">¶</a></p>
+<p id="section-11-9">On the other hand, PADDING and PING frames are permitted in channel packets because they do not affect receiver-specific state.
+STREAM, RESET_STREAM, and DATAGRAM frames are permitted when they carry data scoped to the multicast channel.
+MC_ANNOUNCE, MC_INTEGRITY, MC_KEY and MC_RETIRE frames are permitted because they operate on multicast channel state independently of any individual associated unicast connection.<a href="#section-11-9" class="pilcrow">¶</a></p>
+<p id="section-11-10">MC_JOIN and MC_LEAVE are not permitted in channel packets because their semantics depend on state specific to an individual associated connection, including MC_LIMITS and MC_STATE sequence numbers.<a href="#section-11-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="implementation-and-operational-considerations">
