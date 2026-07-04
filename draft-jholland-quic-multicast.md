@@ -205,8 +205,7 @@ An endpoint MUST treat multicast_client_params as malformed if the parameter len
 
 The Cipher Suite List field is in order of preference, with the most preferred value first.
 It contains values from the "TLS Cipher Suites" registry in the "Transport Layer Security (TLS) Parameters" registry group {{IANA.tls-parameters}}.
-It lists the cipher suites the client is willing to use for multicast channel packet protection and header
-protection.
+It lists the cipher suites the client is willing to use for multicast channel packet protection and header protection.
 A server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsupported cipher suites.
 If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.
 
@@ -405,9 +404,15 @@ The server is responsible for keeping the client within its advertised limits, b
 The server also advertises the expected maxima of the values that can contribute toward client resource limits within a channel in an MC_ANNOUNCE ({{channel-announce-frame}}) frame, and the client also ensures that the set of channels it's joined to does not exceed its limits, according to the advertised values.
 The client also monitors the packets received to ensure that channels don't exceed their advertised values, and leaves channels that do.
 
-If the server asks the client to join a channel that would exceed the client's limits with an up-to-date Client Limit Sequence Number, the client should send back an MC_STATE frame ({{client-channel-state-frame}}) with "DECLINED_JOIN" and reason "PROPERTY_VIOLATION".
-If the server asks the client to join a channel that would exceed the client's limits with an out-of-date Client Limit Sequence Number or a Channel Key Sequence Number that the client has not yet seen, the client should instead send back a "DECLINED_JOIN" with "UNSYNCHRONIZED_PROPERTIES".
-If the actual contents sent in the channel exceed the advertised limits from the MC_ANNOUNCE, clients SHOULD leave the stream and send an MC_STATE(LEFT) frame, using the Limit Violated reason.
+The sequence numbers carried in MC_JOIN allow the client to determine whether a join request is based on state that is synchronized between the client and server.
+
+If the server asks the client to join a channel that would violate the client's limits, and the MC_JOIN frame contains the client's current MC_LIMITS Sequence Number, the client SHOULD send an MC_STATE frame ({{client-channel-state-frame}}) with State DECLINED_JOIN and Reason Code PROPERTY_VIOLATION.
+
+If the server asks the client to join a channel that would violate the client's current limits, but the MC_JOIN frame contains an older MC_LIMITS Sequence Number, the client SHOULD send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+If the MC_JOIN frame refers to an MC_KEY Sequence Number that the client has not yet received, the client SHOULD send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+If the actual contents sent in the channel violate the advertised properties from MC_ANNOUNCE, clients SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code LIMIT_VIOLATION.
 
 # Congestion Control {#congestion-control}
 
@@ -546,15 +551,17 @@ MC_ANNOUNCE frames contain the following fields:
   * Reordering Threshold: A packet-count threshold used to determine when receipt of out-of-order channel packets causes an immediate MC_ACK.
   This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), except that it applies only to this channels packet number space and to MC_ACK frames for this channel.
 
-A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection. If it is already in use, the client should retire it as soon as possible.
+A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection.
+If it is already in use, the client SHOULD retire it as soon as possible.
 As the server knows which connection IDs are in use by the client, it MUST wait with the sending of an MC_JOIN frame until the channel ID associated with it has been retired by the client.
 
 If a client receives an MC_ANNOUNCE frame with a Group IP that is not within the SSM destination address range as outlined in {{RFC4607}}, it SHOULD close the connection with reason MC_EXTENSION_ERROR.
 
 As all the properties in MC_ANNOUNCE frames are immutable during the lifetime of a channel, a server SHOULD NOT send an MC_ANNOUNCE frame for the same channel more than once to each client except as needed for recovery.
 
-A server SHOULD send an MC_ANNOUNCE frame for a channel before sending an MC_KEY and SHOULD send an MC_KEY frame for a channel before sending an MC_JOIN frame for it.
-Each of these recommended orderings MAY occur within the same packet.
+A server SHOULD send an MC_ANNOUNCE frame for a channel before sending an MC_KEY frame for that channel.
+
+A server MUST NOT send an MC_JOIN frame for a channel unless it has sent, or is sending in the same packet, both an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.
 
 ## MC_KEY {#channel-key-frame}
 
@@ -627,11 +634,11 @@ A server SHOULD NOT send MC_KEY frames for channels except those the client has 
 
 ## MC_JOIN {#channel-join-frame}
 
-An MC_JOIN frame (type TBD-02) is sent from server to client and requests that a client join the given transport addresses and ports and process packets with the given Channel ID according to the corresponding MC_ANNOUNCE frame and the latest MC_KEY frame for the channel.
+An MC_JOIN frame (type TBD-02) is sent from server to client and requests that the client join the channel identified by Channel ID.
+The client uses the channel's transport addresses and properties from the corresponding MC_ANNOUNCE frame.
+The MC_KEY Sequence Number field identifies the channel key generation that the server expects the client to have available when processing channel packets.
 
-A client cannot join a multicast channel without first receiving an MC_ANNOUNCE frame and an MC_KEY frame, which together set all the values necessary to process the channel.
-
-If a client receives an MC_JOIN for a channel for which it has not received both an MC_ANNOUNCE frame and an MC_KEY frame, it MUST respond with an MC_STATE with State "DECLINED_JOIN" and reason "Missing Properties". The server MAY send another MC_JOIN after receiving an acknowledgement indicating receipt of the MC_ANNOUNCE frame and the MC_KEY frame.
+A client cannot join a multicast channel without first receiving an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.
 
 MC_JOIN frames are formatted as shown in {{fig-mc-channel-join-format}}.
 
@@ -647,13 +654,22 @@ MC_JOIN Frame {
 ~~~
 {: #fig-mc-channel-join-format title="MC_JOIN Frame Format"}
 
-The sequence numbers are the most recently processed sequence number by the server from the respective frame type. They are present to allow the client to distinguish between a broken server that has performed an illegal action and an instruction that's based on updates that are out of sync (either one or more missing updates to MC_KEY not yet received by the client or one or more missing updates to MC_LIMITS or MC_STATE not yet received by the server).
+MC_JOIN frames contain the following fields:
 
-A client MAY perform the join if it has the sequence number of the corresponding channel properties and the client's limits will not be exceeded, even if the client sequence numbers are not up-to-date.
+* ID Length: The length in bytes of the Channel ID field.
 
-If the client does not join, it MUST send an MC_STATE frame with "DECLINED_JOIN" and a reason.
+* Channel ID: The channel ID for the channel that the client is requested to join.
 
-If the client does join, it MUST send an MC_STATE frame with "JOINED".
+* MC_LIMITS Sequence Number: The most recent Client Limits Sequence Number processed by the server when constructing this join request.
+
+* MC_STATE Sequence Number: The most recent Client Channel State Sequence Number for this channel processed by the server when constructing this join request.
+
+* MC_KEY Sequence Number: The Key Sequence Number for the channel key generation that the server expects the client to use when joining the channel.
+
+If a client receives an MC_JOIN for a channel for which it has not received both an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame, it MUST send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+If the client joins, it MUST send an MC_STATE frame with State JOINED.
+If the client does not join, it MUST send an MC_STATE frame with State DECLINED_JOIN and an appropriate Reason Code.
 
 ## MC_LEAVE {#channel-leave-frame}
 
@@ -688,7 +704,7 @@ If this field is zero, or if the client has already received a channel packet wi
 
 A client that receives an MC_LEAVE for a channel that it has already left, declined to join, or retired MUST ignore the frame.
 
-A client that has received a MC_JOIN or MC_LEAVE for the same Channel ID with a greater MC_STATE Sequence Number MUST ignore the MC_LEAVE frame.?
+A client that has received an MC_JOIN or MC_LEAVE for the same Channel ID with a greater MC_STATE Sequence Number MUST ignore the MC_LEAVE frame.
 
 Otherwise, the client MUST leave the channel according to the After Packet Number field and send an MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.
 
@@ -802,7 +818,7 @@ This indicates that the client does not currently permit joining multicast chann
 This does not disable support for this extension on the connection and does not prevent the client from later sending an MC_LIMITS frame that permits one or both address families.
 
 After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN for a channel whose address family is not currently allowed by the client.
-If a client receives such a join it SHOULD silently ignore it.
+If a client receives such an MC_JOIN responds as described in {{flow-control}}.
 If the client is currently joined to one or more channels that are no longer allowed by the updated limits, the server MUST send an MC_LEAVE frame for those channels unless it has already received MC_STATE indicating that the client has left those channels.
 
 Max Aggregate Rate allowed across all joined channels is in Kibps.
@@ -929,7 +945,9 @@ For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING, MAX_DATA, MAX_
 
 On the other hand, PADDING and PING frames are permitted in channel packets because they do not affect receiver-specific state.
 STREAM, RESET_STREAM, and DATAGRAM frames are permitted when they carry data scoped to the multicast channel.
-MC_ANNOUNCE, MC_JOIN, MC_INTEGRITY, MC_KEY, MC_LEAVE and MC_RETIRE frames are permitted as they act as control frames for the channel itself.
+MC_ANNOUNCE, MC_INTEGRITY, MC_KEY and MC_RETIRE frames are permitted because they operate on multicast channel state independently of any individual associated unicast connection.
+
+MC_JOIN and MC_LEAVE are not permitted in channel packets because their semantics depend on state specific to an individual associated connection, including MC_LIMITS and MC_STATE sequence numbers.
 
 # Implementation and Operational Considerations
 
