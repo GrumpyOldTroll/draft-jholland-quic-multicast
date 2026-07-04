@@ -334,6 +334,43 @@ MC_STATE(RETIRED)  --->
 
 TODO: incorporate server-side state diagram and explanation, latest proposed sketch at <https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/62>
 
+## Channel Key Management {#channel-key-management}
+
+Multicast channel keys are channel-scoped rather than connection-scoped.
+The same channel secret will be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends, or miss key updates while not joined.
+The regular QUIC Key Update mechanism ({{Section 6 of RFC9001}}) can not cover such cases.
+A server uses MC_KEY frames ({{channel-key-frame}}) to provide authorized receivers with channel packet protection secrets, to identify the packet number from which each secret applies, and to rotate channel keys independently of the unicast connection's 1-RTT keys.
+
+Each channel key generation is identified by a Key Sequence Number.
+A server MUST generate continuous Key Sequence Number values for each channel.
+The first MC_KEY frame for a channel MAY use any non-zero Key Sequence Number.
+An MC_KEY frame MUST NOT use Key Sequence Number 0.
+
+A client that is not joined to a channel might not receive every MC_KEY frame for that channel, and can therefore observe gaps in Key Sequence Number values.
+While joined, a client can also observe gaps due to packet loss or reordering.
+
+Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in channel 1-RTT packets, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1.
+A client MUST NOT attempt to decrypt a channel packet unless it has an applicable channel secret for that packet number and Key Phase.
+If no applicable secret is available, the client MAY retain the packet briefly in case an applicable MC_KEY frame arrives later, subject to the client's buffering limits.
+The client MUST NOT acknowledge such a packet in an MC_ACK frame unless it later becomes able to process the packet.
+
+If a joined client receives channel packets for which it has no applicable channel secret, and an applicable MC_KEY frame does not arrive before the client discards those packets, the client SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+If a client receives two different secrets with the same Channel ID and Key Sequence Number, it SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.
+
+Servers SHOULD update channel secrets regularly.
+To limit the exposure of data after receivers have left a channel or lost authorization, servers SHOULD periodically send key updates using only unicast.
+
+Clients MUST delete old channel secrets and the keys derived from them after receiving a newer applicable MC_KEY frame.
+Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.
+A client MAY retain an old secret briefly to process reordered or delayed packets.
+For this experimental specification, it is RECOMMENDED that clients delete old secrets 10 seconds after receiving a newer secret, or after 3 seconds without receiving any packet that uses the old secret, whichever is shorter.
+Clients MUST NOT retain old channel secrets for more than 60 seconds after receiving a newer applicable MC_KEY frame.
+
+The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
+One of the target discoveries for experimental evaluation is to determine good default delay values to use, and to understand whether there are use cases that would benefit from a negotiation between server and client to determine the delays to use dynamically.
+(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)
+
 ## Client Response
 
 The client sends back information about how it has responded to the server's requests to join and leave channels in MC_STATE ({{client-channel-state-frame}}) frames.
@@ -565,26 +602,10 @@ A server MUST NOT send an MC_JOIN frame for a channel unless it has sent, or is 
 
 ## MC_KEY {#channel-key-frame}
 
-Multicast channel keys are channel-scoped rather than connection-scoped.
-The same channel secret will be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends, or miss key updates while not joined.
-The regular QUIC Key Update mechanism ({{Section 6 of RFC9001}}) can not cover such cases.
-Therefore, the server needs an explicit mechanism to provide the current channel secret to authorized receivers, identify the packet number from which that secret applies, and rotate channel keys independently of the unicast connection's 1-RTT keys.
-
 An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
-The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.
+It carries a channel packet protection secret and identifies the packet number from which that secret applies.
 
-A server can send a new MC_KEY frame with a sequence number increased by one.
-A server MUST generate continuous sequence numbers, and MAY start at a value higher than 0.
-Note that while not joined, a client will not receive updates to channel secrets, and thus may see jumps in the Key Sequence Number values between MC_KEY frames.
-However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.
-
-Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1 in the 1-RTT packet.
-Secrets with a Key Phase indicating an unknown key SHOULD be discarded without attempting to decrypt them.
-(An unknown key might happen after loss of the latest MC_KEY frame, so that packets on a channel have an updated Key Phase starting at a particular packet number, but the client does not yet know about the key change.)
-
-Should a client receive two different Keys with the same Key Sequence Number and Channel ID, e.g. one over the unicast connection and one over the multicast channel, it SHOULD close the connection with reason MC_EXTENSION_ERROR.
-
-It is RECOMMENDED that servers send regular secret updates.
+A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.
 
 MC_KEY frames are formatted as shown in {{fig-mc-channel-key-format}}.
 
@@ -605,32 +626,15 @@ MC_KEY frames contain the following fields:
 
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID for the channel associated with this frame.
-  * Key Sequence Number: Increases by 1 each time the secret for the channel is changed by the server.  If there is a gap in sequence numbers due to reordering or retransmission of packets, on receipt of the older MC_KEY frame, the client MUST apply the secret contained and the packet numbers on which it applies as if they arrived in order.
-  * From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.  The Packet Number MUST never decrease with an increased Key Sequence Number.
+  * Key Sequence Number: The key generation identified by this frame.
+  This value MUST NOT be 0.
+  * From Packet Number: The first channel packet number for which the secret in this frame is applicable.
+  The secret applies to channel packets with packet numbers greater than or equal to From Packet Number and with the Key Phase corresponding to this Key Sequence Number as described in {{channel-key-management}}, until superseded by an MC_KEY frame for the same channel with a higher Key Sequence Number.
+  When the Key Sequence Number increases, the From Packet Number MUST increase.
   * Secret Length: Provides the length of the secret field.
   * Secret: A channel packet protection secret.
   Packet protection keys and IVs for channel packets are derived from this secret using the cipher suite identified in the corresponding MC_ANNOUNCE frame and the `"quic key"` and `"quic iv"` labels, as described in {{Section 5.1 of RFC9001}}.
   This secret is not used to derive the header protection key.
-
-
-
-To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
-
-Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
-Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.
-
-Client implementations MAY institute a delay before deleting secrets to allow for decoding of packets for the channel that arrive shortly after a new MC_KEY frame.
-For this experimental specification, it is RECOMMENDED that clients delete old keys 10 seconds after receiving a new key or after 3 seconds that elapse without receiving any new data to decode with the old key, whichever is shorter.
-Clients MUST NOT delay more than 60 seconds before deleting the old keys.
-
-The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
-One of the target discoveries for experimental evaluation is to determine good default delay values to use, and to understand whether there are use cases that would benefit from a negotiation between server and client to determine the delays to use dynamically.
-(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)
-
-The From Packet Number is used to indicate the starting packet number ({{Section 17.1 of RFC9000}}) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
-This secret is applicable to all future packets until it is updated by a new MC_KEY frame.
-
-A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.
 
 ## MC_JOIN {#channel-join-frame}
 
@@ -661,10 +665,13 @@ MC_JOIN frames contain the following fields:
 * Channel ID: The channel ID for the channel that the client is requested to join.
 
 * MC_LIMITS Sequence Number: The most recent Client Limits Sequence Number processed by the server when constructing this join request.
+A value of 0 indicates that no MC_LIMITS frames have been processed by the server.
 
 * MC_STATE Sequence Number: The most recent Client Channel State Sequence Number for this channel processed by the server when constructing this join request.
+A value of 0 indicates that no MC_STATE frames have been processed by the server.
 
 * MC_KEY Sequence Number: The Key Sequence Number for the channel key generation that the server expects the client to use when joining the channel.
+This field MUST NOT be 0; a client that receives an MC_JOIN with an MC_KEY Sequence Number of 0 MUST treat this as a connection error of type MC_EXTENSION_ERROR.
 
 If a client receives an MC_JOIN for a channel for which it has not received both an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame, it MUST send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
 
@@ -696,11 +703,12 @@ MC_LEAVE frames contain the following fields:
 
 * Channel ID: The channel ID for the channel that the client is requested to leave.
 
-* MC_STATE Sequence Number: The most recent Client Channel State Sequence Number processed by the server for this channel.
+* MC_STATE Sequence Number: The most recent Client Channel State Sequence Number for this channel processed by the server when constructing this leave request.
+A value of 0 indicates that no MC_STATE frames have been processed by the server.
 This value allows the client to ignore leave requests that are based on stale client channel state.
 
 * After Packet Number: If non-zero, the client leaves the channel only after receiving a channel packet with this packet number or a higher packet number.
-If this field is zero, or if the client has already received a channel packet with this packet number or a higher packet number, the client leaves the channel immediately.
+If this field is 0, or if the client has already received a channel packet with this packet number or a higher packet number, the client leaves the channel immediately.
 
 A client that receives an MC_LEAVE for a channel that it has already left, declined to join, or retired MUST ignore the frame.
 
@@ -805,6 +813,7 @@ MC_LIMITS Frame {
 
 The sequence number is implicitly 0 before the first MC_LIMITS frame from the client, and increases by 1 each new frame that's sent.
 Newer frames override older ones.
+An MC_LIMITS frame MUST NOT use Client Limits Sequence Number 0.
 
 The 6 Reserved bits MUST be set to 0 by the client and MUST be ignored by the server.
 These are reserved to advertise future capabilities.
@@ -871,6 +880,8 @@ MC_STATE Frame {
 }
 ~~~
 {: #fig-mc-client-channel-state-format title="MC_STATE Frame Format"}
+
+An MC_STATE frame MUST NOT use Client Channel State Sequence Number 0.
 
 State has these defined values:
 
