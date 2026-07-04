@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 4 January 2027                                                 
+Expires: 5 January 2027                                                 
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                             3 July 2026
+                                                             4 July 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 January 2027.
+   This Internet-Draft will expire on 5 January 2027.
 
 Copyright Notice
 
@@ -690,17 +690,29 @@ Table of Contents
    packets received to ensure that channels don't exceed their
    advertised values, and leaves channels that do.
 
-   If the server asks the client to join a channel that would exceed the
-   client's limits with an up-to-date Client Limit Sequence Number, the
-   client should send back an MC_STATE frame (Section 10.9) with
-   "DECLINED_JOIN" and reason "PROPERTY_VIOLATION".  If the server asks
-   the client to join a channel that would exceed the client's limits
-   with an out-of-date Client Limit Sequence Number or a Channel Key
-   Sequence Number that the client has not yet seen, the client should
-   instead send back a "DECLINED_JOIN" with "UNSYNCHRONIZED_PROPERTIES".
-   If the actual contents sent in the channel exceed the advertised
-   limits from the MC_ANNOUNCE, clients SHOULD leave the stream and send
-   an MC_STATE(LEFT) frame, using the Limit Violated reason.
+   The sequence numbers carried in MC_JOIN allow the client to determine
+   whether a join request is based on state that is synchronized between
+   the client and server.
+
+   If the server asks the client to join a channel that would violate
+   the client's limits, and the MC_JOIN frame contains the client's
+   current MC_LIMITS Sequence Number, the client SHOULD send an MC_STATE
+   frame (Section 10.9) with State DECLINED_JOIN and Reason Code
+   PROPERTY_VIOLATION.
+
+   If the server asks the client to join a channel that would violate
+   the client's current limits, but the MC_JOIN frame contains an older
+   MC_LIMITS Sequence Number, the client SHOULD send an MC_STATE frame
+   with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+   If the MC_JOIN frame refers to an MC_KEY Sequence Number that the
+   client has not yet received, the client SHOULD send an MC_STATE frame
+   with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+   If the actual contents sent in the channel violate the advertised
+   properties from MC_ANNOUNCE, clients SHOULD leave the channel and
+   send an MC_STATE frame with State LEFT and Reason Code
+   LIMIT_VIOLATION.
 
 6.  Congestion Control
 
@@ -996,7 +1008,7 @@ Table of Contents
 
    A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame
    as a connection ID for the unicast connection.  If it is already in
-   use, the client should retire it as soon as possible.  As the server
+   use, the client SHOULD retire it as soon as possible.  As the server
    knows which connection IDs are in use by the client, it MUST wait
    with the sending of an MC_JOIN frame until the channel ID associated
    with it has been retired by the client.
@@ -1011,9 +1023,11 @@ Table of Contents
    for recovery.
 
    A server SHOULD send an MC_ANNOUNCE frame for a channel before
-   sending an MC_KEY and SHOULD send an MC_KEY frame for a channel
-   before sending an MC_JOIN frame for it.  Each of these recommended
-   orderings MAY occur within the same packet.
+   sending an MC_KEY frame for that channel.
+
+   A server MUST NOT send an MC_JOIN frame for a channel unless it has
+   sent, or is sending in the same packet, both an applicable
+   MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.
 
 10.2.  MC_KEY
 
@@ -1144,21 +1158,15 @@ Table of Contents
 10.3.  MC_JOIN
 
    An MC_JOIN frame (type TBD-02) is sent from server to client and
-   requests that a client join the given transport addresses and ports
-   and process packets with the given Channel ID according to the
-   corresponding MC_ANNOUNCE frame and the latest MC_KEY frame for the
-   channel.
+   requests that the client join the channel identified by Channel ID.
+   The client uses the channel's transport addresses and properties from
+   the corresponding MC_ANNOUNCE frame.  The MC_KEY Sequence Number
+   field identifies the channel key generation that the server expects
+   the client to have available when processing channel packets.
 
    A client cannot join a multicast channel without first receiving an
-   MC_ANNOUNCE frame and an MC_KEY frame, which together set all the
-   values necessary to process the channel.
-
-   If a client receives an MC_JOIN for a channel for which it has not
-   received both an MC_ANNOUNCE frame and an MC_KEY frame, it MUST
-   respond with an MC_STATE with State "DECLINED_JOIN" and reason
-   "Missing Properties".  The server MAY send another MC_JOIN after
-   receiving an acknowledgement indicating receipt of the MC_ANNOUNCE
-   frame and the MC_KEY frame.
+   applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that
+   channel.
 
    MC_JOIN frames are formatted as shown in Figure 6.
 
@@ -1173,38 +1181,40 @@ Table of Contents
 
                        Figure 6: MC_JOIN Frame Format
 
-   The sequence numbers are the most recently processed sequence number
-   by the server from the respective frame type.  They are present to
-   allow the client to distinguish between a broken server that has
-   performed an illegal action and an instruction that's based on
-   updates that are out of sync (either one or more missing updates to
-   MC_KEY not yet received by the client or one or more missing updates
-   to MC_LIMITS or MC_STATE not yet received by the server).
+   MC_JOIN frames contain the following fields:
 
-   A client MAY perform the join if it has the sequence number of the
-   corresponding channel properties and the client's limits will not be
-   exceeded, even if the client sequence numbers are not up-to-date.
+   *  ID Length: The length in bytes of the Channel ID field.
 
-   If the client does not join, it MUST send an MC_STATE frame with
-   "DECLINED_JOIN" and a reason.
+   *  Channel ID: The channel ID for the channel that the client is
+      requested to join.
 
-   If the client does join, it MUST send an MC_STATE frame with
-   "JOINED".
+   *  MC_LIMITS Sequence Number: The most recent Client Limits Sequence
+      Number processed by the server when constructing this join
+      request.
+
+   *  MC_STATE Sequence Number: The most recent Client Channel State
+      Sequence Number for this channel processed by the server when
+      constructing this join request.
+
+   *  MC_KEY Sequence Number: The Key Sequence Number for the channel
+      key generation that the server expects the client to use when
+      joining the channel.
+
+   If a client receives an MC_JOIN for a channel for which it has not
+   received both an applicable MC_ANNOUNCE frame and an applicable
+   MC_KEY frame, it MUST send an MC_STATE frame with State DECLINED_JOIN
+   and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+   If the client joins, it MUST send an MC_STATE frame with State
+   JOINED.  If the client does not join, it MUST send an MC_STATE frame
+   with State DECLINED_JOIN and an appropriate Reason Code.
 
 10.4.  MC_LEAVE
 
-   An MC_LEAVE frame (type=TBD-03) is sent from server to client, and
-   requests that a client leave the given channel.
-
-   If the client has already left or declined to join the channel, the
-   MC_LEAVE is ignored.
-
-   If an MC_JOIN or an MC_LEAVE with the same Channel ID and a higher
-   MC_STATE Sequence number has previously been received, the MC_LEAVE
-   is ignored.
-
-   Otherwise, the client MUST leave the channel and send a new MC_STATE
-   frame with reason LEFT as requested by server.
+   An MC_LEAVE frame (type=TBD-03) is sent by a server to request that
+   the client leave the given channel.  MC_LEAVE does not retire the
+   channel and the server can later send another MC_JOIN for the same
+   channel as long as it is not retired.
 
    MC_LEAVE frames are formatted as shown in Figure 7.
 
@@ -1218,8 +1228,34 @@ Table of Contents
 
                       Figure 7: MC_LEAVE Frame Format
 
-   If After Packet Number is nonzero, wait until receiving that packet
-   or a higher valued number before leaving.
+   MC_LEAVE frames contain the following fields:
+
+   *  ID Length: The length in bytes of the Channel ID field.
+
+   *  Channel ID: The channel ID for the channel that the client is
+      requested to leave.
+
+   *  MC_STATE Sequence Number: The most recent Client Channel State
+      Sequence Number processed by the server for this channel.  This
+      value allows the client to ignore leave requests that are based on
+      stale client channel state.
+
+   *  After Packet Number: If non-zero, the client leaves the channel
+      only after receiving a channel packet with this packet number or a
+      higher packet number.  If this field is zero, or if the client has
+      already received a channel packet with this packet number or a
+      higher packet number, the client leaves the channel immediately.
+
+   A client that receives an MC_LEAVE for a channel that it has already
+   left, declined to join, or retired MUST ignore the frame.
+
+   A client that has received an MC_JOIN or MC_LEAVE for the same
+   Channel ID with a greater MC_STATE Sequence Number MUST ignore the
+   MC_LEAVE frame.
+
+   Otherwise, the client MUST leave the channel according to the After
+   Packet Number field and send an MC_STATE frame with State LEFT and
+   Reason Code REQUESTED_BY_SERVER.
 
 10.5.  MC_INTEGRITY
 
@@ -1372,11 +1408,11 @@ Table of Contents
 
    After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN
    for a channel whose address family is not currently allowed by the
-   client.  If a client receives such a join it SHOULD silently ignore
-   it.  If the client is currently joined to one or more channels that
-   are no longer allowed by the updated limits, the server MUST send an
-   MC_LEAVE frame for those channels unless it has already received
-   MC_STATE indicating that the client has left those channels.
+   client.  If a client receives such an MC_JOIN responds as described
+   in Section 5.  If the client is currently joined to one or more
+   channels that are no longer allowed by the updated limits, the server
+   MUST send an MC_LEAVE frame for those channels unless it has already
+   received MC_STATE indicating that the client has left those channels.
 
    Max Aggregate Rate allowed across all joined channels is in Kibps.
 
@@ -1590,9 +1626,14 @@ Table of Contents
    On the other hand, PADDING and PING frames are permitted in channel
    packets because they do not affect receiver-specific state.  STREAM,
    RESET_STREAM, and DATAGRAM frames are permitted when they carry data
-   scoped to the multicast channel.  MC_ANNOUNCE, MC_JOIN, MC_INTEGRITY,
-   MC_KEY, MC_LEAVE and MC_RETIRE frames are permitted as they act as
-   control frames for the channel itself.
+   scoped to the multicast channel.  MC_ANNOUNCE, MC_INTEGRITY, MC_KEY
+   and MC_RETIRE frames are permitted because they operate on multicast
+   channel state independently of any individual associated unicast
+   connection.
+
+   MC_JOIN and MC_LEAVE are not permitted in channel packets because
+   their semantics depend on state specific to an individual associated
+   connection, including MC_LIMITS and MC_STATE sequence numbers.
 
 12.  Implementation and Operational Considerations
 
