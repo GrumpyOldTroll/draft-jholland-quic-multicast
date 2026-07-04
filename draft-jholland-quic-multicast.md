@@ -1005,8 +1005,12 @@ For this situation, note that the Session ID is a variable length integer, and t
 
 ### Datagrams
 
-DATAGRAM frames ({{RFC9221}}) can be carried in multicast channels, and can be a good way to deliver popular content to receivers.
-Doing so can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.
+DATAGRAM frames in channel packets are subject to the max_datagram_frame_size transport parameter defined in {{RFC9221}} on the associated QUIC connection.
+A server MUST NOT send DATAGRAM frames in channel packets unless the client advertised max_datagram_frame_size
+with a non-zero value.
+A server MUST NOT send a DATAGRAM frame in a channel packet if the DATAGRAM frame is larger than the value advertised by the client.
+
+Using DATAGRAM frames can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.
 
 However, at the time of this writing (version -05 of {{I-D.draft-ietf-masque-h3-datagram}}) multicast channels generally cannot deliver HTTP/3 datagrams, including WebTransport datagrams (version -02 of {{I-D.draft-ietf-webtrans-http3}}), since the demuxing of WebTransport datagrams uses a Session ID based on a client-specific value (the HTTP/3 Session ID comes from the Stream ID of the client-initiated stream that issued the initial extended CONNECT request).
 
