@@ -1006,8 +1006,7 @@ For this situation, note that the Session ID is a variable length integer, and t
 ### Datagrams
 
 DATAGRAM frames in channel packets are subject to the max_datagram_frame_size transport parameter defined in {{RFC9221}} on the associated QUIC connection.
-A server MUST NOT send DATAGRAM frames in channel packets unless the client advertised max_datagram_frame_size
-with a non-zero value.
+A server MUST NOT send DATAGRAM frames in channel packets unless the client advertised max_datagram_frame_size with a non-zero value.
 A server MUST NOT send a DATAGRAM frame in a channel packet if the DATAGRAM frame is larger than the value advertised by the client.
 
 Using DATAGRAM frames can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.
