@@ -2507,8 +2507,7 @@ This SHOULD NOT cause a close of the whole connection but MAY cause a stream err
 <a href="#section-12.3.3" class="section-number selfRef">12.3.3. </a><a href="#name-datagrams" class="section-name selfRef">Datagrams</a>
           </h4>
 <p id="section-12.3.3-1">DATAGRAM frames in channel packets are subject to the max_datagram_frame_size transport parameter defined in <span>[<a href="#RFC9221" class="cite xref">RFC9221</a>]</span> on the associated QUIC connection.
-A server MUST NOT send DATAGRAM frames in channel packets unless the client advertised max_datagram_frame_size
-with a non-zero value.
+A server MUST NOT send DATAGRAM frames in channel packets unless the client advertised max_datagram_frame_size with a non-zero value.
 A server MUST NOT send a DATAGRAM frame in a channel packet if the DATAGRAM frame is larger than the value advertised by the client.<a href="#section-12.3.3-1" class="pilcrow">¶</a></p>
 <p id="section-12.3.3-2">Using DATAGRAM frames can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.<a href="#section-12.3.3-2" class="pilcrow">¶</a></p>
 <p id="section-12.3.3-3">However, at the time of this writing (version -05 of <span>[<a href="#I-D.draft-ietf-masque-h3-datagram" class="cite xref">I-D.draft-ietf-masque-h3-datagram</a>]</span>) multicast channels generally cannot deliver HTTP/3 datagrams, including WebTransport datagrams (version -02 of <span>[<a href="#I-D.draft-ietf-webtrans-http3" class="cite xref">I-D.draft-ietf-webtrans-http3</a>]</span>), since the demuxing of WebTransport datagrams uses a Session ID based on a client-specific value (the HTTP/3 Session ID comes from the Stream ID of the client-initiated stream that issued the initial extended CONNECT request).<a href="#section-12.3.3-3" class="pilcrow">¶</a></p>
