@@ -158,6 +158,17 @@ Before a client has successfully removed packet protection from any packet in a 
 If a client cannot reconstruct packet numbers for a channel because the encoded packet numbers are too far from its expected packet number, it MUST discard the affected packets.
 If this happens, the client SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code UNSYNCHRONIZED_PROPERTIES.
 
+## Latency Spin Bit in Channel Packets
+
+Channel packets are unidirectional server-to-client packets, and clients can not send packets
+on a multicast channel.
+Therefore, the latency spin bit algorithm from {{Section 17.4 of RFC9000}} does not apply to channel packets.
+
+The spin bit has no semantics in this extension and MUST NOT be assigned another meaning by endpoints unless specified in a future extension.
+
+In channel packets, a server MUST disable the spin bit as specified in {{Section 17.4 of RFC9000}}.
+A client MUST ignore the value of the spin bit in received channel packets.
+
 ## Channel using Multipath QUIC
 
 From the point of view of the client, each Multicast QUIC channel is handled as an additional path from the server. A client keeps its unicast connection with the server open during all the transmission. Additionally, the server can inform the client about an additional path where it will receive multicast content. All mechanisms, except those listed below, follow {{I-D.draft-ietf-quic-multipath}}.
