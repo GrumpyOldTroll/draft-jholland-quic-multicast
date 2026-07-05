@@ -178,8 +178,6 @@ A datagram or any particular bytes from a server-initiated unidirectional stream
 
 Client applications should have a mechanism that disables the use of multicast on connections with enhanced privacy requirements for the privacy-related reasons covered in {{I-D.draft-krose-multicast-security}}.
 
-
-
 # Transport Parameters {#transport-parameter}
 
 Support for multicast extensions in a client is advertised by means of QUIC transport parameters:
