@@ -2386,7 +2386,7 @@ If these packets are addressed to an (S,G) that is used for reception in one or 
             <p id="section-10.10-2.4.1">For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.<a href="#section-10.10-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.10-2.5">
-            <p id="section-10.10-2.5.1">For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process
+            <p id="section-10.10-2.5.1">For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process.
 A server SHOULD NOT retransmit MC_INTEGRITY information for packets that it no longer expects receivers to buffer or process.
 The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
 Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absence is likely to cause receivers to exceed the Max Authentication Delay advertised for the channel.<a href="#section-10.10-2.5.1" class="pilcrow">¶</a></p>

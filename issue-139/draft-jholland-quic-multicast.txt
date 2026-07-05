@@ -1574,7 +1574,7 @@ Table of Contents
 
    *  For MC_INTEGRITY, retransmissions MUST include the packet hashes
       that are still needed to authenticate packets that the server
-      expects the client to process A server SHOULD NOT retransmit
+      expects the client to process.  A server SHOULD NOT retransmit
       MC_INTEGRITY information for packets that it no longer expects
       receivers to buffer or process.  The same packet hash MAY be sent
       in more than one MC_INTEGRITY frame.  Servers SHOULD prioritize
