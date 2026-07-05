@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 5 January 2027                                                 
+Expires: 6 January 2027                                                 
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                             4 July 2026
+                                                             5 July 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 January 2027.
+   This Internet-Draft will expire on 6 January 2027.
 
 Copyright Notice
 
@@ -77,7 +77,8 @@ Table of Contents
    1.  Introduction
      1.1.  Conventions and Definitions
    2.  Multicast Channel
-     2.1.  Channel using Multipath QUIC
+     2.1.  Packet Number Encoding for Channel Packets
+     2.2.  Channel using Multipath QUIC
    3.  Transport Parameters
    4.  Extension Overview
      4.1.  Channel Management
@@ -226,7 +227,48 @@ Table of Contents
    connection associated with the channel.  If a client has no matching
    joined channel, the packet is discarded.
 
-2.1.  Channel using Multipath QUIC
+2.1.  Packet Number Encoding for Channel Packets
+
+   QUIC packet number encoding in Section 17.1 of [RFC9000] encodes a
+   truncated packet number by carrying only the least significant bits
+   of the full packet number.  The sender selects a packet number length
+   large enough for the receiver to reconstruct the full packet number,
+   and the receiver decodes it as the value closest to the next expected
+   packet number in that packet number space.  This sender-side
+   mechanism is not suitable for multicast channel packets, because a
+   single channel packet can be received by many clients with different
+   receive, loss, and acknowledgement states.
+
+   Channel packets therefore use a fixed packet number length of four
+   bytes.  A server MUST encode the packet number of a channel packet as
+   a four-byte truncated packet number, using the packet number encoding
+   described in Section 17.1 of [RFC9000].  Before header protection is
+   applied, the Packet Number Length bits of byte 0, that is, the bits
+   with mask 0x03, MUST be set to 0b11 to indicate a four-byte Packet
+   Number field.  A server MUST NOT select the packet number length for
+   a channel packet based on acknowledgement state from any individual
+   associated unicast connection.
+
+   A client reconstructs the full packet number for a channel packet
+   using the packet number reconstruction algorithm in Section 17.1 of
+   [RFC9000], applied to the channel packet number space.  The expected
+   packet number used for reconstruction is the next packet number after
+   the largest packet number of any channel packet from which the client
+   has successfully removed packet protection in that channel packet
+   number space.
+
+   Before a client has successfully removed packet protection from any
+   packet in a channel packet number space, it uses the From Packet
+   Number of the applicable MC_KEY frame as the next expected packet
+   number for reconstruction.
+
+   If a client cannot reconstruct packet numbers for a channel because
+   the encoded packet numbers are too far from its expected packet
+   number, it MUST discard the affected packets.  If this happens, the
+   client SHOULD leave the channel and send an MC_STATE frame with State
+   LEFT and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+2.2.  Channel using Multipath QUIC
 
    From the point of view of the client, each Multicast QUIC channel is
    handled as an additional path from the server.  A client keeps its
