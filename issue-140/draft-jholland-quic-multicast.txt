@@ -237,7 +237,7 @@ Table of Contents
    packet number in that packet number space.  This sender-side
    mechanism is not suitable for multicast channel packets, because a
    single channel packet can be received by many clients with different
-   receive, loss, and acknowledgement state.
+   receive, loss, and acknowledgement states.
 
    Channel packets therefore use a fixed packet number length of four
    bytes.  A server MUST encode the packet number of a channel packet
