@@ -918,7 +918,8 @@ In addition to the mechanisms used for retransmission described in {{Section 13.
 - Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission SHOULD only occur if the channel in question should still be joined/left/retired.
 - Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.
 - For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.
-- For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process.
+- For MC_INTEGRITY, a server MUST retransmit packet hashes that are still needed to authenticate channel packets that the server expects receivers to process.
+For this purpose, a packet hash is still needed while the corresponding channel packet is within the buffering interval implied by the channel's Max Authentication Delay, unless the server has channel-specific or application-specific information that receivers are no longer expected to buffer or process that packet.
 A server SHOULD NOT retransmit MC_INTEGRITY information for packets that it no longer expects receivers to buffer or process.
 The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
 Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absence is likely to cause receivers to exceed the Max Authentication Delay advertised for the channel.
@@ -1070,7 +1071,8 @@ Max Authentication Delay is a channel property because the amount of receiver bu
 For example, a low-latency media channel might require integrity information to arrive quickly, while a file-transfer or software-update channel might tolerate a larger authentication delay in exchange for lower unicast integrity traffic or larger integrity blocks.
 
 Servers SHOULD choose Max Authentication Delay values that are appropriate for the channel's media or application latency requirements and for expected receiver memory constraints.
-Servers SHOULD send and retransmit MC_INTEGRITY information so that packets can be authenticated within the advertised Max Authentication Delay under normal operating conditions.
+Servers SHOULD send and retransmit MC_INTEGRITY information so that, under normal operating conditions, receivers can authenticate packets within the advertised Max Authentication Delay.
+The exact scheduling of redundant transmission and retransmission is implementation-dependent, but the advertised Max Authentication Delay defines the default interval during which receivers are expected to retain unauthenticated packets.
 Clients MAY use local policy to impose a smaller buffering limit than the value advertised by the server, in which case they might discard unauthenticated packets or leave the channel.
 
 The usefulness of retransmitting MC_INTEGRITY information depends on whether receivers are still expected to have the corresponding multicast packets buffered.
