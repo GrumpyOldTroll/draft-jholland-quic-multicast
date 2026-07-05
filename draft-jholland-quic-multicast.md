@@ -192,7 +192,7 @@ multicast_client_params {
 ~~~
 {: #fig-transport-parameter-format title="multicast_client_params Format"}
 
-The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, Max Channel ID and Max Joined Count fields are identical to their analogous fields in the MC_LIMITS frame ({{client-limits-frame}}) and hold the initial values.
+The Reserved, IPv4 Channels Allowed, IPv6 Channels Allowed, Max Aggregate Rate, Max Channel IDs and Max Joined Count fields are identical to their analogous fields in the MC_LIMITS frame ({{client-limits-frame}}) and hold the initial values.
 
 A server MUST NOT send MC_ANNOUNCE ({{channel-announce-frame}}) frames with addresses using an IP Family that is not allowed according to the IPv4 and IPv6 Channels Allowed fields in the multicast_client_params, unless and until a later MC_LIMITS ({{client-limits-frame}}) frame adds permission for a different address family.
 
@@ -241,7 +241,7 @@ Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients.
 If a client decides not to join after being asked to do so, it sends an MC_STATE ({{client-channel-state-frame}}) frame with State DECLINED_JOIN and an appropriate Reason Code.
 This is a state update for the channel even though the client does not join the multicast channel.
 
-The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS ({{client-limits-frame}}) frame the server received.
+The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left, declined to join or retired fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS ({{client-limits-frame}}) frame the server received.
 
 This extension does not define an application-layer catalogue or content-selection protocol.
 Application protocols determine what content, service, program, representation, or other application context is relevant to a connection.
@@ -288,7 +288,7 @@ In this case, this could happen without any involvement of the client-side appli
 ~~~
 {: #fig-client-channel-states title="States a channel from the clients point of view."}
 
-When the server has asked the client to join a channel and has not received any MC_STATE frames {{client-channel-state-frame}} with state DECLINED_JOIN or LEFT, it also sends MC_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
+When the server has asked the client to join a channel and has not received any MC_STATE frames {{client-channel-state-frame}} with state DECLINED_JOIN, LEFT or RETIRED, it also sends MC_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
 A client MUST NOT decode packets for a channel for which it has not received an applicable MC_ANNOUNCE ({{channel-announce-frame}}), or for which it has not received a matching packet hash in an MC_INTEGRITY ({{channel-integrity-frame}}) frame, or for which it has not received an applicable MC_KEY frame {{channel-key-frame}}.
 
 {{fig-frame-exchange}} shows the frames that are being exchanged about and over a channel during the lifetime of an example channel.
@@ -839,7 +839,7 @@ MC_LIMITS frames contain the following fields:
 
 * Max Aggregate Rate: The maximum aggregate rate, in Kibps, allowed across all channels that the client is concurrently requested to join.
 
-* Max Channel IDs: The maximum number channel IDs for which the client retains channel state.
+* Max Channel IDs: The maximum number of channel IDs for which the client retains channel state.
   Retired channel IDs do not count against this value.
 
 * Max Joined Count: The maximum number of channels that the client can be asked to join concurrently.
@@ -863,9 +863,10 @@ MC_RETIRE Frame {
 Retires a channel by ID, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
 If After Packet Number is nonzero and the channel is joined and has received any data, the channel will be retired after receiving that packet or a higher valued number, otherwise it will be retired immediately.
 
-After receiving an MC_RETIRE and retiring a channel, the client MUST send a new MC_STATE frame with reason RETIRED to the server.
+After receiving an MC_RETIRE and retiring a channel, the client MUST send an MC_STATE frame with State RETIRED and Reason Code REQUESTED_BY_SERVER.
 
-If the client is still joined in the channel that is being retired, it MUST also leave it. If a channel is left this way, it does not need to send an additional MC_STATE frame with state LEFT, as state RETIRED also implies the channel was left.
+If the client is still joined in the channel that is being retired, it MUST also leave it.
+If a channel is left this way, it does not need to send an additional MC_STATE frame with State LEFT, as State RETIRED also implies the channel was left.
 
 ## MC_STATE {#client-channel-state-frame}
 
@@ -912,7 +913,7 @@ MC_STATE frames contain the following fields:
 * Reason Phrase Length: The length of the Reason Phrase field.
 
 * Reason Phrase: Optional diagnostic text describing the state change.
-This field MUST NOT affect protocol behavior.
+  This field MUST NOT affect protocol behavior.
 
 A server MUST ignore an MC_STATE frame whose Client Channel State Sequence Number is less than or equal to the largest Client Channel State Sequence Number it has already processed for that channel.
 
