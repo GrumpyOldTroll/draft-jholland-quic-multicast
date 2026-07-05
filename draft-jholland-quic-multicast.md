@@ -684,8 +684,7 @@ MC_LEAVE Frame {
   Type (i) = TBD-03 (experiments use 0xff3e803),
   ID Length (8),
   Channel ID (8..160),
-  MC_STATE Sequence Number (i),
-  After Packet Number (i)
+  MC_STATE Sequence Number (i)
 }
 ~~~
 {: #fig-mc-channel-leave-format title="MC_LEAVE Frame Format"}
@@ -699,14 +698,11 @@ MC_LEAVE frames contain the following fields:
 * MC_STATE Sequence Number: The most recent Client Channel State Sequence Number processed by the server for this channel.
 This value allows the client to ignore leave requests that are based on stale client channel state.
 
-* After Packet Number: If non-zero, the client leaves the channel only after receiving a channel packet with this packet number or a higher packet number.
-If this field is zero, or if the client has already received a channel packet with this packet number or a higher packet number, the client leaves the channel immediately.
-
 A client that receives an MC_LEAVE for a channel that it has already left, declined to join, or retired MUST ignore the frame.
 
 A client that has received an MC_JOIN or MC_LEAVE for the same Channel ID with a greater MC_STATE Sequence Number MUST ignore the MC_LEAVE frame.
 
-Otherwise, the client MUST leave the channel according to the After Packet Number field and send an MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.
+Otherwise, the client MUST leave the channel immediately and send an MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.
 
 ## MC_INTEGRITY {#channel-integrity-frame}
 
@@ -829,24 +825,30 @@ Max Joined Count is the count of channels that are allowed to be joined concurre
 
 ## MC_RETIRE {#channel-retire-frame}
 
+An MC_RETIRE frame retires a channel by Channel ID and causes the client
+to discard any state associated with that channel.
+
 MC_RETIRE frames are formatted as shown in {{fig-mc-channel-retire-format}}.
 
 ~~~
 MC_RETIRE Frame {
   Type (i) = TBD-0a (experiments use 0xff3e80a),
   ID Length (8),
-  Channel ID (8..160),
-  After Packet Number (i)
+  Channel ID (8..160)
 }
 ~~~
 {: #fig-mc-channel-retire-format title="MC_RETIRE Frame Format"}
 
-Retires a channel by ID, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
-If After Packet Number is nonzero and the channel is joined and has received any data, the channel will be retired after receiving that packet or a higher valued number, otherwise it will be retired immediately.
+MC_RETIRE frames contain the following fields:
 
-After receiving an MC_RETIRE and retiring a channel, the client MUST send a new MC_STATE frame with reason RETIRED to the server.
+* ID Length: The length in bytes of the Channel ID field.
 
-If the client is still joined in the channel that is being retired, it MUST also leave it. If a channel is left this way, it does not need to send an additional MC_STATE frame with state LEFT, as state RETIRED also implies the channel was left.
+* Channel ID: The channel ID for the channel that the client is requested to leave.
+
+After receiving an MC_RETIRE frame, the client MUST retire the channel immediately and send an MC_STATE frame with State RETIRED and Reason Code REQUESTED_BY_SERVER.
+
+If the client is still joined to the channel that is being retired, it MUST also leave the channel.
+In this case, the client does not send a separate MC_STATE frame with State LEFT, as State RETIRED also implies that the client has left the channel.
 
 ## MC_STATE {#client-channel-state-frame}
 
@@ -1015,6 +1017,15 @@ It is therefore hoped that an extension or revision to WebTransport and HTTP/3 d
 Such a value could for instance be sent in an HTTP/3 response header, and as long as it is unique within the connection and avoids collision with any client-initiated stream ID values, it could still be used to multiplex data associated with different HTTP/3 traffic and different WebTransport sessions carried on the same connection.
 Then by choosing the same server-chosen session ID for all the connections, the server would be able to use the same channel to carry the identical complete datagrams, including the server-chosen Session ID, to multiple receivers that the server asks to join the same channel.
 Such a change could either replace the current client-chosen definition for Session ID in server-to-client datagrams, or could add new HTTP/3 frame types that allow a server-chosen Session ID when the client has advertised support for this extended functionality.
+
+## Moving Clients Between Channels {#moving-clients-between-channels}
+
+MC_LEAVE and MC_RETIRE take effect immediately when processed by the receiver.
+These frames do not provide a mechanism for draining a channel up to a packet-number boundary.
+
+A server that wants to minimize loss when moving receivers away from a channel SHOULD stop scheduling new data on the old channel before sending MC_LEAVE or MC_RETIRE, or provide any required replacement data over the associated unicast connection or another channel.
+
+For example, when switching receivers from one channel to another, a server can stop sending new application data that is important for those receivers on the old channel, send any transition data on the unicast connection or the new channel, and then send MC_LEAVE or MC_RETIRE for the old channel.
 
 ## Graceful Degradation {#graceful-degradation}
 
