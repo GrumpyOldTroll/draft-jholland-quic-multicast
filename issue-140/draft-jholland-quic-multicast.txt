@@ -240,10 +240,13 @@ Table of Contents
    receive, loss, and acknowledgement states.
 
    Channel packets therefore use a fixed packet number length of four
-   bytes.  A server MUST encode the packet number of a channel packet
-   using the four-byte packet number encoding defined in Section 17.1 of
-   [RFC9000].  A server MUST NOT select the packet number length for a
-   channel packet based on acknowledgement state from any individual
+   bytes.  A server MUST encode the packet number of a channel packet as
+   a four-byte truncated packet number, using the packet number encoding
+   described in Section 17.1 of [RFC9000].  Before header protection is
+   applied, the Packet Number Length bits of byte 0, that is, the bits
+   with mask 0x03, MUST be set to 0b11 to indicate a four-byte Packet
+   Number field.  A server MUST NOT select the packet number length for
+   a channel packet based on acknowledgement state from any individual
    associated unicast connection.
 
    A client reconstructs the full packet number for a channel packet
