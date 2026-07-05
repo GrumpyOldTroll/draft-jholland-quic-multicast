@@ -918,7 +918,7 @@ In addition to the mechanisms used for retransmission described in {{Section 13.
 - Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission SHOULD only occur if the channel in question should still be joined/left/retired.
 - Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.
 - For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.
-- For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process
+- For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process.
 A server SHOULD NOT retransmit MC_INTEGRITY information for packets that it no longer expects receivers to buffer or process.
 The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
 Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absence is likely to cause receivers to exceed the Max Authentication Delay advertised for the channel.
