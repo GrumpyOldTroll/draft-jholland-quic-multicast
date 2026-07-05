@@ -418,7 +418,8 @@ If the actual contents sent in the channel violate the advertised properties fro
 
 Both the server and the client perform congestion control operations, so that according to the guidelines in {{Section 4.1 of RFC8085}}, mechanisms for both feedback-based and receiver-driven styles of congestion control are present and operational.
 
-All frames defined by this document other than MC_ACK are ack-eliciting.  Packets containing those frames are considered in-flight and count toward congestion control limits as described in {{RFC9002}}.
+All frames defined by this document other than MC_ACK are ack-eliciting.
+Packets containing those frames are considered in-flight and count toward congestion control limits as described in {{RFC9002}}.
 MC_ACK frames are treated the same as ACK frames for congestion control and loss recovery purposes and do not make a packet ack-eliciting and thus a packet containing only them does not count as in-flight.
 
 The server maintains a full view of the traffic received by the client via the MC_ACK ({{channel-ack-frame}}) frames and ACK frames it receives, and can detect loss experienced by the client.
@@ -917,7 +918,8 @@ In addition to the mechanisms used for retransmission described in {{Section 13.
 - Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission SHOULD only occur if the channel in question should still be joined/left/retired.
 - Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.
 - For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.
-- For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process.
+- For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process
+A server SHOULD NOT retransmit MC_INTEGRITY information for packets that it no longer expects receivers to buffer or process.
 The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
 Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absence is likely to cause receivers to exceed the Max Authentication Delay advertised for the channel.
 
@@ -1070,6 +1072,13 @@ For example, a low-latency media channel might require integrity information to 
 Servers SHOULD choose Max Authentication Delay values that are appropriate for the channel's media or application latency requirements and for expected receiver memory constraints.
 Servers SHOULD send and retransmit MC_INTEGRITY information so that packets can be authenticated within the advertised Max Authentication Delay under normal operating conditions.
 Clients MAY use local policy to impose a smaller buffering limit than the value advertised by the server, in which case they might discard unauthenticated packets or leave the channel.
+
+The usefulness of retransmitting MC_INTEGRITY information depends on whether receivers are still expected to have the corresponding multicast packets buffered.
+Once receivers are expected to have discarded a packet, retransmitting integrity information for that packet is unlikely to help those receivers process application data.
+
+This consideration is especially important when MC_INTEGRITY information is sent on the unicast connection and retransmitted for individual receivers.
+It is also important for channels carrying delay-sensitive unreliable data, such as DATAGRAM frames for real-time applications.
+For such channels, servers can reduce wasted work by sending integrity information redundantly near the original packet transmission and by avoiding late retransmission of integrity information after the packet's expected usefulness has expired.
 
 # Security Considerations
 
