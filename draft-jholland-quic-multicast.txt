@@ -1819,11 +1819,23 @@ Table of Contents
 
 12.3.3.  Datagrams
 
-   DATAGRAM frames ([RFC9221]) can be carried in multicast channels, and
-   can be a good way to deliver popular content to receivers.  Doing so
-   can align well with existing multicast UDP-based applications, since
-   a datagram API in a QUIC application offers similar functionality to
-   a UDP API for sending and receiving packets.
+   DATAGRAM frames in channel packets are subject to the
+   max_datagram_frame_size transport parameter defined in [RFC9221] on
+   each associated QUIC connection.  A server MUST NOT send MC_JOIN to a
+   client for a channel that carries DATAGRAM frames unless that client
+   advertised max_datagram_frame_size with a non-zero value.
+
+   A server MUST NOT send MC_JOIN to a client for a channel if the
+   server expects that channel to carry DATAGRAM frames larger than the
+   max_datagram_frame_size value advertised by that client.  If the
+   server later sends larger DATAGRAM frames on that channel, clients
+   whose advertised max_datagram_frame_size is exceeded will process
+   this as specified by [RFC9221], which can result in termination of
+   their associated QUIC connections.
+
+   Using DATAGRAM frames can align well with existing multicast UDP-
+   based applications, since a datagram API in a QUIC application offers
+   similar functionality to a UDP API for sending and receiving packets.
 
    However, at the time of this writing (version -05 of
    [I-D.draft-ietf-masque-h3-datagram]) multicast channels generally
