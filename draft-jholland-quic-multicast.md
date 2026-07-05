@@ -237,7 +237,9 @@ Sending an MC_ANNOUNCE before an MC_JOIN ensures the client can establish the ne
 MC_KEY frames provide the secrets necessary to decode the payload of packets in the channel.
 {{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
-Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients. If a client decides not to join after being asked to do so, it can indicate this decision by sending an MC_STATE ({{client-channel-state-frame}}) frame with state DECLINED_JOIN and an appropriate reason.
+Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients.
+If a client decides not to join after being asked to do so, it sends an MC_STATE ({{client-channel-state-frame}}) frame with State DECLINED_JOIN and an appropriate Reason Code.
+This is a state update for the channel even though the client does not join the multicast channel.
 
 The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS ({{client-limits-frame}}) frame the server received.
 
@@ -867,11 +869,8 @@ If the client is still joined in the channel that is being retired, it MUST also
 
 ## MC_STATE {#client-channel-state-frame}
 
-MC_STATE frames (type=TBD-0b or TBD-0c) are sent from client to server to report changes in the client's channel state.
-Each time the channel state changes, the Client Channel State Sequence number is increased by one. Due to packet loss it is possible that Sequence numbers aren't continuous on the server side. As such, the server MUST only consider the frames with the highest Sequence number.
-It is a state change to the channel if the server requests that a client join a channel and the client declines the join, even though no join occurs on the network.
-
-Frames of type TBD-0b are used for cases in which the reason for the state change occur in the QUIC multicast layer while frames of type TBD-0c are used for reasons that are application specific.
+MC_STATE frames are sent from client to server to report the client's
+state for a multicast channel.
 
 MC_STATE frames are formatted as shown in {{fig-mc-client-channel-state-format}}.
 
@@ -889,43 +888,64 @@ MC_STATE Frame {
 ~~~
 {: #fig-mc-client-channel-state-format title="MC_STATE Frame Format"}
 
-State has these defined values:
+MC_STATE frames contain the following fields:
 
- * 0x1: LEFT
- * 0x2: DECLINED_JOIN
- * 0x3: JOINED
- * 0x4: RETIRED
+* ID Length: The length in bytes of the Channel ID field.
 
-If a server receives an undefined value, it SHOULD close the connection with reason MC_EXTENSION_ERROR.
+* Channel ID: The channel ID for the channel whose state is being reported.
 
-If State is JOINED or RETIRED, the Reason Code MUST be REQUESTED_BY_SERVER (0x1).
+* Client Channel State Sequence Number: The sequence number of this state update for the channel.
+  Before the first MC_STATE frame for a channel, the implicit Client Channel State Sequence Number is 0.
+  The first MC_STATE frame sent by the client for a channel MUST use Client Channel State Sequence Number 1, and each subsequent MC_STATE frame for that channel MUST increase the Client Channel State Sequence Number by 1.
+  An MC_STATE frame MUST NOT use Client Channel State Sequence Number 0.
 
-If State is LEFT or DECLINED_JOIN, for frames of type TBD-0b the Reason Code field is set to one of:
+* State: The client channel state being reported.
+  The following values are defined:
 
- * 0x0: UNSPECIFIED_OTHER
- * 0x1: REQUESTED_BY_SERVER
- * 0x2: ADMINISTRATIVE_BLOCK
- * 0x3: PROTOCOL_ERROR
- * 0x4: PROPERTY_VIOLATION
- * 0x5: UNSYNCHRONIZED_PROPERTIES
- * 0x6: ID_COLLISION
- * 0x10: HELD_DOWN
- * 0x12: MAX_RATE_EXCEEDED
- * 0x13: HIGH_LOSS
- * 0x14: EXCESSIVE_SPURIOUS_TRAFFIC
- * 0x15: MAX_STREAMS_EXCEEDED
- * 0x16: LIMIT_VIOLATION
- * 0x17: AUTHENTICATION_DELAY_EXCEEDED
+  * 0x1: LEFT
+  * 0x2: DECLINED_JOIN
+  * 0x3: JOINED
+  * 0x4: RETIRED
 
-(Author's note TODO: consider whether that these reasons should be added to the QUIC Transport Error Codes registry ({{Section 22.5 of RFC9000}}) instead of defining a new registry specific to multicast.)
+* Reason Code: A code describing why the reported state was reached.
 
-For frames of type TBD-0c, the Reason Code is left to the application, as described in {{Section 20.2 of RFC9000}}
+* Reason Phrase Length: The length of the Reason Phrase field.
 
-The Reason Phrase field, in combination with the Reason Phrase Length field, can optionally be used to give further details for the state change.
+* Reason Phrase: Optional diagnostic text describing the state change.
+This field MUST NOT affect protocol behavior.
 
-A client might receive multicast packets that it can not associate with any channel ID, or that cannot be verified as matching hashes from MC_INTEGRITY frames, or cannot be decrypted.
-This traffic is presumed either to have been corrupted in transit or to have been sent by someone other than the legitimate sender of traffic for the channel, possibly by an attacker or a misconfigured sender.
-If these packets are addressed to an (S,G) that is used for reception in one or more known channels, the client MAY leave these channels with reason "Excessive Spurious traffic".
+A server MUST ignore an MC_STATE frame whose Client Channel State Sequence Number is less than or equal to the largest Client Channel State Sequence Number it has already processed for that channel.
+
+If a server receives an MC_STATE frame with an undefined State value, it SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.
+
+Frames of type TBD-0b use reason codes defined by this specification.
+These reason codes describe channel state changes caused by QUIC multicast transport behavior, local transport policy, or server requests.
+
+Frames of type TBD-0c carry application-defined Reason Code values.
+As with application protocol error codes in {{Section 20.2 of RFC9000}}, the application protocol using this extension defines the semantics and allocation policy for these values.
+
+If State is JOINED or RETIRED, the frame type MUST be TBD-0b and the Reason Code MUST be REQUESTED_BY_SERVER (0x1).
+
+If State is LEFT or DECLINED_JOIN and the frame type is TBD-0b, the Reason Code field is set to one of the following values:
+
+* 0x0: UNSPECIFIED_OTHER
+* 0x1: REQUESTED_BY_SERVER
+* 0x2: ADMINISTRATIVE_BLOCK
+* 0x3: PROTOCOL_ERROR
+* 0x4: PROPERTY_VIOLATION
+* 0x5: UNSYNCHRONIZED_PROPERTIES
+* 0x6: ID_COLLISION
+* 0x10: HELD_DOWN
+* 0x12: MAX_RATE_EXCEEDED
+* 0x13: HIGH_LOSS
+* 0x14: EXCESSIVE_SPURIOUS_TRAFFIC
+* 0x15: MAX_STREAMS_EXCEEDED
+* 0x16: LIMIT_VIOLATION
+* 0x17: AUTHENTICATION_DELAY_EXCEEDED
+
+If a server receives an MC_STATE frame of type TBD-0b with an undefined Reason Code, it SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.
+
+(Author's note TODO: consider whether these reasons should be added to the QUIC Transport Error Codes registry ({{Section 22.5 of RFC9000}}) instead of defining a new registry specific to multicast.)
 
 ## Retransmission of information
 In addition to the mechanisms used for retransmission described in {{Section 13.3 of RFC9000}} and {{Section 5.2 of RFC9221}} the following rules apply to the newly introduced frames:
@@ -1063,8 +1083,6 @@ The MC_ACK policy advertised in MC_ANNOUNCE controls when clients send MC_ACK fr
 Clients MAY send MC_ACK frames more frequently than this policy requires, but SHOULD avoid sending them less frequently.
 Servers should choose Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold values that balance uplink load against the need for timely loss, congestion, ECN, and liveness feedback.
 
-
-
 ## Address Collisions {#address-collisions}
 
 Multicast channels at the network layer are addressed with a source IP, a destination group IP address, and a destination UDP port.
@@ -1087,6 +1105,15 @@ For example, a low-latency media channel might require integrity information to 
 Servers SHOULD choose Max Authentication Delay values that are appropriate for the channel's media or application latency requirements and for expected receiver memory constraints.
 Servers SHOULD send and retransmit MC_INTEGRITY information so that packets can be authenticated within the advertised Max Authentication Delay under normal operating conditions.
 Clients MAY use local policy to impose a smaller buffering limit than the value advertised by the server, in which case they might discard unauthenticated packets or leave the channel.
+
+## Spurious Channel Traffic
+
+A client can receive multicast packets that it cannot associate with a joined channel, that cannot be authenticated using accepted MC_INTEGRITY information, or that cannot be decrypted using an applicable channel
+secret.
+Such packets can be caused by corruption, loss or delay of control information, misconfiguration, or injection by an attacker.
+
+A client MAY discard such packets without further processing.
+If spurious traffic is persistently received for an (S,G) used by one or more joined channels, and the traffic interferes with reception or causes excessive resource use, the client MAY leave the affected channels and send MC_STATE with State LEFT and Reason Code EXCESSIVE_SPURIOUS_TRAFFIC.
 
 # Security Considerations
 
