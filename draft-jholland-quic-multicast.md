@@ -179,8 +179,8 @@ The multicast_client_params parameter has the structure shown below in {{fig-tra
 ~~~
 multicast_client_params {
   Reserved (6),
-  IPv6 Channels Allowed (1),
   IPv4 Channels Allowed (1),
+  IPv6 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Max Joined Count (i),
@@ -413,6 +413,12 @@ If the server asks the client to join a channel that would violate the client's 
 If the MC_JOIN frame refers to an MC_KEY Sequence Number that the client has not yet received, the client SHOULD send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
 
 If the actual contents sent in the channel violate the advertised properties from MC_ANNOUNCE, clients SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code LIMIT_VIOLATION.
+
+After processing an MC_LIMITS frame, if the set of channels that the client is currently requested to join no longer fits within the client's current limits, the server MUST send MC_LEAVE frames for one or more channels.
+For this purpose, the requested set includes channels for which the server has sent MC_JOIN and has not received an MC_STATE frame with State LEFT, DECLINED_JOIN, or RETIRED.
+
+The server is responsible for selecting which channels to leave so that the remaining requested set fits within the client's current limits.
+The server MUST NOT send new MC_JOIN frames that would cause the requested set to violate the client's current limits.
 
 # Congestion Control {#congestion-control}
 
@@ -794,6 +800,12 @@ MC_ACK Frame {
 
 ## MC_LIMITS {#client-limits-frame}
 
+MC_LIMITS frames are sent by a client to update the multicast channel
+limits that were initially provided in the multicast_client_params
+transport parameter ({{transport-parameter}}).
+The server applies these limits as described in {{flow-control}}.
+Each processed MC_LIMITS frame replaces the previously active client limits.
+
 MC_LIMITS frames are formatted as shown in {{fig-mc-client-limits-format}}.
 
 ~~~
@@ -801,8 +813,8 @@ MC_LIMITS Frame {
   Type (i) = TBD-09 (experiments use 0xff3e809),
   Client Limits Sequence Number (i),
   Reserved (6),
-  IPv6 Channels Allowed (1),
   IPv4 Channels Allowed (1),
+  IPv6 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Max Joined Count (i),
@@ -810,29 +822,27 @@ MC_LIMITS Frame {
 ~~~
 {: #fig-mc-client-limits-format title="MC_LIMITS Frame Format"}
 
-The sequence number is implicitly 0 before the first MC_LIMITS frame from the client, and increases by 1 each new frame that's sent.
-Newer frames override older ones.
+MC_LIMITS frames contain the following fields:
 
-The 6 Reserved bits MUST be set to 0 by the client and MUST be ignored by the server.
-These are reserved to advertise future capabilities.
+* Client Limits Sequence Number: The sequence number of this limits update.
+  Before the first MC_LIMITS frame from the client, the implicit Client Limits Sequence Number is 0.  The first MC_LIMITS frame sent by the client MUST use Client Limits Sequence Number 1, and each subsequent MC_LIMITS frame MUST increase the Client Limits Sequence Number by 1.
+  An MC_LIMITS frame MUST NOT use Client Limits Sequence Number 0.
 
-IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can be joined and 0 if IPv6 channels cannot be joined.
+* Reserved: Reserved bits for future use.
+  These bits MUST be set to 0 by the client and MUST be ignored by the server.
 
-IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can be joined and 0 if IPv4 channels cannot be joined.
+* IPv4 Channels Allowed: A 1-bit field set to 1 if the client currently permits the server to request joins for IPv4 channels, and set to 0 otherwise.
 
-It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero simultaneously.
-This indicates that the client does not currently permit joining multicast channels using either IP address family.
-This does not disable support for this extension on the connection and does not prevent the client from later sending an MC_LIMITS frame that permits one or both address families.
+* IPv6 Channels Allowed: A 1-bit field set to 1 if the client currently permits the server to request joins for IPv6 channels, and set to 0 otherwise.
 
-After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN for a channel whose address family is not currently allowed by the client.
-If a client receives such an MC_JOIN responds as described in {{flow-control}}.
-If the client is currently joined to one or more channels that are no longer allowed by the updated limits, the server MUST send an MC_LEAVE frame for those channels unless it has already received MC_STATE indicating that the client has left those channels.
+* Max Aggregate Rate: The maximum aggregate rate, in Kibps, allowed across all channels that the client is concurrently requested to join.
 
-Max Aggregate Rate allowed across all joined channels is in Kibps.
+* Max Channel IDs: The maximum number channel IDs for which the client retains channel state.
+  Retired channel IDs do not count against this value.
 
-Max Channel IDs is the count of channel IDs that can be announced to this client and have keys.  Retired Channel IDs don't count against this value.
+* Max Joined Count: The maximum number of channels that the client can be asked to join concurrently.
 
-Max Joined Count is the count of channels that are allowed to be joined concurrently.
+A server MUST ignore an MC_LIMITS frame whose Client Limits Sequence Number is less than or equal to the largest Client Limits Sequence Number it has already processed on the connection.
 
 ## MC_RETIRE {#channel-retire-frame}
 
