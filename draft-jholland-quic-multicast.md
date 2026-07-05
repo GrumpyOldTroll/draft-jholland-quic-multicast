@@ -143,7 +143,7 @@ If a client has no matching joined channel, the packet is discarded.
 
 QUIC packet number encoding in {{Section 17.1 of RFC9000}} encodes a truncated packet number by carrying only the least significant bits of the full packet number.
 The sender selects a packet number length large enough for the receiver to reconstruct the full packet number, and the receiver decodes it as the value closest to the next expected packet number in that packet number space.
-This sender-side mechanism is not suitable for multicast channel packets, because a single channel packet can be received by many clients with different receive, loss, and acknowledgement state.
+This sender-side mechanism is not suitable for multicast channel packets, because a single channel packet can be received by many clients with different receive, loss, and acknowledgement states.
 
 Channel packets therefore use a fixed packet number length of four bytes.
 A server MUST encode the packet number of a channel packet using the four-byte packet number encoding defined in {{Section 17.1 of RFC9000}}.
