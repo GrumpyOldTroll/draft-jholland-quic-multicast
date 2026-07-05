@@ -1051,7 +1051,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Holland, et al.</td>
-<td class="center">Expires 5 January 2027</td>
+<td class="center">Expires 6 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1064,12 +1064,12 @@ svg {
 <dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-04" class="published">4 July 2026</time>
+<time datetime="2026-07-05" class="published">5 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-06">6 January 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1130,7 +1130,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 6 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2506,15 +2506,16 @@ This SHOULD NOT cause a close of the whole connection but MAY cause a stream err
           <h4 id="name-datagrams">
 <a href="#section-12.3.3" class="section-number selfRef">12.3.3. </a><a href="#name-datagrams" class="section-name selfRef">Datagrams</a>
           </h4>
-<p id="section-12.3.3-1">DATAGRAM frames in channel packets are subject to the max_datagram_frame_size transport parameter defined in <span>[<a href="#RFC9221" class="cite xref">RFC9221</a>]</span> on the associated QUIC connection.
-A server MUST NOT send DATAGRAM frames in channel packets unless the client advertised max_datagram_frame_size with a non-zero value.
-A server MUST NOT send a DATAGRAM frame in a channel packet if the DATAGRAM frame is larger than the value advertised by the client.<a href="#section-12.3.3-1" class="pilcrow">¶</a></p>
-<p id="section-12.3.3-2">Using DATAGRAM frames can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.<a href="#section-12.3.3-2" class="pilcrow">¶</a></p>
-<p id="section-12.3.3-3">However, at the time of this writing (version -05 of <span>[<a href="#I-D.draft-ietf-masque-h3-datagram" class="cite xref">I-D.draft-ietf-masque-h3-datagram</a>]</span>) multicast channels generally cannot deliver HTTP/3 datagrams, including WebTransport datagrams (version -02 of <span>[<a href="#I-D.draft-ietf-webtrans-http3" class="cite xref">I-D.draft-ietf-webtrans-http3</a>]</span>), since the demuxing of WebTransport datagrams uses a Session ID based on a client-specific value (the HTTP/3 Session ID comes from the Stream ID of the client-initiated stream that issued the initial extended CONNECT request).<a href="#section-12.3.3-3" class="pilcrow">¶</a></p>
-<p id="section-12.3.3-4">It is therefore hoped that an extension or revision to WebTransport and HTTP/3 datagrams can be adopted in a future version of their specifications that make it possible to use a server-chosen Session ID value for demuxing WebTransport datagrams (and HTTP/3 datagrams in general).<a href="#section-12.3.3-4" class="pilcrow">¶</a></p>
-<p id="section-12.3.3-5">Such a value could for instance be sent in an HTTP/3 response header, and as long as it is unique within the connection and avoids collision with any client-initiated stream ID values, it could still be used to multiplex data associated with different HTTP/3 traffic and different WebTransport sessions carried on the same connection.
+<p id="section-12.3.3-1">DATAGRAM frames in channel packets are subject to the max_datagram_frame_size transport parameter defined in <span>[<a href="#RFC9221" class="cite xref">RFC9221</a>]</span> on each associated QUIC connection.
+A server MUST NOT send MC_JOIN to a client for a channel that carries DATAGRAM frames unless that client advertised max_datagram_frame_size with a non-zero value.<a href="#section-12.3.3-1" class="pilcrow">¶</a></p>
+<p id="section-12.3.3-2">A server MUST NOT send MC_JOIN to a client for a channel if the server expects that channel to carry DATAGRAM frames larger than the max_datagram_frame_size value advertised by that client.
+If the server later sends larger DATAGRAM frames on that channel, clients whose advertised max_datagram_frame_size is exceeded will process this as specified by <span>[<a href="#RFC9221" class="cite xref">RFC9221</a>]</span>, which can result in termination of their associated QUIC connections.<a href="#section-12.3.3-2" class="pilcrow">¶</a></p>
+<p id="section-12.3.3-3">Using DATAGRAM frames can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.<a href="#section-12.3.3-3" class="pilcrow">¶</a></p>
+<p id="section-12.3.3-4">However, at the time of this writing (version -05 of <span>[<a href="#I-D.draft-ietf-masque-h3-datagram" class="cite xref">I-D.draft-ietf-masque-h3-datagram</a>]</span>) multicast channels generally cannot deliver HTTP/3 datagrams, including WebTransport datagrams (version -02 of <span>[<a href="#I-D.draft-ietf-webtrans-http3" class="cite xref">I-D.draft-ietf-webtrans-http3</a>]</span>), since the demuxing of WebTransport datagrams uses a Session ID based on a client-specific value (the HTTP/3 Session ID comes from the Stream ID of the client-initiated stream that issued the initial extended CONNECT request).<a href="#section-12.3.3-4" class="pilcrow">¶</a></p>
+<p id="section-12.3.3-5">It is therefore hoped that an extension or revision to WebTransport and HTTP/3 datagrams can be adopted in a future version of their specifications that make it possible to use a server-chosen Session ID value for demuxing WebTransport datagrams (and HTTP/3 datagrams in general).<a href="#section-12.3.3-5" class="pilcrow">¶</a></p>
+<p id="section-12.3.3-6">Such a value could for instance be sent in an HTTP/3 response header, and as long as it is unique within the connection and avoids collision with any client-initiated stream ID values, it could still be used to multiplex data associated with different HTTP/3 traffic and different WebTransport sessions carried on the same connection.
 Then by choosing the same server-chosen session ID for all the connections, the server would be able to use the same channel to carry the identical complete datagrams, including the server-chosen Session ID, to multiple receivers that the server asks to join the same channel.
-Such a change could either replace the current client-chosen definition for Session ID in server-to-client datagrams, or could add new HTTP/3 frame types that allow a server-chosen Session ID when the client has advertised support for this extended functionality.<a href="#section-12.3.3-5" class="pilcrow">¶</a></p>
+Such a change could either replace the current client-chosen definition for Session ID in server-to-client datagrams, or could add new HTTP/3 frame types that allow a server-chosen Session ID when the client has advertised support for this extended functionality.<a href="#section-12.3.3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
