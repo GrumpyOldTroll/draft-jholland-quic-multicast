@@ -139,6 +139,25 @@ Incoming packets received on the network path associated with a channel use the 
 A client with a matching joined channel always has at least one connection associated with the channel.
 If a client has no matching joined channel, the packet is discarded.
 
+## Packet Number Encoding for Channel Packets
+
+QUIC packet number encoding in {{Section 17.1 of RFC9000}} encodes a truncated packet number by carrying only the least significant bits of the full packet number.
+The sender selects a packet number length large enough for the receiver to reconstruct the full packet number, and the receiver decodes it as the value closest to the next expected packet number in that packet number space.
+This sender-side mechanism is not suitable for multicast channel packets, because a single channel packet can be received by many clients with different receive, loss, and acknowledgement states.
+
+Channel packets therefore use a fixed packet number length of four bytes.
+A server MUST encode the packet number of a channel packet as a four-byte truncated packet number, using the packet number encoding described in {{Section 17.1 of RFC9000}}.
+Before header protection is applied, the Packet Number Length bits of byte 0, that is, the bits with mask 0x03, MUST be set to 0b11 to indicate a four-byte Packet Number field.
+A server MUST NOT select the packet number length for a channel packet based on acknowledgement state from any individual associated unicast connection.
+
+A client reconstructs the full packet number for a channel packet using the packet number reconstruction algorithm in {{Section 17.1 of RFC9000}}, applied to the channel packet number space.
+The expected packet number used for reconstruction is the next packet number after the largest packet number of any channel packet from which the client has successfully removed packet protection in that channel packet number space.
+
+Before a client has successfully removed packet protection from any packet in a channel packet number space, it uses the From Packet Number of the applicable MC_KEY frame as the next expected packet number for reconstruction.
+
+If a client cannot reconstruct packet numbers for a channel because the encoded packet numbers are too far from its expected packet number, it MUST discard the affected packets.
+If this happens, the client SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
 ## Channel using Multipath QUIC
 
 From the point of view of the client, each Multicast QUIC channel is handled as an additional path from the server. A client keeps its unicast connection with the server open during all the transmission. Additionally, the server can inform the client about an additional path where it will receive multicast content. All mechanisms, except those listed below, follow {{I-D.draft-ietf-quic-multipath}}.
