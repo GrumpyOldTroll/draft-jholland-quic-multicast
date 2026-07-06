@@ -469,7 +469,6 @@ Connection termination does not require the client to send MC_STATE frames for t
 After the unicast connection is terminated, MC_STATE frames cannot be delivered on that connection.
 
 * The server MUST NOT rely on receiving per-channel leave or retire state for cleanup.
-Servers MAY stop sending to multicast channels if there are no unicast connections left that are associated with them.
 
 * For determining the liveness of a connection, the client MUST only consider packets received on the unicast connection. Any packets received on a multicast channel MUST NOT be used to reset a timer checking if a potentially specified max_idle_timeout has been reached. If the unicast connection becomes idle, as described in {{Section 10.1 of RFC9000}}, the client MUST terminate the connection as described above.
 
