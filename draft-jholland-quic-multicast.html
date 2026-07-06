@@ -1316,6 +1316,9 @@ svg {
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.8">
                 <p id="section-toc.1-1.12.2.8.1"><a href="#section-12.8" class="auto internal xref">12.8</a>.  <a href="#name-buffering-unauthenticated-p" class="internal xref">Buffering Unauthenticated Packets</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.9">
+                <p id="section-toc.1-1.12.2.9.1"><a href="#section-12.9" class="auto internal xref">12.9</a>.  <a href="#name-spurious-channel-traffic" class="internal xref">Spurious Channel Traffic</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
@@ -1509,8 +1512,8 @@ Presence indicates that multicast-capable clients MAY send frames defined in thi
 <pre>
 multicast_client_params {
   Reserved (6),
-  IPv6 Channels Allowed (1),
   IPv4 Channels Allowed (1),
+  IPv6 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Max Joined Count (i),
@@ -1525,7 +1528,7 @@ multicast_client_params {
 <a href="#name-multicast_client_params-for" class="selfRef">multicast_client_params Format</a>
         </figcaption></figure>
 </div>
-<p id="section-3-8">The Reserved, IPv6 Channels Allowed, IPv4 Channels Allowed, Max Aggregate Rate, Max Channel ID and Max Joined Count fields are identical to their analogous fields in the MC_LIMITS frame (<a href="#client-limits-frame" class="auto internal xref">Section 10.7</a>) and hold the initial values.<a href="#section-3-8" class="pilcrow">¶</a></p>
+<p id="section-3-8">The Reserved, IPv4 Channels Allowed, IPv6 Channels Allowed, Max Aggregate Rate, Max Channel IDs and Max Joined Count fields are identical to their analogous fields in the MC_LIMITS frame (<a href="#client-limits-frame" class="auto internal xref">Section 10.7</a>) and hold the initial values.<a href="#section-3-8" class="pilcrow">¶</a></p>
 <p id="section-3-9">A server MUST NOT send MC_ANNOUNCE (<a href="#channel-announce-frame" class="auto internal xref">Section 10.1</a>) frames with addresses using an IP Family that is not allowed according to the IPv4 and IPv6 Channels Allowed fields in the multicast_client_params, unless and until a later MC_LIMITS (<a href="#client-limits-frame" class="auto internal xref">Section 10.7</a>) frame adds permission for a different address family.<a href="#section-3-9" class="pilcrow">¶</a></p>
 <p id="section-3-10">It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero in the transport parameter.
 This indicates that the client supports this extension but does not initially permit joining multicast channels using either IP address family.<a href="#section-3-10" class="pilcrow">¶</a></p>
@@ -1579,7 +1582,7 @@ MC_KEY frames provide the secrets necessary to decode the payload of packets in 
 <a href="#fig-client-channel-states" class="auto internal xref">Figure 2</a> shows the states a channel has from the clients point of view.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
 <p id="section-4.1-4">Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients.
 Client responses to join, leave, and retire requests are described in <a href="#client-response" class="auto internal xref">Section 4.3</a>.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
-<p id="section-4.1-5">The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left or declined to join fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS (<a href="#client-limits-frame" class="auto internal xref">Section 10.7</a>) frame the server received.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+<p id="section-4.1-5">The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left, declined to join or retired fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS (<a href="#client-limits-frame" class="auto internal xref">Section 10.7</a>) frame the server received.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 <p id="section-4.1-6">This extension does not define an application-layer catalogue or content-selection protocol.
 Application protocols determine what content, service, program, representation, or other application context is relevant to a connection.
 The multicast extension merely provides a transport mechanism by which the server can describe channels that are available in that context and request that the client join or leave them.
@@ -1629,8 +1632,8 @@ In this case, this could happen without any involvement of the client-side appli
 <a href="#name-states-a-channel-from-the-c" class="selfRef">States a channel from the clients point of view.</a>
           </figcaption></figure>
 </div>
-<p id="section-4.1-9">When the server has asked the client to join a channel and has not received any MC_STATE frames <a href="#client-channel-state-frame" class="auto internal xref">Section 10.9</a> with state DECLINED_JOIN or LEFT, it also sends MC_INTEGRITY frames (<a href="#channel-integrity-frame" class="auto internal xref">Section 10.5</a>) to enable the client to verify packet integrity before processing the packet.
-A client MUST NOT decode packets for a channel for which it has not received an applicable MC_ANNOUNCE (<a href="#channel-announce-frame" class="auto internal xref">Section 10.1</a>), or for which it has not received a matching packet hash in an MC_INTEGRITY (<a href="#channel-integrity-frame" class="auto internal xref">Section 10.5</a>) frame, or for which it has not received an applicable MC_KEY frame <a href="#channel-key-frame" class="auto internal xref">Section 10.2</a>.<a href="#section-4.1-9" class="pilcrow">¶</a></p>
+<p id="section-4.1-9">When the server has asked the client to join a channel and has not received any MC_STATE frames <a href="#client-channel-state-frame" class="auto internal xref">Section 10.9</a> with State DECLINED_JOIN, LEFT, or RETIRED, it also sends MC_INTEGRITY frames (<a href="#channel-integrity-frame" class="auto internal xref">Section 10.5</a>) to enable the client to verify packet integrity before processing channel packets.
+A client MUST NOT decode a channel packet unless it has received an applicable MC_ANNOUNCE (<a href="#channel-announce-frame" class="auto internal xref">Section 10.1</a>) frame and an applicable MC_KEY (<a href="#channel-key-frame" class="auto internal xref">Section 10.2</a>) frame for the channel, and has received a matching packet hash in an MC_INTEGRITY frame for that packet.<a href="#section-4.1-9" class="pilcrow">¶</a></p>
 <p id="section-4.1-10"><a href="#fig-frame-exchange" class="auto internal xref">Figure 3</a> shows the frames that are being exchanged about and over a channel during the lifetime of an example channel.<a href="#section-4.1-10" class="pilcrow">¶</a></p>
 <span id="name-example-flow-of-frames-for-"></span><div id="fig-frame-exchange">
 <figure id="figure-3">
@@ -1821,6 +1824,10 @@ The client also monitors the packets received to ensure that channels don't exce
 <p id="section-5-5">If the server asks the client to join a channel that would violate the client's current limits, but the MC_JOIN frame contains an older MC_LIMITS Sequence Number, the client SHOULD send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.<a href="#section-5-5" class="pilcrow">¶</a></p>
 <p id="section-5-6">If the MC_JOIN frame refers to an MC_KEY Sequence Number that the client has not yet received, the client SHOULD send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.<a href="#section-5-6" class="pilcrow">¶</a></p>
 <p id="section-5-7">If the actual contents sent in the channel violate the advertised properties from MC_ANNOUNCE, clients SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code LIMIT_VIOLATION.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<p id="section-5-8">After processing an MC_LIMITS frame, if the set of channels that the client is currently requested to join no longer fits within the client's current limits, the server MUST send MC_LEAVE frames for one or more channels.
+For this purpose, the requested set includes channels for which the server has sent MC_JOIN and has not received an MC_STATE frame with State LEFT, DECLINED_JOIN, or RETIRED.<a href="#section-5-8" class="pilcrow">¶</a></p>
+<p id="section-5-9">The server is responsible for selecting which channels to leave so that the remaining requested set fits within the client's current limits.
+The server MUST NOT send new MC_JOIN frames that would cause the requested set to violate the client's current limits.<a href="#section-5-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="congestion-control">
@@ -2321,17 +2328,22 @@ This field is present only when the frame type is TBD-07.<a href="#section-10.6-
         <h3 id="name-mc_limits">
 <a href="#section-10.7" class="section-number selfRef">10.7. </a><a href="#name-mc_limits" class="section-name selfRef">MC_LIMITS</a>
         </h3>
-<p id="section-10.7-1">MC_LIMITS frames are formatted as shown in <a href="#fig-mc-client-limits-format" class="auto internal xref">Figure 10</a>.<a href="#section-10.7-1" class="pilcrow">¶</a></p>
+<p id="section-10.7-1">MC_LIMITS frames are sent by a client to update the multicast channel
+limits that were initially provided in the multicast_client_params
+transport parameter (<a href="#transport-parameter" class="auto internal xref">Section 3</a>).
+The server applies these limits as described in <a href="#flow-control" class="auto internal xref">Section 5</a>.
+Each processed MC_LIMITS frame replaces the previously active client limits.<a href="#section-10.7-1" class="pilcrow">¶</a></p>
+<p id="section-10.7-2">MC_LIMITS frames are formatted as shown in <a href="#fig-mc-client-limits-format" class="auto internal xref">Figure 10</a>.<a href="#section-10.7-2" class="pilcrow">¶</a></p>
 <span id="name-mc_limits-frame-format"></span><div id="fig-mc-client-limits-format">
 <figure id="figure-10">
-          <div class="alignLeft art-text artwork" id="section-10.7-2.1">
+          <div class="alignLeft art-text artwork" id="section-10.7-3.1">
 <pre>
 MC_LIMITS Frame {
   Type (i) = TBD-09 (experiments use 0xff3e809),
   Client Limits Sequence Number (i),
   Reserved (6),
-  IPv6 Channels Allowed (1),
   IPv4 Channels Allowed (1),
+  IPv6 Channels Allowed (1),
   Max Aggregate Rate (i),
   Max Channel IDs (i),
   Max Joined Count (i),
@@ -2342,22 +2354,35 @@ MC_LIMITS Frame {
 <a href="#name-mc_limits-frame-format" class="selfRef">MC_LIMITS Frame Format</a>
           </figcaption></figure>
 </div>
-<p id="section-10.7-3">The sequence number is implicitly 0 before the first MC_LIMITS frame from the client, and increases by 1 each new frame that's sent.
-Newer frames override older ones.
-An MC_LIMITS frame MUST NOT use Client Limits Sequence Number 0.<a href="#section-10.7-3" class="pilcrow">¶</a></p>
-<p id="section-10.7-4">The 6 Reserved bits MUST be set to 0 by the client and MUST be ignored by the server.
-These are reserved to advertise future capabilities.<a href="#section-10.7-4" class="pilcrow">¶</a></p>
-<p id="section-10.7-5">IPv6 Channels Allowed is a 1-bit field set to 1 if IPv6 channels can be joined and 0 if IPv6 channels cannot be joined.<a href="#section-10.7-5" class="pilcrow">¶</a></p>
-<p id="section-10.7-6">IPv4 Channels Allowed is a 1-bit field set to 1 if IPv4 channels can be joined and 0 if IPv4 channels cannot be joined.<a href="#section-10.7-6" class="pilcrow">¶</a></p>
-<p id="section-10.7-7">It is valid for both IPv4 Channels Allowed and IPv6 Channels Allowed to be set to zero simultaneously.
-This indicates that the client does not currently permit joining multicast channels using either IP address family.
-This does not disable support for this extension on the connection and does not prevent the client from later sending an MC_LIMITS frame that permits one or both address families.<a href="#section-10.7-7" class="pilcrow">¶</a></p>
-<p id="section-10.7-8">After receiving an MC_LIMITS frame, the server MUST NOT send MC_JOIN for a channel whose address family is not currently allowed by the client.
-If a client receives such an MC_JOIN responds as described in <a href="#flow-control" class="auto internal xref">Section 5</a>.
-If the client is currently joined to one or more channels that are no longer allowed by the updated limits, the server MUST send an MC_LEAVE frame for those channels unless it has already received MC_STATE indicating that the client has left those channels.<a href="#section-10.7-8" class="pilcrow">¶</a></p>
-<p id="section-10.7-9">Max Aggregate Rate allowed across all joined channels is in Kibps.<a href="#section-10.7-9" class="pilcrow">¶</a></p>
-<p id="section-10.7-10">Max Channel IDs is the count of channel IDs that can be announced to this client and have keys.  Retired Channel IDs don't count against this value.<a href="#section-10.7-10" class="pilcrow">¶</a></p>
-<p id="section-10.7-11">Max Joined Count is the count of channels that are allowed to be joined concurrently.<a href="#section-10.7-11" class="pilcrow">¶</a></p>
+<p id="section-10.7-4">MC_LIMITS frames contain the following fields:<a href="#section-10.7-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.7-5.1">
+            <p id="section-10.7-5.1.1">Client Limits Sequence Number: The sequence number of this limits update.
+Before the first MC_LIMITS frame from the client, the implicit Client Limits Sequence Number is 0.  The first MC_LIMITS frame sent by the client MUST use Client Limits Sequence Number 1, and each subsequent MC_LIMITS frame MUST increase the Client Limits Sequence Number by 1.
+An MC_LIMITS frame MUST NOT use Client Limits Sequence Number 0.<a href="#section-10.7-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.7-5.2">
+            <p id="section-10.7-5.2.1">Reserved: Reserved bits for future use.
+These bits MUST be set to 0 by the client and MUST be ignored by the server.<a href="#section-10.7-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.7-5.3">
+            <p id="section-10.7-5.3.1">IPv4 Channels Allowed: A 1-bit field set to 1 if the client currently permits the server to request joins for IPv4 channels, and set to 0 otherwise.<a href="#section-10.7-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.7-5.4">
+            <p id="section-10.7-5.4.1">IPv6 Channels Allowed: A 1-bit field set to 1 if the client currently permits the server to request joins for IPv6 channels, and set to 0 otherwise.<a href="#section-10.7-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.7-5.5">
+            <p id="section-10.7-5.5.1">Max Aggregate Rate: The maximum aggregate rate, in Kibps, allowed across all channels that the client is concurrently requested to join.<a href="#section-10.7-5.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.7-5.6">
+            <p id="section-10.7-5.6.1">Max Channel IDs: The maximum number of channel IDs for which the client retains channel state.
+Retired channel IDs do not count against this value.<a href="#section-10.7-5.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.7-5.7">
+            <p id="section-10.7-5.7.1">Max Joined Count: The maximum number of channels that the client can be asked to join concurrently.<a href="#section-10.7-5.7.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.7-6">A server MUST ignore an MC_LIMITS frame whose Client Limits Sequence Number is less than or equal to the largest Client Limits Sequence Number it has already processed on the connection.<a href="#section-10.7-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="channel-retire-frame">
@@ -2401,14 +2426,12 @@ Client responses to MC_RETIRE are described in <a href="#client-response" class=
         <h3 id="name-mc_state">
 <a href="#section-10.9" class="section-number selfRef">10.9. </a><a href="#name-mc_state" class="section-name selfRef">MC_STATE</a>
         </h3>
-<p id="section-10.9-1">MC_STATE frames (type=TBD-0b or TBD-0c) are sent from client to server to report changes in the client's channel state.
-Each time the channel state changes, the Client Channel State Sequence number is increased by one. Due to packet loss it is possible that Sequence numbers aren't continuous on the server side. As such, the server MUST only consider the frames with the highest Sequence number.
-It is a state change to the channel if the server requests that a client join a channel and the client declines the join, even though no join occurs on the network.<a href="#section-10.9-1" class="pilcrow">¶</a></p>
-<p id="section-10.9-2">Frames of type TBD-0b are used for cases in which the reason for the state change occur in the QUIC multicast layer while frames of type TBD-0c are used for reasons that are application specific.<a href="#section-10.9-2" class="pilcrow">¶</a></p>
-<p id="section-10.9-3">MC_STATE frames are formatted as shown in <a href="#fig-mc-client-channel-state-format" class="auto internal xref">Figure 12</a>.<a href="#section-10.9-3" class="pilcrow">¶</a></p>
+<p id="section-10.9-1">MC_STATE frames are sent from client to server to report the client's
+state for a multicast channel.<a href="#section-10.9-1" class="pilcrow">¶</a></p>
+<p id="section-10.9-2">MC_STATE frames are formatted as shown in <a href="#fig-mc-client-channel-state-format" class="auto internal xref">Figure 12</a>.<a href="#section-10.9-2" class="pilcrow">¶</a></p>
 <span id="name-mc_state-frame-format"></span><div id="fig-mc-client-channel-state-format">
 <figure id="figure-12">
-          <div class="alignLeft art-text artwork" id="section-10.9-4.1">
+          <div class="alignLeft art-text artwork" id="section-10.9-3.1">
 <pre>
 MC_STATE Frame {
   Type (i) = TBD-0b..TBD-0c (experiments use 0xff3e80b and 0xff3e80c),
@@ -2426,75 +2449,103 @@ MC_STATE Frame {
 <a href="#name-mc_state-frame-format" class="selfRef">MC_STATE Frame Format</a>
           </figcaption></figure>
 </div>
-<p id="section-10.9-5">An MC_STATE frame MUST NOT use Client Channel State Sequence Number 0.<a href="#section-10.9-5" class="pilcrow">¶</a></p>
-<p id="section-10.9-6">State has these defined values:<a href="#section-10.9-6" class="pilcrow">¶</a></p>
+<p id="section-10.9-4">MC_STATE frames contain the following fields:<a href="#section-10.9-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10.9-7.1">
-            <p id="section-10.9-7.1.1">0x1: LEFT<a href="#section-10.9-7.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10.9-5.1">
+            <p id="section-10.9-5.1.1">ID Length: The length in bytes of the Channel ID field.<a href="#section-10.9-5.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-7.2">
-            <p id="section-10.9-7.2.1">0x2: DECLINED_JOIN<a href="#section-10.9-7.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-5.2">
+            <p id="section-10.9-5.2.1">Channel ID: The channel ID for the channel whose state is being reported.<a href="#section-10.9-5.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-7.3">
-            <p id="section-10.9-7.3.1">0x3: JOINED<a href="#section-10.9-7.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-5.3">
+            <p id="section-10.9-5.3.1">Client Channel State Sequence Number: The sequence number of this state update for the channel.
+Before the first MC_STATE frame for a channel, the implicit Client Channel State Sequence Number is 0.
+The first MC_STATE frame sent by the client for a channel MUST use Client Channel State Sequence Number 1, and each subsequent MC_STATE frame for that channel MUST increase the Client Channel State Sequence Number by 1.
+An MC_STATE frame MUST NOT use Client Channel State Sequence Number 0.<a href="#section-10.9-5.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-7.4">
-            <p id="section-10.9-7.4.1">0x4: RETIRED<a href="#section-10.9-7.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-5.4">
+            <p id="section-10.9-5.4.1">State: The client channel state being reported.
+The following values are defined:<a href="#section-10.9-5.4.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.9-5.4.2.1">
+                <p id="section-10.9-5.4.2.1.1">0x1: LEFT<a href="#section-10.9-5.4.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-10.9-5.4.2.2">
+                <p id="section-10.9-5.4.2.2.1">0x2: DECLINED_JOIN<a href="#section-10.9-5.4.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-10.9-5.4.2.3">
+                <p id="section-10.9-5.4.2.3.1">0x3: JOINED<a href="#section-10.9-5.4.2.3.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-10.9-5.4.2.4">
+                <p id="section-10.9-5.4.2.4.1">0x4: RETIRED<a href="#section-10.9-5.4.2.4.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</li>
+          <li class="normal" id="section-10.9-5.5">
+            <p id="section-10.9-5.5.1">Reason Code: A code describing why the reported state was reached.<a href="#section-10.9-5.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.9-5.6">
+            <p id="section-10.9-5.6.1">Reason Phrase Length: The length of the Reason Phrase field.<a href="#section-10.9-5.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.9-5.7">
+            <p id="section-10.9-5.7.1">Reason Phrase: Optional diagnostic text describing the state change.
+This field MUST NOT affect protocol behavior.<a href="#section-10.9-5.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-10.9-8">If a server receives an undefined value, it SHOULD close the connection with reason MC_EXTENSION_ERROR.<a href="#section-10.9-8" class="pilcrow">¶</a></p>
-<p id="section-10.9-9">If State is JOINED or RETIRED, the Reason Code MUST be REQUESTED_BY_SERVER (0x1).<a href="#section-10.9-9" class="pilcrow">¶</a></p>
-<p id="section-10.9-10">If State is LEFT or DECLINED_JOIN, for frames of type TBD-0b the Reason Code field is set to one of:<a href="#section-10.9-10" class="pilcrow">¶</a></p>
+<p id="section-10.9-6">A server MUST ignore an MC_STATE frame whose Client Channel State Sequence Number is less than or equal to the largest Client Channel State Sequence Number it has already processed for that channel.<a href="#section-10.9-6" class="pilcrow">¶</a></p>
+<p id="section-10.9-7">If a server receives an MC_STATE frame with an undefined State value, it SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.<a href="#section-10.9-7" class="pilcrow">¶</a></p>
+<p id="section-10.9-8">Frames of type TBD-0b use reason codes defined by this specification.
+These reason codes describe channel state changes caused by QUIC multicast transport behavior, local transport policy, or server requests.<a href="#section-10.9-8" class="pilcrow">¶</a></p>
+<p id="section-10.9-9">Frames of type TBD-0c carry application-defined Reason Code values.
+As with application protocol error codes in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-20.2" class="relref">Section 20.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>, the application protocol using this extension defines the semantics and allocation policy for these values.<a href="#section-10.9-9" class="pilcrow">¶</a></p>
+<p id="section-10.9-10">If State is JOINED or RETIRED, the frame type MUST be TBD-0b and the Reason Code MUST be REQUESTED_BY_SERVER (0x1).<a href="#section-10.9-10" class="pilcrow">¶</a></p>
+<p id="section-10.9-11">If State is LEFT or DECLINED_JOIN and the frame type is TBD-0b, the Reason Code field is set to one of the following values:<a href="#section-10.9-11" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10.9-11.1">
-            <p id="section-10.9-11.1.1">0x0: UNSPECIFIED_OTHER<a href="#section-10.9-11.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10.9-12.1">
+            <p id="section-10.9-12.1.1">0x0: UNSPECIFIED_OTHER<a href="#section-10.9-12.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.2">
-            <p id="section-10.9-11.2.1">0x1: REQUESTED_BY_SERVER<a href="#section-10.9-11.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.2">
+            <p id="section-10.9-12.2.1">0x1: REQUESTED_BY_SERVER<a href="#section-10.9-12.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.3">
-            <p id="section-10.9-11.3.1">0x2: ADMINISTRATIVE_BLOCK<a href="#section-10.9-11.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.3">
+            <p id="section-10.9-12.3.1">0x2: ADMINISTRATIVE_BLOCK<a href="#section-10.9-12.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.4">
-            <p id="section-10.9-11.4.1">0x3: PROTOCOL_ERROR<a href="#section-10.9-11.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.4">
+            <p id="section-10.9-12.4.1">0x3: PROTOCOL_ERROR<a href="#section-10.9-12.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.5">
-            <p id="section-10.9-11.5.1">0x4: PROPERTY_VIOLATION<a href="#section-10.9-11.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.5">
+            <p id="section-10.9-12.5.1">0x4: PROPERTY_VIOLATION<a href="#section-10.9-12.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.6">
-            <p id="section-10.9-11.6.1">0x5: UNSYNCHRONIZED_PROPERTIES<a href="#section-10.9-11.6.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.6">
+            <p id="section-10.9-12.6.1">0x5: UNSYNCHRONIZED_PROPERTIES<a href="#section-10.9-12.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.7">
-            <p id="section-10.9-11.7.1">0x6: ID_COLLISION<a href="#section-10.9-11.7.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.7">
+            <p id="section-10.9-12.7.1">0x6: ID_COLLISION<a href="#section-10.9-12.7.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.8">
-            <p id="section-10.9-11.8.1">0x10: HELD_DOWN<a href="#section-10.9-11.8.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.8">
+            <p id="section-10.9-12.8.1">0x10: HELD_DOWN<a href="#section-10.9-12.8.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.9">
-            <p id="section-10.9-11.9.1">0x12: MAX_RATE_EXCEEDED<a href="#section-10.9-11.9.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.9">
+            <p id="section-10.9-12.9.1">0x12: MAX_RATE_EXCEEDED<a href="#section-10.9-12.9.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.10">
-            <p id="section-10.9-11.10.1">0x13: HIGH_LOSS<a href="#section-10.9-11.10.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.10">
+            <p id="section-10.9-12.10.1">0x13: HIGH_LOSS<a href="#section-10.9-12.10.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.11">
-            <p id="section-10.9-11.11.1">0x14: EXCESSIVE_SPURIOUS_TRAFFIC<a href="#section-10.9-11.11.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.11">
+            <p id="section-10.9-12.11.1">0x14: EXCESSIVE_SPURIOUS_TRAFFIC<a href="#section-10.9-12.11.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.12">
-            <p id="section-10.9-11.12.1">0x15: MAX_STREAMS_EXCEEDED<a href="#section-10.9-11.12.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.12">
+            <p id="section-10.9-12.12.1">0x15: MAX_STREAMS_EXCEEDED<a href="#section-10.9-12.12.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.13">
-            <p id="section-10.9-11.13.1">0x16: LIMIT_VIOLATION<a href="#section-10.9-11.13.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.13">
+            <p id="section-10.9-12.13.1">0x16: LIMIT_VIOLATION<a href="#section-10.9-12.13.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.9-11.14">
-            <p id="section-10.9-11.14.1">0x17: AUTHENTICATION_DELAY_EXCEEDED<a href="#section-10.9-11.14.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-10.9-12.14">
+            <p id="section-10.9-12.14.1">0x17: AUTHENTICATION_DELAY_EXCEEDED<a href="#section-10.9-12.14.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-10.9-12">(Author's note TODO: consider whether that these reasons should be added to the QUIC Transport Error Codes registry (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-22.5" class="relref">Section 22.5</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) instead of defining a new registry specific to multicast.)<a href="#section-10.9-12" class="pilcrow">¶</a></p>
-<p id="section-10.9-13">For frames of type TBD-0c, the Reason Code is left to the application, as described in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-20.2" class="relref">Section 20.2</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span><a href="#section-10.9-13" class="pilcrow">¶</a></p>
-<p id="section-10.9-14">The Reason Phrase field, in combination with the Reason Phrase Length field, can optionally be used to give further details for the state change.<a href="#section-10.9-14" class="pilcrow">¶</a></p>
-<p id="section-10.9-15">A client might receive multicast packets that it can not associate with any channel ID, or that cannot be verified as matching hashes from MC_INTEGRITY frames, or cannot be decrypted.
-This traffic is presumed either to have been corrupted in transit or to have been sent by someone other than the legitimate sender of traffic for the channel, possibly by an attacker or a misconfigured sender.
-If these packets are addressed to an (S,G) that is used for reception in one or more known channels, the client MAY leave these channels with reason "Excessive Spurious traffic".<a href="#section-10.9-15" class="pilcrow">¶</a></p>
+<p id="section-10.9-13">If a server receives an MC_STATE frame of type TBD-0b with an undefined Reason Code, it SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.<a href="#section-10.9-13" class="pilcrow">¶</a></p>
+<p id="section-10.9-14">(Author's note TODO: consider whether these reasons should be added to the QUIC Transport Error Codes registry (<span><a href="https://rfc-editor.org/rfc/rfc9000#section-22.5" class="relref">Section 22.5</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span>) instead of defining a new registry specific to multicast.)<a href="#section-10.9-14" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="retransmission-of-information">
@@ -2741,6 +2792,18 @@ Once receivers are expected to have discarded a packet, retransmitting integrity
 <p id="section-12.8-5">This consideration is especially important when MC_INTEGRITY information is sent on the unicast connection and retransmitted for individual receivers.
 It is also important for channels carrying delay-sensitive unreliable data, such as DATAGRAM frames for real-time applications.
 For such channels, servers can reduce wasted work by sending integrity information redundantly near the original packet transmission and by avoiding late retransmission of integrity information after the packet's expected usefulness has expired.<a href="#section-12.8-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="spurious-channel-traffic">
+<section id="section-12.9">
+        <h3 id="name-spurious-channel-traffic">
+<a href="#section-12.9" class="section-number selfRef">12.9. </a><a href="#name-spurious-channel-traffic" class="section-name selfRef">Spurious Channel Traffic</a>
+        </h3>
+<p id="section-12.9-1">A client can receive multicast packets that it cannot associate with a joined channel, that cannot be authenticated using accepted MC_INTEGRITY information, or that cannot be decrypted using an applicable channel
+secret.
+Such packets can be caused by corruption, loss or delay of control information, misconfiguration, or injection by an attacker.<a href="#section-12.9-1" class="pilcrow">¶</a></p>
+<p id="section-12.9-2">A client MAY discard such packets without further processing.
+If spurious traffic is persistently received for an (S,G) used by one or more joined channels, and the traffic interferes with reception or causes excessive resource use, the client MAY leave the affected channels and send MC_STATE with State LEFT and Reason Code EXCESSIVE_SPURIOUS_TRAFFIC.<a href="#section-12.9-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
