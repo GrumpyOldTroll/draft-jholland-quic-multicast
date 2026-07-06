@@ -139,6 +139,36 @@ Incoming packets received on the network path associated with a channel use the 
 A client with a matching joined channel always has at least one connection associated with the channel.
 If a client has no matching joined channel, the packet is discarded.
 
+## Packet Number Encoding for Channel Packets
+
+QUIC packet number encoding in {{Section 17.1 of RFC9000}} encodes a truncated packet number by carrying only the least significant bits of the full packet number.
+The sender selects a packet number length large enough for the receiver to reconstruct the full packet number, and the receiver decodes it as the value closest to the next expected packet number in that packet number space.
+This sender-side mechanism is not suitable for multicast channel packets, because a single channel packet can be received by many clients with different receive, loss, and acknowledgement states.
+
+Channel packets therefore use a fixed packet number length of four bytes.
+A server MUST encode the packet number of a channel packet as a four-byte truncated packet number, using the packet number encoding described in {{Section 17.1 of RFC9000}}.
+Before header protection is applied, the Packet Number Length bits of byte 0, that is, the bits with mask 0x03, MUST be set to 0b11 to indicate a four-byte Packet Number field.
+A server MUST NOT select the packet number length for a channel packet based on acknowledgement state from any individual associated unicast connection.
+
+A client reconstructs the full packet number for a channel packet using the packet number reconstruction algorithm in {{Section 17.1 of RFC9000}}, applied to the channel packet number space.
+The expected packet number used for reconstruction is the next packet number after the largest packet number of any channel packet from which the client has successfully removed packet protection in that channel packet number space.
+
+Before a client has successfully removed packet protection from any packet in a channel packet number space, it uses the From Packet Number of the applicable MC_KEY frame as the next expected packet number for reconstruction.
+
+If a client cannot reconstruct packet numbers for a channel because the encoded packet numbers are too far from its expected packet number, it MUST discard the affected packets.
+If this happens, the client SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+## Latency Spin Bit in Channel Packets
+
+Channel packets are unidirectional server-to-client packets, and clients can not send packets
+on a multicast channel.
+Therefore, the latency spin bit algorithm from {{Section 17.4 of RFC9000}} does not apply to channel packets.
+
+The spin bit has no semantics in this extension and MUST NOT be assigned another meaning by endpoints unless specified in a future extension.
+
+In channel packets, a server MUST disable the spin bit as specified in {{Section 17.4 of RFC9000}}.
+A client MUST ignore the value of the spin bit in received channel packets.
+
 ## Channel using Multipath QUIC
 
 From the point of view of the client, each Multicast QUIC channel is handled as an additional path from the server. A client keeps its unicast connection with the server open during all the transmission. Additionally, the server can inform the client about an additional path where it will receive multicast content. All mechanisms, except those listed below, follow {{I-D.draft-ietf-quic-multipath}}.
@@ -691,8 +721,7 @@ MC_LEAVE Frame {
   Type (i) = TBD-03 (experiments use 0xff3e803),
   ID Length (8),
   Channel ID (8..160),
-  MC_STATE Sequence Number (i),
-  After Packet Number (i)
+  MC_STATE Sequence Number (i)
 }
 ~~~
 {: #fig-mc-channel-leave-format title="MC_LEAVE Frame Format"}
@@ -707,14 +736,11 @@ MC_LEAVE frames contain the following fields:
 A value of 0 indicates that no MC_STATE frames have been processed by the server.
 This value allows the client to ignore leave requests that are based on stale client channel state.
 
-* After Packet Number: If non-zero, the client leaves the channel only after receiving a channel packet with this packet number or a higher packet number.
-If this field is 0, or if the client has already received a channel packet with this packet number or a higher packet number, the client leaves the channel immediately.
-
 A client that receives an MC_LEAVE for a channel that it has already left, declined to join, or retired MUST ignore the frame.
 
 A client that has received an MC_JOIN or MC_LEAVE for the same Channel ID with a greater MC_STATE Sequence Number MUST ignore the MC_LEAVE frame.
 
-Otherwise, the client MUST leave the channel according to the After Packet Number field and send an MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.
+Otherwise, the client MUST leave the channel immediately and send an MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.
 
 ## MC_INTEGRITY {#channel-integrity-frame}
 
@@ -838,24 +864,30 @@ Max Joined Count is the count of channels that are allowed to be joined concurre
 
 ## MC_RETIRE {#channel-retire-frame}
 
+An MC_RETIRE frame retires a channel by Channel ID and causes the client
+to discard any state associated with that channel.
+
 MC_RETIRE frames are formatted as shown in {{fig-mc-channel-retire-format}}.
 
 ~~~
 MC_RETIRE Frame {
   Type (i) = TBD-0a (experiments use 0xff3e80a),
   ID Length (8),
-  Channel ID (8..160),
-  After Packet Number (i)
+  Channel ID (8..160)
 }
 ~~~
 {: #fig-mc-channel-retire-format title="MC_RETIRE Frame Format"}
 
-Retires a channel by ID, discarding any state associated with it.   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't have a coherent sequence number.)
-If After Packet Number is nonzero and the channel is joined and has received any data, the channel will be retired after receiving that packet or a higher valued number, otherwise it will be retired immediately.
+MC_RETIRE frames contain the following fields:
 
-After receiving an MC_RETIRE and retiring a channel, the client MUST send a new MC_STATE frame with reason RETIRED to the server.
+* ID Length: The length in bytes of the Channel ID field.
 
-If the client is still joined in the channel that is being retired, it MUST also leave it. If a channel is left this way, it does not need to send an additional MC_STATE frame with state LEFT, as state RETIRED also implies the channel was left.
+* Channel ID: The channel ID for the channel that the client is requested to leave.
+
+After receiving an MC_RETIRE frame, the client MUST retire the channel immediately and send an MC_STATE frame with State RETIRED and Reason Code REQUESTED_BY_SERVER.
+
+If the client is still joined to the channel that is being retired, it MUST also leave the channel.
+In this case, the client does not send a separate MC_STATE frame with State LEFT, as State RETIRED also implies that the client has left the channel.
 
 ## MC_STATE {#client-channel-state-frame}
 
@@ -1016,8 +1048,13 @@ For this situation, note that the Session ID is a variable length integer, and t
 
 ### Datagrams
 
-DATAGRAM frames ({{RFC9221}}) can be carried in multicast channels, and can be a good way to deliver popular content to receivers.
-Doing so can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.
+DATAGRAM frames in channel packets are subject to the max_datagram_frame_size transport parameter defined in {{RFC9221}} on each associated QUIC connection.
+A server MUST NOT send MC_JOIN to a client for a channel that carries DATAGRAM frames unless that client advertised max_datagram_frame_size with a non-zero value.
+
+A server MUST NOT send MC_JOIN to a client for a channel if the server expects that channel to carry DATAGRAM frames larger than the max_datagram_frame_size value advertised by that client.
+If the server later sends larger DATAGRAM frames on that channel, clients whose advertised max_datagram_frame_size is exceeded will process this as specified by {{RFC9221}}, which can result in termination of their associated QUIC connections.
+
+Using DATAGRAM frames can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.
 
 However, at the time of this writing (version -05 of {{I-D.draft-ietf-masque-h3-datagram}}) multicast channels generally cannot deliver HTTP/3 datagrams, including WebTransport datagrams (version -02 of {{I-D.draft-ietf-webtrans-http3}}), since the demuxing of WebTransport datagrams uses a Session ID based on a client-specific value (the HTTP/3 Session ID comes from the Stream ID of the client-initiated stream that issued the initial extended CONNECT request).
 
@@ -1026,6 +1063,15 @@ It is therefore hoped that an extension or revision to WebTransport and HTTP/3 d
 Such a value could for instance be sent in an HTTP/3 response header, and as long as it is unique within the connection and avoids collision with any client-initiated stream ID values, it could still be used to multiplex data associated with different HTTP/3 traffic and different WebTransport sessions carried on the same connection.
 Then by choosing the same server-chosen session ID for all the connections, the server would be able to use the same channel to carry the identical complete datagrams, including the server-chosen Session ID, to multiple receivers that the server asks to join the same channel.
 Such a change could either replace the current client-chosen definition for Session ID in server-to-client datagrams, or could add new HTTP/3 frame types that allow a server-chosen Session ID when the client has advertised support for this extended functionality.
+
+## Moving Clients Between Channels {#moving-clients-between-channels}
+
+MC_LEAVE and MC_RETIRE take effect immediately when processed by the receiver.
+These frames do not provide a mechanism for draining a channel up to a packet-number boundary.
+
+A server that wants to minimize loss when moving receivers away from a channel SHOULD stop scheduling new data on the old channel before sending MC_LEAVE or MC_RETIRE, or provide any required replacement data over the associated unicast connection or another channel.
+
+For example, when switching receivers from one channel to another, a server can stop sending new application data that is important for those receivers on the old channel, send any transition data on the unicast connection or the new channel, and then send MC_LEAVE or MC_RETIRE for the old channel.
 
 ## Graceful Degradation {#graceful-degradation}
 
