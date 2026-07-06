@@ -568,7 +568,12 @@ To minimize the amount of additional packets sent on a multicast channel when re
 
 Termination of the unicast connection behaves as described in {{Section 10 of RFC9000}}, with the following notable differences:
 
-* On the client side, termination of the unicast connection means that it MUST leave all multicast channels and discard any state associated with them. Servers MAY stop sending to multicast channels if there are no unicast connections left that are associated with them.
+* On the client side, if the associated unicast connection is terminated for any reason, including receipt or transmission of a CONNECTION_CLOSE frame, all multicast channel state associated with that connection MUST be discarded.
+If the client is joined to any multicast channels for that connection, it MUST leave those channels.
+Connection termination does not require the client to send MC_STATE frames for the affected channels.
+After the unicast connection is terminated, MC_STATE frames cannot be delivered on that connection.
+
+* The server MUST NOT rely on receiving per-channel leave or retire state for cleanup.
 
 * For determining the liveness of a connection, the client MUST only consider packets received on the unicast connection. Any packets received on a multicast channel MUST NOT be used to reset a timer checking if a potentially specified max_idle_timeout has been reached. If the unicast connection becomes idle, as described in {{Section 10.1 of RFC9000}}, the client MUST terminate the connection as described above.
 
