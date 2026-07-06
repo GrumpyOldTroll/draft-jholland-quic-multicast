@@ -417,19 +417,19 @@ Table of Contents
    MC_EXTENSION_ERROR.
 
    The Hash Algorithm List field is in order of preference, with the
-   most preferred value first.  It contains values from the Named
-   Information Hash Algorithm Registry.  It lists the hash algorithms
-   the client is willing to use to check integrity of data in multicast
-   channels.
-
-   A server MUST NOT send an MC_ANNOUNCE to this client for a channel
-   using a hash algorithm that was not included in the Hash Algorithm
-   List.  If the server sends such an MC_ANNOUNCE, the client SHOULD
-   treat it as a connection error of type MC_EXTENSION_ERROR:
+   most preferred value first.  It lists the hash algorithms the client
+   is willing to use to check integrity of data in multicast channels.
+   It contains values from the Named Information Hash Algorithm
+   Registry:
 
    *  https://www.iana.org/assignments/named-information/named-
       information.xhtml#hash-alg (https://www.iana.org/assignments/
       named-information/named-information.xhtml#hash-alg)
+
+   A server MUST NOT send an MC_ANNOUNCE to this client for a channel
+   using a hash algorithm that was not included in the Hash Algorithm
+   List.  If the server sends such an MC_ANNOUNCE, the client SHOULD
+   treat it as a connection error of type MC_EXTENSION_ERROR.
 
 4.  Extension Overview
 
@@ -471,7 +471,7 @@ Table of Contents
    any connection IDs that might collide with channel IDs.  MC_KEY
    frames provide the secrets necessary to decode the payload of packets
    in the channel.  Figure 2 shows the states a channel has from the
-   clients point of view.
+   client's point of view.
 
    Joining a channel after receiving an MC_JOIN frame is OPTIONAL for
    clients.  Client responses to join, leave, and retire requests are
@@ -534,7 +534,7 @@ Table of Contents
    - Nothing preventing a join is active (e.g. a hold-down timer,
      administrative blocking, etc.)
 
-         Figure 2: States a channel from the clients point of view.
+        Figure 2: States a channel from the client's point of view.
 
    When the server has asked the client to join a channel and has not
    received any MC_STATE frames Section 10.9 with State DECLINED_JOIN,
@@ -866,7 +866,7 @@ Table of Contents
    aborting the connection, either by increasing its MAX_DATA as needed
    to keep up with received multicast packets or by dropping the packet
    and leaving the channel (resulting in unicast fallback).  If a server
-   detects that a clients MAX_DATA is about to be exceeded, it MUST
+   detects that a client's MAX_DATA is about to be exceeded, it MUST
    instruct the client to leave channels to prevent any further MAX_DATA
    violations.
 
@@ -946,7 +946,7 @@ Table of Contents
    Under sustained persistent loss that exceeds client-configured
    thresholds, the client SHOULD reduce its Max Rate and tell the server
    via MC_LIMITS frames, which also will result in the server
-   instructing the client to leave channels until the clients aggregate
+   instructing the client to leave channels until the client's aggregate
    rate is below its advertised Max Rate.  Under a higher threshold of
    sustained persistent loss, the client also SHOULD leave channels,
    using an MC_STATE(LEFT) frame with the "HIGH_LOSS" reason, as well as
@@ -1014,7 +1014,7 @@ Table of Contents
    arrives at the client.
 
    To minimize the amount of additional packets sent on a multicast
-   channel when retransmiting frames, the server SHOULD use Forward
+   channel when retransmitting frames, the server SHOULD use Forward
    Erasure Correction (FEC) techniques following guidelines from
    [I-D.draft-michel-quic-fec].  Instead of retransmitting the frames
    directly, the server sends FEC repair packets on the multicast
@@ -1069,8 +1069,8 @@ Table of Contents
    binding or because the UE has changed to a different network, the
    client properties might change.  For example, the client might switch
    from a network that supports both IPv6 and IPv4 multicast to a
-   network that only support IPv4.  As such, it MUST immediately send an
-   MC_LIMITS frame after it has noticed that it migrated.  The client
+   network that only supports IPv4.  As such, it MUST immediately send
+   an MC_LIMITS frame after it has noticed that it migrated.  The client
    MAY rejoin any previously joined channels, if its limits still allow
    it to.  It MUST send MC_STATE(LEFT) frames with reason
    LIMIT_VIOLATION for any channels it does not rejoin.
@@ -1216,7 +1216,7 @@ Table of Contents
       when receipt of out-of-order channel packets causes an immediate
       MC_ACK.  This field has the same semantics as the Reordering
       Threshold field of ACK_FREQUENCY ([I-D.ietf-quic-ack-frequency]),
-      except that it applies only to this channels packet number space
+      except that it applies only to this channel's packet number space
       and to MC_ACK frames for this channel.
 
    A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame
@@ -1228,7 +1228,8 @@ Table of Contents
 
    If a client receives an MC_ANNOUNCE frame with a Group IP that is not
    within the SSM destination address range as outlined in [RFC4607], it
-   SHOULD close the connection with reason MC_EXTENSION_ERROR.
+   SHOULD close the connection with a connection error of type
+   MC_EXTENSION_ERROR.
 
    As all the properties in MC_ANNOUNCE frames are immutable during the
    lifetime of a channel, a server SHOULD NOT send an MC_ANNOUNCE frame
@@ -1768,8 +1769,8 @@ Table of Contents
    PATH_CHALLENGE).
 
    A client that receives a frame in an authenticated channel packet
-   that is not permitted SHOULD close the connection with reason
-   MC_EXTENSION_ERROR.
+   that is not permitted SHOULD close the connection with a connection
+   error of type MC_EXTENSION_ERROR.
 
    For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING,
    MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID,
@@ -1892,7 +1893,7 @@ Table of Contents
    [I-D.draft-ietf-webtrans-http3].
 
    Popular data that can be sent with server-initiated streams and
-   carried over WebTransport is a good use cases for multicast transport
+   carried over WebTransport is a good use case for multicast transport
    because the same server-to-client data can be pushed to many
    different receivers on a multicast channel.
 
@@ -1933,14 +1934,13 @@ Table of Contents
    based applications, since a datagram API in a QUIC application offers
    similar functionality to a UDP API for sending and receiving packets.
 
-   However, at the time of this writing (version -05 of
-   [I-D.draft-ietf-masque-h3-datagram]) multicast channels generally
-   cannot deliver HTTP/3 datagrams, including WebTransport datagrams
-   (version -02 of [I-D.draft-ietf-webtrans-http3]), since the demuxing
-   of WebTransport datagrams uses a Session ID based on a client-
-   specific value (the HTTP/3 Session ID comes from the Stream ID of the
-   client-initiated stream that issued the initial extended CONNECT
-   request).
+   However, at the time of this writing, HTTP/3 datagrams [RFC9297],
+   including WebTransport datagrams as defined by
+   [I-D.draft-ietf-webtrans-http3], generally cannot be delivered over
+   multicast channels, since the demuxing of WebTransport datagrams uses
+   a Session ID based on a client-specific value (the HTTP/3 Session ID
+   comes from the Stream ID of the client-initiated stream that issued
+   the initial extended CONNECT request).
 
    It is therefore hoped that an extension or revision to WebTransport
    and HTTP/3 datagrams can be adopted in a future version of their
@@ -2057,7 +2057,7 @@ Table of Contents
    Multicast channels at the network layer are addressed with a source
    IP, a destination group IP address, and a destination UDP port.
 
-   These offers a number of potential address collision considerations
+   This creates a number of potential address collision considerations
    that are worth mentioning:
 
    1.  If properties change for the data being used in a channel (for
@@ -2257,10 +2257,6 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-   [RFC8446]  Rescorla, E., "The Transport Layer Security (TLS) Protocol
-              Version 1.3", RFC 8446, DOI 10.17487/RFC8446, August 2018,
-              <https://www.rfc-editor.org/rfc/rfc8446>.
-
    [RFC9000]  Iyengar, J., Ed. and M. Thomson, Ed., "QUIC: A UDP-Based
               Multiplexed and Secure Transport", RFC 9000,
               DOI 10.17487/RFC9000, May 2021,
@@ -2280,13 +2276,6 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc9221>.
 
 15.2.  Informative References
-
-   [I-D.draft-ietf-masque-h3-datagram]
-              Schinazi, D. and L. Pardue, "HTTP Datagrams and the
-              Capsule Protocol", Work in Progress, Internet-Draft,
-              draft-ietf-masque-h3-datagram-11, 17 June 2022,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-masque-
-              h3-datagram-11>.
 
    [I-D.draft-ietf-webtrans-http3]
               Frindell, A., Kinnear, E., and V. Vasiliev, "WebTransport
@@ -2328,6 +2317,10 @@ Table of Contents
 
    [RFC9114]  Bishop, M., Ed., "HTTP/3", RFC 9114, DOI 10.17487/RFC9114,
               June 2022, <https://www.rfc-editor.org/rfc/rfc9114>.
+
+   [RFC9297]  Schinazi, D. and L. Pardue, "HTTP Datagrams and the
+              Capsule Protocol", RFC 9297, DOI 10.17487/RFC9297, August
+              2022, <https://www.rfc-editor.org/rfc/rfc9297>.
 
 Acknowledgments
 
