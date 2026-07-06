@@ -268,8 +268,7 @@ MC_KEY frames provide the secrets necessary to decode the payload of packets in 
 {{fig-client-channel-states}} shows the states a channel has from the clients point of view.
 
 Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients.
-If a client decides not to join after being asked to do so, it sends an MC_STATE ({{client-channel-state-frame}}) frame with State DECLINED_JOIN and an appropriate Reason Code.
-This is a state update for the channel even though the client does not join the multicast channel.
+Client responses to join, leave, and retire requests are described in {{client-response}}.
 
 The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left, declined to join or retired fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS ({{client-limits-frame}}) frame the server received.
 
@@ -318,8 +317,8 @@ In this case, this could happen without any involvement of the client-side appli
 ~~~
 {: #fig-client-channel-states title="States a channel from the clients point of view."}
 
-When the server has asked the client to join a channel and has not received any MC_STATE frames {{client-channel-state-frame}} with state DECLINED_JOIN, LEFT or RETIRED, it also sends MC_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing the packet.
-A client MUST NOT decode packets for a channel for which it has not received an applicable MC_ANNOUNCE ({{channel-announce-frame}}), or for which it has not received a matching packet hash in an MC_INTEGRITY ({{channel-integrity-frame}}) frame, or for which it has not received an applicable MC_KEY frame {{channel-key-frame}}.
+When the server has asked the client to join a channel and has not received any MC_STATE frames {{client-channel-state-frame}} with State DECLINED_JOIN, LEFT, or RETIRED, it also sends MC_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing channel packets.
+A client MUST NOT decode a channel packet unless it has received an applicable MC_ANNOUNCE ({{channel-announce-frame}}) frame and an applicable MC_KEY ({{channel-key-frame}}) frame for the channel, and has received a matching packet hash in an MC_INTEGRITY frame for that packet.
 
 {{fig-frame-exchange}} shows the frames that are being exchanged about and over a channel during the lifetime of an example channel.
 
@@ -366,16 +365,89 @@ MC_STATE(RETIRED)  --->
 
 TODO: incorporate server-side state diagram and explanation, latest proposed sketch at <https://github.com/GrumpyOldTroll/draft-jholland-quic-multicast/issues/62>
 
-## Client Response
+## Channel Key Management {#channel-key-management}
 
-The client sends back information about how it has responded to the server's requests to join and leave channels in MC_STATE ({{client-channel-state-frame}}) frames.
-MC_STATE frames are only sent for channels after the server has requested the client to join the channel, and are thereafter sent any time the state changes.
+Multicast channel keys are channel-scoped rather than connection-scoped.
+The same channel secret will be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends, or miss key updates while not joined.
+The regular QUIC Key Update mechanism ({{Section 6 of RFC9001}}) can not cover such cases.
+A server uses MC_KEY frames ({{channel-key-frame}}) to provide authorized receivers with channel packet protection secrets, to identify the packet number from which each secret applies, and to rotate channel keys independently of the unicast connection's 1-RTT keys.
 
-Clients that receive and decode data on a multicast channel send acknowledgements for the data on the unicast connection using MC_ACK ({{channel-ack-frame}}) frames.
+Each channel key generation is identified by a Key Sequence Number.
+A server MUST generate continuous Key Sequence Number values for each channel.
+The first MC_KEY frame for a channel MAY use any non-zero Key Sequence Number.
+An MC_KEY frame MUST NOT use Key Sequence Number 0.
 
-A server can determine if a client receives packets for a multicast channel if it receives MC_ACK frames associated with that channel. Accordingly, a client MUST send an MC_ACK frame as soon as possible after receiving the first packets on a newly joined channel.
-As such, it is in general up to the server to decide on the time after which it deems a client to be unable to receive packets on a given channel and take appropriate steps, e.g. sending an MC_LEAVE frame to the client.
-Note that clients willing to join a channel SHOULD remain joined to the channel even if they receive no channel data for an extended period, to enable multicast-capable networks to perform popularity-based admission control for multicast channels.
+A client that is not joined to a channel might not receive every MC_KEY frame for that channel, and can therefore observe gaps in Key Sequence Number values.
+While joined, a client can also observe gaps due to packet loss or reordering.
+
+Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in channel 1-RTT packets, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1.
+A client MUST NOT attempt to decrypt a channel packet unless it has an applicable channel secret for that packet number and Key Phase.
+If no applicable secret is available, the client MAY retain the packet briefly in case an applicable MC_KEY frame arrives later, subject to the client's buffering limits.
+The client MUST NOT acknowledge such a packet in an MC_ACK frame unless it later becomes able to process the packet.
+
+If a joined client receives channel packets for which it has no applicable channel secret, and an applicable MC_KEY frame does not arrive before the client discards those packets, the client SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+If a client receives two different secrets with the same Channel ID and Key Sequence Number, it SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.
+
+Servers SHOULD update channel secrets regularly.
+To limit the exposure of data after receivers have left a channel or lost authorization, servers SHOULD periodically send key updates using only unicast.
+
+Clients MUST delete old channel secrets and the keys derived from them after receiving a newer applicable MC_KEY frame.
+Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.
+A client MAY retain an old secret briefly to process reordered or delayed packets.
+For this experimental specification, it is RECOMMENDED that clients delete old secrets 10 seconds after receiving a newer secret, or after 3 seconds without receiving any packet that uses the old secret, whichever is shorter.
+Clients MUST NOT retain old channel secrets for more than 60 seconds after receiving a newer applicable MC_KEY frame.
+
+The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
+One of the target discoveries for experimental evaluation is to determine good default delay values to use, and to understand whether there are use cases that would benefit from a negotiation between server and client to determine the delays to use dynamically.
+(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)
+
+## Client Response {#client-response}
+
+A client reports how it has responded to server requests to join, leave, or retire channels using MC_STATE ({{client-channel-state-frame}}) frames.
+MC_STATE frames are sent whenever the client's state for the channel changes.
+
+If a client joins a channel after receiving an MC_JOIN frame, it MUST send an MC_STATE frame with State JOINED.
+If the client does not join, it MUST send an MC_STATE frame with State DECLINED_JOIN and an appropriate Reason Code.
+Declining an MC_JOIN request is a state change for the channel even though the client does not join the multicast channel.
+
+After leaving a channel in response to an MC_LEAVE frame, a client MUST send an MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.
+
+After retiring a channel in response to an MC_RETIRE frame, a client MUST send an MC_STATE frame with State RETIRED and Reason Code REQUESTED_BY_SERVER.
+Retiring a joined channel also leaves that channel; the client does not send a separate MC_STATE frame with State LEFT.
+
+## Acknowledging Channel Packets {#channel-packet-acknowledgment}
+
+Clients that receive and decode packets on a multicast channel acknowledge those packets on the unicast connection using MC_ACK ({{channel-ack-frame}}) frames.
+
+An MC_ACK frame acknowledges packets only in the packet number space of the channel identified by its Channel ID.
+
+MC_ACK generation is controlled by the MC_ACK policy advertised in the MC_ANNOUNCE frame for the corresponding channel.
+The Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold fields of MC_ANNOUNCE apply separately to each multicast channel packet number space.
+
+A client SHOULD send an MC_ACK for a channel when either:
+
+* the number of ack-eliciting channel packets received since the last MC_ACK for that channel is greater than the Ack-Eliciting Threshold; or
+
+* Max ACK Delay has elapsed and at least one ack-eliciting channel packet has been received since the last MC_ACK for that channel.
+
+A client MAY send an MC_ACK earlier than required by these rules.
+
+A client MUST send the first MC_ACK for a newly joined channel without intentional delay after receiving and processing an ack-eliciting packet on that channel.
+
+A client SHOULD use the Reordering Threshold to determine when receipt of out-of-order channel packets causes an immediate MC_ACK, following the behavior defined for ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), applied to the channel packet number space.
+
+All channel packets that require acknowledgment MUST be acknowledged at least once.
+When MC_ACK frames are sent less frequently, clients need to retain ACK range information long enough to avoid permanently omitting acknowledgment of received channel packets.
+
+ACK_FREQUENCY and IMMEDIATE_ACK frames defined by {{I-D.ietf-quic-ack-frequency}} do not affect MC_ACK generation unless a future extension explicitly defines such behavior.
+The ACK policy for MC_ACK frames is instead defined by the MC_ANNOUNCE frame for the corresponding channel.
+
+After sending ack-eliciting channel packets, a server can determine that a client is receiving packets for a multicast channel when it receives MC_ACK frames for that channel.
+It is up to the server to decide how long to wait before treating the absence of MC_ACK frames as evidence that the client is not receiving packets on the channel, and to take appropriate steps such as sending an MC_LEAVE frame.
+
+A client that is willing to remain joined to a channel SHOULD NOT leave the channel solely because it receives no channel data for an extended period.
+This enables multicast-capable networks to perform popularity-based admission control for multicast channels.
 
 ## Data Carried in Channels
 
@@ -456,7 +528,8 @@ The server MUST NOT send new MC_JOIN frames that would cause the requested set t
 
 Both the server and the client perform congestion control operations, so that according to the guidelines in {{Section 4.1 of RFC8085}}, mechanisms for both feedback-based and receiver-driven styles of congestion control are present and operational.
 
-All frames defined by this document other than MC_ACK are ack-eliciting.  Packets containing those frames are considered in-flight and count toward congestion control limits as described in {{RFC9002}}.
+All frames defined by this document other than MC_ACK are ack-eliciting.
+Packets containing those frames are considered in-flight and count toward congestion control limits as described in {{RFC9002}}.
 MC_ACK frames are treated the same as ACK frames for congestion control and loss recovery purposes and do not make a packet ack-eliciting and thus a packet containing only them does not count as in-flight.
 
 The server maintains a full view of the traffic received by the client via the MC_ACK ({{channel-ack-frame}}) frames and ACK frames it receives, and can detect loss experienced by the client.
@@ -507,7 +580,6 @@ Connection termination does not require the client to send MC_STATE frames for t
 After the unicast connection is terminated, MC_STATE frames cannot be delivered on that connection.
 
 * The server MUST NOT rely on receiving per-channel leave or retire state for cleanup.
-Servers MAY stop sending to multicast channels if there are no unicast connections left that are associated with them.
 
 * For determining the liveness of a connection, the client MUST only consider packets received on the unicast connection. Any packets received on a multicast channel MUST NOT be used to reset a timer checking if a potentially specified max_idle_timeout has been reached. If the unicast connection becomes idle, as described in {{Section 10.1 of RFC9000}}, the client MUST terminate the connection as described above.
 
@@ -610,26 +682,10 @@ A server MUST NOT send an MC_JOIN frame for a channel unless it has sent, or is 
 
 ## MC_KEY {#channel-key-frame}
 
-Multicast channel keys are channel-scoped rather than connection-scoped.
-The same channel secret will be shared by receivers on many different QUIC connections, and clients can join a channel after it has started or leave before it ends, or miss key updates while not joined.
-The regular QUIC Key Update mechanism ({{Section 6 of RFC9001}}) can not cover such cases.
-Therefore, the server needs an explicit mechanism to provide the current channel secret to authorized receivers, identify the packet number from which that secret applies, and rotate channel keys independently of the unicast connection's 1-RTT keys.
-
 An MC_KEY frame (type=TBD-01) is sent from server to client, either with the unicast connection or in an existing joined multicast channel.
-The MC_KEY frame contains an updated secret that is used to generate the keying material for the payload of 1-RTT packets received on the multicast channel.
+It carries a channel packet protection secret and identifies the packet number from which that secret applies.
 
-A server can send a new MC_KEY frame with a sequence number increased by one.
-A server MUST generate continuous sequence numbers, and MAY start at a value higher than 0.
-Note that while not joined, a client will not receive updates to channel secrets, and thus may see jumps in the Key Sequence Number values between MC_KEY frames.
-However, while joined the Key Sequence Numbers in the MC_KEY frames MUST increment by 1 for each new secret.
-
-Secrets with even-valued Key Sequence Numbers have a Key Phase of 0 in the 1-RTT packet, and secrets with odd-valued Key Sequence Numbers have a Key Phase of 1 in the 1-RTT packet.
-Secrets with a Key Phase indicating an unknown key SHOULD be discarded without attempting to decrypt them.
-(An unknown key might happen after loss of the latest MC_KEY frame, so that packets on a channel have an updated Key Phase starting at a particular packet number, but the client does not yet know about the key change.)
-
-Should a client receive two different Keys with the same Key Sequence Number and Channel ID, e.g. one over the unicast connection and one over the multicast channel, it SHOULD close the connection with reason MC_EXTENSION_ERROR.
-
-It is RECOMMENDED that servers send regular secret updates.
+A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.
 
 MC_KEY frames are formatted as shown in {{fig-mc-channel-key-format}}.
 
@@ -650,32 +706,15 @@ MC_KEY frames contain the following fields:
 
   * ID Length: The length in bytes of the Channel ID field.
   * Channel ID: The channel ID for the channel associated with this frame.
-  * Key Sequence Number: Increases by 1 each time the secret for the channel is changed by the server.  If there is a gap in sequence numbers due to reordering or retransmission of packets, on receipt of the older MC_KEY frame, the client MUST apply the secret contained and the packet numbers on which it applies as if they arrived in order.
-  * From Packet Number: The values in this MC_KEY frame apply only to packets starting at From Packet Number and continuing until they are overwritten by a new MC_KEY frame with a higher From Packet Number.  The Packet Number MUST never decrease with an increased Key Sequence Number.
+  * Key Sequence Number: The key generation identified by this frame.
+  This value MUST NOT be 0.
+  * From Packet Number: The first channel packet number for which the secret in this frame is applicable.
+  The secret applies to channel packets with packet numbers greater than or equal to From Packet Number and with the Key Phase corresponding to this Key Sequence Number as described in {{channel-key-management}}, until superseded by an MC_KEY frame for the same channel with a higher Key Sequence Number.
+  When the Key Sequence Number increases, the From Packet Number MUST increase.
   * Secret Length: Provides the length of the secret field.
   * Secret: A channel packet protection secret.
   Packet protection keys and IVs for channel packets are derived from this secret using the cipher suite identified in the corresponding MC_ANNOUNCE frame and the `"quic key"` and `"quic iv"` labels, as described in {{Section 5.1 of RFC9001}}.
   This secret is not used to derive the header protection key.
-
-
-
-To maintain forward secrecy and prevent malicious clients from decrypting packets long after they have left or were removed from the unicast connection, servers SHOULD periodically send key updates using only unicast.
-
-Clients MUST delete old secrets and the keys derived from them after receiving new MC_KEY frames.
-Deleting old keys prevents later compromise of a client from discovering an otherwise uncompromised key, thus improving the chances of achieving forward secrecy for data sent before a key rotation.
-
-Client implementations MAY institute a delay before deleting secrets to allow for decoding of packets for the channel that arrive shortly after a new MC_KEY frame.
-For this experimental specification, it is RECOMMENDED that clients delete old keys 10 seconds after receiving a new key or after 3 seconds that elapse without receiving any new data to decode with the old key, whichever is shorter.
-Clients MUST NOT delay more than 60 seconds before deleting the old keys.
-
-The delay values for this specification are somewhat arbitrary and allow for implementation-dependent experimentation.
-One of the target discoveries for experimental evaluation is to determine good default delay values to use, and to understand whether there are use cases that would benefit from a negotiation between server and client to determine the delays to use dynamically.
-(A poor delay choice results in either overhead from dropping packets instead of decoding them with old keys for too short a delay or in extra forward secrecy exposure time for too long a delay, and the purpose of the delays are to bound the forward secrecy exposure without inducing unreasonable overhead.)
-
-The From Packet Number is used to indicate the starting packet number ({{Section 17.1 of RFC9000}}) of the 1-RTT packets for which the secret contained in an MC_KEY frame is applicable.
-This secret is applicable to all future packets until it is updated by a new MC_KEY frame.
-
-A server SHOULD NOT send MC_KEY frames for channels except those the client has joined or will be imminently asked to join.
 
 ## MC_JOIN {#channel-join-frame}
 
@@ -706,15 +745,17 @@ MC_JOIN frames contain the following fields:
 * Channel ID: The channel ID for the channel that the client is requested to join.
 
 * MC_LIMITS Sequence Number: The most recent Client Limits Sequence Number processed by the server when constructing this join request.
+A value of 0 indicates that no MC_LIMITS frames have been processed by the server.
 
 * MC_STATE Sequence Number: The most recent Client Channel State Sequence Number for this channel processed by the server when constructing this join request.
+A value of 0 indicates that no MC_STATE frames have been processed by the server.
 
 * MC_KEY Sequence Number: The Key Sequence Number for the channel key generation that the server expects the client to use when joining the channel.
+This field MUST NOT be 0; a client that receives an MC_JOIN with an MC_KEY Sequence Number of 0 MUST treat this as a connection error of type MC_EXTENSION_ERROR.
 
 If a client receives an MC_JOIN for a channel for which it has not received both an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame, it MUST send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
 
-If the client joins, it MUST send an MC_STATE frame with State JOINED.
-If the client does not join, it MUST send an MC_STATE frame with State DECLINED_JOIN and an appropriate Reason Code.
+Client responses to MC_JOIN are described in {{client-response}}.
 
 ## MC_LEAVE {#channel-leave-frame}
 
@@ -740,24 +781,26 @@ MC_LEAVE frames contain the following fields:
 
 * Channel ID: The channel ID for the channel that the client is requested to leave.
 
-* MC_STATE Sequence Number: The most recent Client Channel State Sequence Number processed by the server for this channel.
+* MC_STATE Sequence Number: The most recent Client Channel State Sequence Number for this channel processed by the server when constructing this leave request.
+A value of 0 indicates that no MC_STATE frames have been processed by the server.
 This value allows the client to ignore leave requests that are based on stale client channel state.
 
 A client that receives an MC_LEAVE for a channel that it has already left, declined to join, or retired MUST ignore the frame.
 
 A client that has received an MC_JOIN or MC_LEAVE for the same Channel ID with a greater MC_STATE Sequence Number MUST ignore the MC_LEAVE frame.
 
-Otherwise, the client MUST leave the channel immediately and send an MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.
+Otherwise, the client MUST leave the channel immediately.
+Client responses to MC_LEAVE are described in {{client-response}}.
 
 ## MC_INTEGRITY {#channel-integrity-frame}
 
-MC_INTEGRITY frames are sent from server to client and are used to convey packet hashes for validating the integrity of packets received over the multicast channel as described in {{packet-hashes}}.
+MC_INTEGRITY frames (types TBD-04 and TBD-05; experiments use 0xff3e804 and 0xff3e805) are sent from server to client and are used to convey packet hashes for validating the integrity of packets received on the multicast channel.
 
 MC_INTEGRITY frames are formatted as shown in {{fig-mc-channel-integrity-format}}.
 
 ~~~
 MC_INTEGRITY Frame {
-  Type (i) = TBD-04..TBD-05 (experiments use 0xff3e804/0xff3e805),
+  Type (i) = TBD-04..TBD-05 (experiments use 0xff3e804 and 0xff3e805),
   ID Length (8),
   Channel ID (8..160),
   Packet Number Start (i),
@@ -767,47 +810,38 @@ MC_INTEGRITY Frame {
 ~~~
 {: #fig-mc-channel-integrity-format title="MC_INTEGRITY Frame Format"}
 
+MC_INTEGRITY frames contain the following fields:
 
-For type TBD-05, Packet Hashes Length is present and is the length in bytes of the Packet Hashes field.
-For TBD-04, Packet Hashes Length is not present and the Packet Hashes field extends to the end of the packet.
+* ID Length: The length in bytes of the Channel ID field.
 
-The Packet Hashes field contains a sequence of packet hashes.
-The first hash in the Packet Hashes list is a hash of a 1-RTT packet with the Channel ID equal to the Channel ID in the MC_INTEGRITY frame and packet number equal to the Packet Number Start field.
-Subsequent hashes refer to the packets for that channel with packet numbers increasing by one.
+* Channel ID: The channel ID for the channel whose packet hashes are being provided.
 
-Each hash has its length determined by the Integrity Hash Algorithm in the corresponding MC_ANNOUNCE frame.
-The Packet Hashes field MUST contain a non-zero integer multiple of of the hash length for the channel.
-A client that receives an MC_INTEGRITY frame whose Packet Hashes field length is zero, or whose Packet Hashes field length is not an integer multiple of the hash length for the channel, MUST treat this as a connection error of type MC_EXTENSION_ERROR.
+* Packet Number Start: The packet number of the first channel packet covered by the Packet Hashes field.
 
-See {{packet-hashes}} for a description of the packet hash calculation.
+* Packet Hashes Length: The length in bytes of the Packet Hashes field.
+  This field is present only when the frame type is TBD-05.
+
+* Packet Hashes: A sequence of packet hashes.
+  The first hash corresponds to the packet with packet number Packet Number Start in the packet number
+  space of the channel identified by Channel ID.
+  Each subsequent hash corresponds to the next packet number in that packet number space.
+
+For frames of type TBD-04, Packet Hashes Length is not present and the
+Packet Hashes field extends to the end of the packet.
+Therefore, an MC_INTEGRITY frame of type TBD-04 MUST be the final frame in the packet.
+
+Each hash has the length determined by the Integrity Hash Algorithm in the corresponding MC_ANNOUNCE frame.
+The Packet Hashes field MUST contain a non-zero integer multiple of the hash length for the channel.
+
+A client that receives an MC_INTEGRITY frame whose Packet Hashes field is empty, or whose Packet Hashes field length is not an integer multiple of the hash length for the channel, MUST treat this as a connection error of type MC_EXTENSION_ERROR.
+
+Packet hashes are calculated as described in {{packet-hashes}}.
 
 ## MC_ACK {#channel-ack-frame}
 
-The MC_ACK frame (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) is an extension of the ACK frame defined by {{RFC9000}}. It is used to acknowledge packets that were sent on multicast channels. If the frame type is TBD-07, MC_ACK frames also contain the sum of QUIC packets with associated ECN marks received on the connection up to this point.
-
-MC_ACK generation is controlled by the MC_ACK policy advertised in the MC_ANNOUNCE frame of the corresponding channel.
-The Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold fields of MC_ANNOUNCE apply separately to each multicast channel packet number space.
-
-A client SHOULD send an MC_ACK for a channel when either:
-
-* the number of ack-eliciting channel packets received since the last MC_ACK for that channel is greater than the Ack-Eliciting Threshold;
-
-  or
-
-* Max ACK Delay has elapsed and at least one ack-eliciting channel packet has been received since the last MC_ACK for that channel.
-
-A client MAY send an MC_ACK earlier than required by these rules.
-A client MUST send the first MC_ACK for a newly joined channel without intentional delay after receiving ack-eliciting packets on that channel.
-
-A client SHOULD use the Reordering Threshold to determine when receipt of out-of-order channel packets causes an immediate MC_ACK, following the behavior defined for ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), applied to the channel packet number space.
-
-All channel packets that require acknowledgment MUST be acknowledged at least once.
-When MC_ACK frames are sent less frequently, clients need to retain ACK range information long enough to avoid permanently omitting acknowledgment of received channel packets.
-
-ACK_FREQUENCY and IMMEDIATE_ACK frames defined by {{I-D.ietf-quic-ack-frequency}} do not affect MC_ACK generation unless a future extension explicitly defines such behavior.
-The ACK policy for MC_ACK frames is instead defined by the MC_ANNOUNCE frame for the corresponding channel.
-
-(TODO: Would there be value in reusing the multiple packet number space version of ACK_MP from {{Section 12.2 of I-D.draft-ietf-quic-multipath}}, defining channel ID as the packet number space?  at 2022-05 they're identical except the Channel ID and types.)
+MC_ACK frames (types TBD-06 and TBD-07; experiments use 0xff3e806..0xff3e807) are sent by a client to acknowledge packets received on a multicast channel.
+MC_ACK extends the ACK frame defined by {{Section 19.3 of RFC9000}} by adding a Channel ID.
+Frames of type TBD-07 also contain ECN counts.
 
 MC_ACK frames are formatted as shown in {{fig-mc-channel-ack-format}}.
 
@@ -825,6 +859,21 @@ MC_ACK Frame {
 }
 ~~~
 {: #fig-mc-channel-ack-format title="MC_ACK Frame Format"}
+
+MC_ACK frames contain the following fields:
+
+* ID Length: The length in bytes of the Channel ID field.
+
+* Channel ID: The channel ID for the channel whose packets are being acknowledged.
+
+* Largest Acknowledged: The largest packet number being acknowledged in the packet number space of the channel identified by Channel ID.
+
+* ACK Delay: The time delta between receipt of the largest acknowledged channel packet and transmission of this MC_ACK frame, encoded as described for ACK frames in {{Section 19.3 of RFC9000}}.
+
+* ACK Range Count, First ACK Range, and ACK Range: These fields have the same encoding and semantics as the corresponding fields of ACK frames defined by {{Section 19.3 of RFC9000}}, except that packet numbers refer to the packet number space of the channel identified by Channel ID.
+
+* ECN Counts: ECN counts for packets received on the channel, encoded as described for ACK frames with ECN counts in {{Section 19.3 of RFC9000}}.
+  This field is present only when the frame type is TBD-07.
 
 ## MC_LIMITS {#client-limits-frame}
 
@@ -892,12 +941,10 @@ MC_RETIRE frames contain the following fields:
 
 * ID Length: The length in bytes of the Channel ID field.
 
-* Channel ID: The channel ID for the channel that the client is requested to leave.
+* Channel ID: The channel ID for the channel that the client is requested to retire.
 
-After receiving an MC_RETIRE frame, the client MUST retire the channel immediately and send an MC_STATE frame with State RETIRED and Reason Code REQUESTED_BY_SERVER.
-
-If the client is still joined to the channel that is being retired, it MUST also leave the channel.
-If a channel is left this way, it does not need to send an additional MC_STATE frame with State LEFT, as State RETIRED also implies the channel was left.
+A client that processes an MC_RETIRE frame MUST retire the channel immediately and discard all state associated with that channel.
+Client responses to MC_RETIRE are described in {{client-response}}.
 
 ## MC_STATE {#client-channel-state-frame}
 
@@ -986,7 +1033,9 @@ In addition to the mechanisms used for retransmission described in {{Section 13.
 - Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission SHOULD only occur if the channel in question should still be joined/left/retired.
 - Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.
 - For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.
-- For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process.
+- For MC_INTEGRITY, a server MUST retransmit packet hashes that are still needed to authenticate channel packets that the server expects receivers to process.
+For this purpose, a packet hash is still needed while the corresponding channel packet is within the buffering interval implied by the channel's Max Authentication Delay, unless the server has channel-specific or application-specific information that receivers are no longer expected to buffer or process that packet.
+A server SHOULD NOT retransmit MC_INTEGRITY information for packets that it no longer expects receivers to buffer or process.
 The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
 Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absence is likely to cause receivers to exceed the Max Authentication Delay advertised for the channel.
 
@@ -1124,7 +1173,7 @@ Further, the use of multicast channels likely requires increased coordination be
 
 For large deployments, server implementations will often need to operate on separate devices from the ones generating the multicast channel packets, and will need to be designed accordingly.
 
-As several MC_ACKs can be bundled for efficiency purposes, servers SHOULD make sure that information contained in packets is stored and able to be retransmitted for a reasonable time. This SHOULD be at least the max_ack_delay of a channel plus half the RTT between client and server.
+Because multiple MC_ACK frames can be bundled for efficiency, servers SHOULD retain information needed for loss recovery for at least the channel's Max ACK Delay plus half the RTT between client and server.
 The MC_ACK policy advertised in MC_ANNOUNCE controls when clients send MC_ACK frames for a channel.
 Clients MAY send MC_ACK frames more frequently than this policy requires, but SHOULD avoid sending them less frequently.
 Servers should choose Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold values that balance uplink load against the need for timely loss, congestion, ECN, and liveness feedback.
@@ -1149,8 +1198,16 @@ Max Authentication Delay is a channel property because the amount of receiver bu
 For example, a low-latency media channel might require integrity information to arrive quickly, while a file-transfer or software-update channel might tolerate a larger authentication delay in exchange for lower unicast integrity traffic or larger integrity blocks.
 
 Servers SHOULD choose Max Authentication Delay values that are appropriate for the channel's media or application latency requirements and for expected receiver memory constraints.
-Servers SHOULD send and retransmit MC_INTEGRITY information so that packets can be authenticated within the advertised Max Authentication Delay under normal operating conditions.
+Servers SHOULD send and retransmit MC_INTEGRITY information so that, under normal operating conditions, receivers can authenticate packets within the advertised Max Authentication Delay.
+The exact scheduling of redundant transmission and retransmission is implementation-dependent, but the advertised Max Authentication Delay defines the default interval during which receivers are expected to retain unauthenticated packets.
 Clients MAY use local policy to impose a smaller buffering limit than the value advertised by the server, in which case they might discard unauthenticated packets or leave the channel.
+
+The usefulness of retransmitting MC_INTEGRITY information depends on whether receivers are still expected to have the corresponding multicast packets buffered.
+Once receivers are expected to have discarded a packet, retransmitting integrity information for that packet is unlikely to help those receivers process application data.
+
+This consideration is especially important when MC_INTEGRITY information is sent on the unicast connection and retransmitted for individual receivers.
+It is also important for channels carrying delay-sensitive unreliable data, such as DATAGRAM frames for real-time applications.
+For such channels, servers can reduce wasted work by sending integrity information redundantly near the original packet transmission and by avoiding late retransmission of integrity information after the packet's expected usefulness has expired.
 
 ## Spurious Channel Traffic
 
@@ -1160,6 +1217,7 @@ Such packets can be caused by corruption, loss or delay of control information, 
 
 A client MAY discard such packets without further processing.
 If spurious traffic is persistently received for an (S,G) used by one or more joined channels, and the traffic interferes with reception or causes excessive resource use, the client MAY leave the affected channels and send MC_STATE with State LEFT and Reason Code EXCESSIVE_SPURIOUS_TRAFFIC.
+
 
 # Security Considerations
 
