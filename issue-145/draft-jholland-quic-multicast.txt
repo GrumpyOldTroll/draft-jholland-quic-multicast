@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 6 January 2027                                                 
+Expires: 7 January 2027                                                 
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                             5 July 2026
+                                                             6 July 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 6 January 2027.
+   This Internet-Draft will expire on 7 January 2027.
 
 Copyright Notice
 
@@ -833,9 +833,7 @@ Table of Contents
       that connection.
 
    *  The server MUST NOT rely on receiving per-channel leave or retire
-      state for cleanup.  Servers MAY stop sending to multicast channels
-      if there are no unicast connections left that are associated with
-      them.
+      state for cleanup.
 
    *  For determining the liveness of a connection, the client MUST only
       consider packets received on the unicast connection.  Any packets
