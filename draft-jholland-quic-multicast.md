@@ -58,7 +58,6 @@ normative:
   IANA.tls-parameters:
   I-D.ietf-quic-ack-frequency:
   RFC8085:
-  RFC8446:
   RFC9000:
   RFC9001:
   RFC9002:
@@ -67,13 +66,13 @@ normative:
 informative:
 
   I-D.draft-ietf-webtrans-http3:
-  I-D.draft-ietf-masque-h3-datagram:
   I-D.draft-michel-quic-fec:
   RFC4607:
   RFC6363:
   RFC6726:
   RFC6968:
   RFC9114:
+  RFC9297:
   MERKLE:
     title: "Secrecy, Authentication, and Public Key Systems"
     author:
@@ -240,13 +239,13 @@ A server MUST NOT send an MC_ANNOUNCE to this client for any channels using unsu
 If the server does send an MC_ANNOUNCE with an unsupported cipher suite, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.
 
 The Hash Algorithm List field is in order of preference, with the most preferred value first.
-It contains values from the Named Information Hash Algorithm Registry.
 It lists the hash algorithms the client is willing to use to check integrity of data in multicast channels.
-
-A server MUST NOT send an MC_ANNOUNCE to this client for a channel using a hash algorithm that was not included in the Hash Algorithm List.
-If the server sends such an MC_ANNOUNCE, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR:
+It contains values from the Named Information Hash Algorithm Registry:
 
  - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
+
+A server MUST NOT send an MC_ANNOUNCE to this client for a channel using a hash algorithm that was not included in the Hash Algorithm List.
+If the server sends such an MC_ANNOUNCE, the client SHOULD treat it as a connection error of type MC_EXTENSION_ERROR.
 
 # Extension Overview
 
@@ -265,7 +264,7 @@ The server asks the client to join channels with MC_JOIN ({{channel-join-frame}}
 The server uses the MC_ANNOUNCE ({{channel-announce-frame}}) frame before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the secrets necessary to decode the headers of packets in the channel.
 Sending an MC_ANNOUNCE before an MC_JOIN ensures the client can establish the necessary state required to join and retire any connection IDs that might collide with channel IDs.
 MC_KEY frames provide the secrets necessary to decode the payload of packets in the channel.
-{{fig-client-channel-states}} shows the states a channel has from the clients point of view.
+{{fig-client-channel-states}} shows the states a channel has from the client's point of view.
 
 Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients.
 Client responses to join, leave, and retire requests are described in {{client-response}}.
@@ -315,7 +314,7 @@ In this case, this could happen without any involvement of the client-side appli
 - Nothing preventing a join is active (e.g. a hold-down timer,
   administrative blocking, etc.)
 ~~~
-{: #fig-client-channel-states title="States a channel from the clients point of view."}
+{: #fig-client-channel-states title="States a channel from the client's point of view."}
 
 When the server has asked the client to join a channel and has not received any MC_STATE frames {{client-channel-state-frame}} with State DECLINED_JOIN, LEFT, or RETIRED, it also sends MC_INTEGRITY frames ({{channel-integrity-frame}}) to enable the client to verify packet integrity before processing channel packets.
 A client MUST NOT decode a channel packet unless it has received an applicable MC_ANNOUNCE ({{channel-announce-frame}}) frame and an applicable MC_KEY ({{channel-key-frame}}) frame for the channel, and has received a matching packet hash in an MC_INTEGRITY frame for that packet.
@@ -501,7 +500,7 @@ If it's not identical it MAY be treated as a connection error of type MC_EXTENSI
 
 The values used for unicast flow control cannot be used to limit the transmission rate of a multicast channel because a single client with a low MAX_STREAM_DATA or MAX_DATA value that did not acknowledge receipt could block many other receivers if the servers had to ensure that channels responded to each client's limits.
 Instead of terminating a connection if its MAX_DATA gets exceeded (as described in {{Section 19.9 of RFC9000}}), a client must be able to robustly handle multicast packets that would exceed its MAX_DATA without aborting the connection, either by increasing its MAX_DATA as needed to keep up with received multicast packets or by dropping the packet and leaving the channel (resulting in unicast fallback).
-If a server detects that a clients MAX_DATA is about to be exceeded, it MUST instruct the client to leave channels to prevent any further MAX_DATA violations.
+If a server detects that a client's MAX_DATA is about to be exceeded, it MUST instruct the client to leave channels to prevent any further MAX_DATA violations.
 
 Instead, clients advertise resource limits via MC_LIMITS ({{client-limits-frame}}) frames and their initial values from the transport parameter ({{transport-parameter}}).
 The server is responsible for keeping the client within its advertised limits, by ensuring via MC_JOIN and MC_LEAVE frames that the set of channels the client is asked to be joined to will not, in aggregate, exceed the client's advertised limits.
@@ -535,7 +534,7 @@ MC_ACK frames are treated the same as ACK frames for congestion control and loss
 The server maintains a full view of the traffic received by the client via the MC_ACK ({{channel-ack-frame}}) frames and ACK frames it receives, and can detect loss experienced by the client.
 Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.
 
-Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the clients aggregate rate is below its advertised Max Rate.
+Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the client's aggregate rate is below its advertised Max Rate.
 Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(LEFT) frame with the "HIGH_LOSS" reason, as well as reducing the Max Rate in MC_LIMITS.
 
 The unicast connection's congestion control is unaffected.
@@ -568,7 +567,7 @@ All frames defined in this document except MC_ACK are ack-eliciting and are retr
 Note that recovery MAY be achieved either by retransmitting frame data that was lost and needs reliable transport either by sending the frame data on the unicast connection or by coordinating to cause an aggregated retransmission of widely dropped data on a multicast channel, at the server's discretion.
 However, the server in each connection is responsible for ensuring that any necessary server-to-client frame data lost by a multicast channel packet loss ultimately arrives at the client.
 
-To minimize the amount of additional packets sent on a multicast channel when retransmiting frames, the server SHOULD use Forward Erasure Correction (FEC) techniques following guidelines from {{I-D.draft-michel-quic-fec}}. Instead of retransmitting the frames directly, the server sends FEC repair packets on the multicast channel. As such, an individual repair packet can recover different losses on distinct clients, thus minimizing the amount of data sent on a multicast channel. The scheduling of these repair packets is implementation-dependent and hence out of scope of this document.
+To minimize the amount of additional packets sent on a multicast channel when retransmitting frames, the server SHOULD use Forward Erasure Correction (FEC) techniques following guidelines from {{I-D.draft-michel-quic-fec}}. Instead of retransmitting the frames directly, the server sends FEC repair packets on the multicast channel. As such, an individual repair packet can recover different losses on distinct clients, thus minimizing the amount of data sent on a multicast channel. The scheduling of these repair packets is implementation-dependent and hence out of scope of this document.
 
 # Connection Termination
 
@@ -595,7 +594,7 @@ If a server or client detect a stateless reset for a channel, they MUST ignore i
 ## Connection Migration
 
 If the unicast connection migrated, e.g. due to a change of the NAT binding or because the UE has changed to a different network, the client properties might change.
-For example, the client might switch from a network that supports both IPv6 and IPv4 multicast to a network that only support IPv4. As such, it MUST immediately send an MC_LIMITS frame after it has noticed that it migrated.
+For example, the client might switch from a network that supports both IPv6 and IPv4 multicast to a network that only supports IPv4. As such, it MUST immediately send an MC_LIMITS frame after it has noticed that it migrated.
 The client MAY rejoin any previously joined channels, if its limits still allow it to. It MUST send MC_STATE(LEFT) frames with reason LIMIT_VIOLATION for any channels it does not rejoin.
 
 The server SHOULD take notice of migrating clients as the delay that is being caused by rejoining a multicast group can lead to exceeding the expected MAX_ACK_DELAY, which a server might interpret as a loss of multicast connectivity.
@@ -666,13 +665,13 @@ MC_ANNOUNCE frames contain the following fields:
   A value of 0 requests that every ack-eliciting channel packet be acknowledged immediately.
   A value of 1 corresponds to the default QUIC behavior of acknowledging after receiving two ack-eliciting packets.
   * Reordering Threshold: A packet-count threshold used to determine when receipt of out-of-order channel packets causes an immediate MC_ACK.
-  This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), except that it applies only to this channels packet number space and to MC_ACK frames for this channel.
+  This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), except that it applies only to this channel's packet number space and to MC_ACK frames for this channel.
 
 A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection.
 If it is already in use, the client SHOULD retire it as soon as possible.
 As the server knows which connection IDs are in use by the client, it MUST wait with the sending of an MC_JOIN frame until the channel ID associated with it has been retired by the client.
 
-If a client receives an MC_ANNOUNCE frame with a Group IP that is not within the SSM destination address range as outlined in {{RFC4607}}, it SHOULD close the connection with reason MC_EXTENSION_ERROR.
+If a client receives an MC_ANNOUNCE frame with a Group IP that is not within the SSM destination address range as outlined in {{RFC4607}}, it SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.
 
 As all the properties in MC_ANNOUNCE frames are immutable during the lifetime of a channel, a server SHOULD NOT send an MC_ANNOUNCE frame for the same channel more than once to each client except as needed for recovery.
 
@@ -1057,7 +1056,7 @@ This includes, but is not limited to, frames that are part of the cryptographic 
 
 A frame is also not permitted in a channel packet if it is defined only for client-to-server use, or if it would require the server to respond to a single client via the multicast channel (e.g., PATH_CHALLENGE).
 
-A client that receives a frame in an authenticated channel packet that is not permitted SHOULD close the connection with reason MC_EXTENSION_ERROR.
+A client that receives a frame in an authenticated channel packet that is not permitted SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.
 
 For example, frames such as ACK, CRYPTO, NEW_TOKEN, STOP_SENDING, MAX_DATA, MAX_STREAMS, NEW_CONNECTION_ID, RETIRE_CONNECTION_ID, PATH_CHALLENGE, PATH_RESPONSE, CONNECTION_CLOSE, and HANDSHAKE_DONE are not permitted in channel packets because their semantics are tied to an individual QUIC connection.
 
@@ -1113,7 +1112,7 @@ TODO: flesh out this principle for application-level error code assignment in ge
 
 WebTransport over HTTP/3 is defined in {{I-D.draft-ietf-webtrans-http3}}.
 
-Popular data that can be sent with server-initiated streams and carried over WebTransport is a good use cases for multicast transport because the same server-to-client data can be pushed to many different receivers on a multicast channel.
+Popular data that can be sent with server-initiated streams and carried over WebTransport is a good use case for multicast transport because the same server-to-client data can be pushed to many different receivers on a multicast channel.
 
 A QUIC connection using HTTP/3 and WebTransport can use multicast channels to deliver WebTransport server-initiated streams.
 
@@ -1131,7 +1130,7 @@ If the server later sends larger DATAGRAM frames on that channel, clients whose 
 
 Using DATAGRAM frames can align well with existing multicast UDP-based applications, since a datagram API in a QUIC application offers similar functionality to a UDP API for sending and receiving packets.
 
-However, at the time of this writing (version -05 of {{I-D.draft-ietf-masque-h3-datagram}}) multicast channels generally cannot deliver HTTP/3 datagrams, including WebTransport datagrams (version -02 of {{I-D.draft-ietf-webtrans-http3}}), since the demuxing of WebTransport datagrams uses a Session ID based on a client-specific value (the HTTP/3 Session ID comes from the Stream ID of the client-initiated stream that issued the initial extended CONNECT request).
+However, at the time of this writing, HTTP/3 datagrams {{RFC9297}}, including WebTransport datagrams as defined by {{I-D.draft-ietf-webtrans-http3}}, generally cannot be delivered over multicast channels, since the demuxing of WebTransport datagrams uses a Session ID based on a client-specific value (the HTTP/3 Session ID comes from the Stream ID of the client-initiated stream that issued the initial extended CONNECT request).
 
 It is therefore hoped that an extension or revision to WebTransport and HTTP/3 datagrams can be adopted in a future version of their specifications that make it possible to use a server-chosen Session ID value for demuxing WebTransport datagrams (and HTTP/3 datagrams in general).
 
@@ -1182,7 +1181,7 @@ Servers should choose Max ACK Delay, Ack-Eliciting Threshold, and Reordering Thr
 
 Multicast channels at the network layer are addressed with a source IP, a destination group IP address, and a destination UDP port.
 
-These offers a number of potential address collision considerations that are worth mentioning:
+This creates a number of potential address collision considerations that are worth mentioning:
 
  1. If properties change for the data being used in a channel (for example, new video encoding settings might result in a change to the expected max rate for a video feed), a server might reuse the same network addresses in a new QUIC multicast channel, and might send a join for the new channel and a leave for the old channel to clients that can support the new max rate.  If they arrive together, this could be handled by the client without making a change to the IGMP or MLD membership state, as an optimization that can prevent the need for some recovery, or even by reusing the same UDP socket.  Doing so does not change any requirements for the channel state management at the QUIC layer, and as long as the situation is transient, should not result in leaving due to Excessive Spurious Traffic even if some packets were reordered or may still be in flight.
  2. As described in {{Section 6 of RFC4607}}, link-layer addresses can be linked to the low-order bits of multicast addresses, and may be the same for different group destinations.  Collisions in the link-layer addressing, even with traffic that comes from other sources, can cause congestion or receiver CPU load for colliding channels that might be different from that seen with other channels that were delivered with apparently the same network paths.
