@@ -1792,7 +1792,8 @@ The client also monitors the packets received to ensure that channels don't exce
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-congestion-control" class="section-name selfRef">Congestion Control</a>
       </h2>
 <p id="section-6-1">Both the server and the client perform congestion control operations, so that according to the guidelines in <span><a href="https://rfc-editor.org/rfc/rfc8085#section-4.1" class="relref">Section 4.1</a> of [<a href="#RFC8085" class="cite xref">RFC8085</a>]</span>, mechanisms for both feedback-based and receiver-driven styles of congestion control are present and operational.<a href="#section-6-1" class="pilcrow">¶</a></p>
-<p id="section-6-2">All frames defined by this document other than MC_ACK are ack-eliciting.  Packets containing those frames are considered in-flight and count toward congestion control limits as described in <span>[<a href="#RFC9002" class="cite xref">RFC9002</a>]</span>.
+<p id="section-6-2">All frames defined by this document other than MC_ACK are ack-eliciting.
+Packets containing those frames are considered in-flight and count toward congestion control limits as described in <span>[<a href="#RFC9002" class="cite xref">RFC9002</a>]</span>.
 MC_ACK frames are treated the same as ACK frames for congestion control and loss recovery purposes and do not make a packet ack-eliciting and thus a packet containing only them does not count as in-flight.<a href="#section-6-2" class="pilcrow">¶</a></p>
 <p id="section-6-3">The server maintains a full view of the traffic received by the client via the MC_ACK (<a href="#channel-ack-frame" class="auto internal xref">Section 10.6</a>) frames and ACK frames it receives, and can detect loss experienced by the client.
 Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.<a href="#section-6-3" class="pilcrow">¶</a></p>
@@ -2451,7 +2452,9 @@ If these packets are addressed to an (S,G) that is used for reception in one or 
             <p id="section-10.10-2.4.1">For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.<a href="#section-10.10-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.10-2.5">
-            <p id="section-10.10-2.5.1">For MC_INTEGRITY, retransmissions MUST include the packet hashes that are still needed to authenticate packets that the server expects the client to process.
+            <p id="section-10.10-2.5.1">For MC_INTEGRITY, a server MUST retransmit packet hashes that are still needed to authenticate channel packets that the server expects receivers to process.
+For this purpose, a packet hash is still needed while the corresponding channel packet is within the buffering interval implied by the channel's Max Authentication Delay, unless the server has channel-specific or application-specific information that receivers are no longer expected to buffer or process that packet.
+A server SHOULD NOT retransmit MC_INTEGRITY information for packets that it no longer expects receivers to buffer or process.
 The same packet hash MAY be sent in more than one MC_INTEGRITY frame.
 Servers SHOULD prioritize retransmission of MC_INTEGRITY information whose absence is likely to cause receivers to exceed the Max Authentication Delay advertised for the channel.<a href="#section-10.10-2.5.1" class="pilcrow">¶</a></p>
 </li>
@@ -2665,8 +2668,14 @@ The amount of memory needed for this buffer is a function of the channel rate, t
 <p id="section-12.8-2">Max Authentication Delay is a channel property because the amount of receiver buffering required for unauthenticated packets depends on the channel's rate, the way integrity information is distributed for that channel, and the latency requirements of the application data carried on that channel.
 For example, a low-latency media channel might require integrity information to arrive quickly, while a file-transfer or software-update channel might tolerate a larger authentication delay in exchange for lower unicast integrity traffic or larger integrity blocks.<a href="#section-12.8-2" class="pilcrow">¶</a></p>
 <p id="section-12.8-3">Servers SHOULD choose Max Authentication Delay values that are appropriate for the channel's media or application latency requirements and for expected receiver memory constraints.
-Servers SHOULD send and retransmit MC_INTEGRITY information so that packets can be authenticated within the advertised Max Authentication Delay under normal operating conditions.
+Servers SHOULD send and retransmit MC_INTEGRITY information so that, under normal operating conditions, receivers can authenticate packets within the advertised Max Authentication Delay.
+The exact scheduling of redundant transmission and retransmission is implementation-dependent, but the advertised Max Authentication Delay defines the default interval during which receivers are expected to retain unauthenticated packets.
 Clients MAY use local policy to impose a smaller buffering limit than the value advertised by the server, in which case they might discard unauthenticated packets or leave the channel.<a href="#section-12.8-3" class="pilcrow">¶</a></p>
+<p id="section-12.8-4">The usefulness of retransmitting MC_INTEGRITY information depends on whether receivers are still expected to have the corresponding multicast packets buffered.
+Once receivers are expected to have discarded a packet, retransmitting integrity information for that packet is unlikely to help those receivers process application data.<a href="#section-12.8-4" class="pilcrow">¶</a></p>
+<p id="section-12.8-5">This consideration is especially important when MC_INTEGRITY information is sent on the unicast connection and retransmitted for individual receivers.
+It is also important for channels carrying delay-sensitive unreliable data, such as DATAGRAM frames for real-time applications.
+For such channels, servers can reduce wasted work by sending integrity information redundantly near the original packet transmission and by avoiding late retransmission of integrity information after the packet's expected usefulness has expired.<a href="#section-12.8-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
