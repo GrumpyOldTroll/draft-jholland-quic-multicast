@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 5 January 2027                                                 
+Expires: 7 January 2027                                                 
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                             4 July 2026
+                                                             6 July 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 January 2027.
+   This Internet-Draft will expire on 7 January 2027.
 
 Copyright Notice
 
@@ -77,7 +77,9 @@ Table of Contents
    1.  Introduction
      1.1.  Conventions and Definitions
    2.  Multicast Channel
-     2.1.  Channel using Multipath QUIC
+     2.1.  Packet Number Encoding for Channel Packets
+     2.2.  Latency Spin Bit in Channel Packets
+     2.3.  Channel using Multipath QUIC
    3.  Transport Parameters
    4.  Extension Overview
      4.1.  Channel Management
@@ -112,11 +114,12 @@ Table of Contents
        12.3.1.  HTTP/3 Server Push
        12.3.2.  HTTP/3 WebTransport Streams
        12.3.3.  Datagrams
-     12.4.  Graceful Degradation
-       12.4.1.  Circuit Breakers
-     12.5.  Server Scalability
-     12.6.  Address Collisions
-     12.7.  Buffering Unauthenticated Packets
+     12.4.  Moving Clients Between Channels
+     12.5.  Graceful Degradation
+       12.5.1.  Circuit Breakers
+     12.6.  Server Scalability
+     12.7.  Address Collisions
+     12.8.  Buffering Unauthenticated Packets
    13. Security Considerations
    14. IANA Considerations
    15. References
@@ -227,7 +230,63 @@ Table of Contents
    connection associated with the channel.  If a client has no matching
    joined channel, the packet is discarded.
 
-2.1.  Channel using Multipath QUIC
+2.1.  Packet Number Encoding for Channel Packets
+
+   QUIC packet number encoding in Section 17.1 of [RFC9000] encodes a
+   truncated packet number by carrying only the least significant bits
+   of the full packet number.  The sender selects a packet number length
+   large enough for the receiver to reconstruct the full packet number,
+   and the receiver decodes it as the value closest to the next expected
+   packet number in that packet number space.  This sender-side
+   mechanism is not suitable for multicast channel packets, because a
+   single channel packet can be received by many clients with different
+   receive, loss, and acknowledgement states.
+
+   Channel packets therefore use a fixed packet number length of four
+   bytes.  A server MUST encode the packet number of a channel packet as
+   a four-byte truncated packet number, using the packet number encoding
+   described in Section 17.1 of [RFC9000].  Before header protection is
+   applied, the Packet Number Length bits of byte 0, that is, the bits
+   with mask 0x03, MUST be set to 0b11 to indicate a four-byte Packet
+   Number field.  A server MUST NOT select the packet number length for
+   a channel packet based on acknowledgement state from any individual
+   associated unicast connection.
+
+   A client reconstructs the full packet number for a channel packet
+   using the packet number reconstruction algorithm in Section 17.1 of
+   [RFC9000], applied to the channel packet number space.  The expected
+   packet number used for reconstruction is the next packet number after
+   the largest packet number of any channel packet from which the client
+   has successfully removed packet protection in that channel packet
+   number space.
+
+   Before a client has successfully removed packet protection from any
+   packet in a channel packet number space, it uses the From Packet
+   Number of the applicable MC_KEY frame as the next expected packet
+   number for reconstruction.
+
+   If a client cannot reconstruct packet numbers for a channel because
+   the encoded packet numbers are too far from its expected packet
+   number, it MUST discard the affected packets.  If this happens, the
+   client SHOULD leave the channel and send an MC_STATE frame with State
+   LEFT and Reason Code UNSYNCHRONIZED_PROPERTIES.
+
+2.2.  Latency Spin Bit in Channel Packets
+
+   Channel packets are unidirectional server-to-client packets, and
+   clients can not send packets on a multicast channel.  Therefore, the
+   latency spin bit algorithm from Section 17.4 of [RFC9000] does not
+   apply to channel packets.
+
+   The spin bit has no semantics in this extension and MUST NOT be
+   assigned another meaning by endpoints unless specified in a future
+   extension.
+
+   In channel packets, a server MUST disable the spin bit as specified
+   in Section 17.4 of [RFC9000].  A client MUST ignore the value of the
+   spin bit in received channel packets.
+
+2.3.  Channel using Multipath QUIC
 
    From the point of view of the client, each Multicast QUIC channel is
    handled as an additional path from the server.  A client keeps its
@@ -266,7 +325,7 @@ Table of Contents
    the client.  It is recommended that applications designed to leverage
    the multicast capabilities of this extension also provide graceful
    degradation for endpoints that do not or cannot make use of the
-   multicast functionality (see Section 12.4).
+   multicast functionality (see Section 12.5).
 
    The server has access to all data transmitted on any multicast
    channel it uses, and could optionally send this data with unicast
@@ -1053,7 +1112,7 @@ Table of Contents
       a client is expected to buffer a multicast channel packet before
       the packet becomes authenticated by an accepted MC_INTEGRITY
       frame.  The delay is measured from receipt of the channel packet
-      until the packet becomes authenticated.  See Section 12.7.
+      until the packet becomes authenticated.  See Section 12.8.
 
    *  Max ACK Delay: The maximum amount of time, in microseconds, that a
       client can intentionally delay sending an MC_ACK frame for ack-
@@ -1227,8 +1286,7 @@ Table of Contents
      Type (i) = TBD-03 (experiments use 0xff3e803),
      ID Length (8),
      Channel ID (8..160),
-     MC_STATE Sequence Number (i),
-     After Packet Number (i)
+     MC_STATE Sequence Number (i)
    }
 
                       Figure 7: MC_LEAVE Frame Format
@@ -1247,12 +1305,6 @@ Table of Contents
       allows the client to ignore leave requests that are based on stale
       client channel state.
 
-   *  After Packet Number: If non-zero, the client leaves the channel
-      only after receiving a channel packet with this packet number or a
-      higher packet number.  If this field is 0, or if the client has
-      already received a channel packet with this packet number or a
-      higher packet number, the client leaves the channel immediately.
-
    A client that receives an MC_LEAVE for a channel that it has already
    left, declined to join, or retired MUST ignore the frame.
 
@@ -1260,9 +1312,8 @@ Table of Contents
    Channel ID with a greater MC_STATE Sequence Number MUST ignore the
    MC_LEAVE frame.
 
-   Otherwise, the client MUST leave the channel according to the After
-   Packet Number field and send an MC_STATE frame with State LEFT and
-   Reason Code REQUESTED_BY_SERVER.
+   Otherwise, the client MUST leave the channel immediately and send an
+   MC_STATE frame with State LEFT and Reason Code REQUESTED_BY_SERVER.
 
 10.5.  MC_INTEGRITY
 
@@ -1433,31 +1484,34 @@ Table of Contents
 
 10.8.  MC_RETIRE
 
+   An MC_RETIRE frame retires a channel by Channel ID and causes the
+   client to discard any state associated with that channel.
+
    MC_RETIRE frames are formatted as shown in Figure 11.
 
    MC_RETIRE Frame {
      Type (i) = TBD-0a (experiments use 0xff3e80a),
      ID Length (8),
-     Channel ID (8..160),
-     After Packet Number (i)
+     Channel ID (8..160)
    }
 
                      Figure 11: MC_RETIRE Frame Format
 
-   Retires a channel by ID, discarding any state associated with it.
-   (Author comment: We can't use RETIRE_CONNECTION_ID because we don't
-   have a coherent sequence number.)  If After Packet Number is nonzero
-   and the channel is joined and has received any data, the channel will
-   be retired after receiving that packet or a higher valued number,
-   otherwise it will be retired immediately.
+   MC_RETIRE frames contain the following fields:
 
-   After receiving an MC_RETIRE and retiring a channel, the client MUST
-   send a new MC_STATE frame with reason RETIRED to the server.
+   *  ID Length: The length in bytes of the Channel ID field.
 
-   If the client is still joined in the channel that is being retired,
-   it MUST also leave it.  If a channel is left this way, it does not
-   need to send an additional MC_STATE frame with state LEFT, as state
-   RETIRED also implies the channel was left.
+   *  Channel ID: The channel ID for the channel that the client is
+      requested to leave.
+
+   After receiving an MC_RETIRE frame, the client MUST retire the
+   channel immediately and send an MC_STATE frame with State RETIRED and
+   Reason Code REQUESTED_BY_SERVER.
+
+   If the client is still joined to the channel that is being retired,
+   it MUST also leave the channel.  In this case, the client does not
+   send a separate MC_STATE frame with State LEFT, as State RETIRED also
+   implies that the client has left the channel.
 
 10.9.  MC_STATE
 
@@ -1772,11 +1826,23 @@ Table of Contents
 
 12.3.3.  Datagrams
 
-   DATAGRAM frames ([RFC9221]) can be carried in multicast channels, and
-   can be a good way to deliver popular content to receivers.  Doing so
-   can align well with existing multicast UDP-based applications, since
-   a datagram API in a QUIC application offers similar functionality to
-   a UDP API for sending and receiving packets.
+   DATAGRAM frames in channel packets are subject to the
+   max_datagram_frame_size transport parameter defined in [RFC9221] on
+   each associated QUIC connection.  A server MUST NOT send MC_JOIN to a
+   client for a channel that carries DATAGRAM frames unless that client
+   advertised max_datagram_frame_size with a non-zero value.
+
+   A server MUST NOT send MC_JOIN to a client for a channel if the
+   server expects that channel to carry DATAGRAM frames larger than the
+   max_datagram_frame_size value advertised by that client.  If the
+   server later sends larger DATAGRAM frames on that channel, clients
+   whose advertised max_datagram_frame_size is exceeded will process
+   this as specified by [RFC9221], which can result in termination of
+   their associated QUIC connections.
+
+   Using DATAGRAM frames can align well with existing multicast UDP-
+   based applications, since a datagram API in a QUIC application offers
+   similar functionality to a UDP API for sending and receiving packets.
 
    However, at the time of this writing (version -05 of
    [I-D.draft-ietf-masque-h3-datagram]) multicast channels generally
@@ -1808,7 +1874,24 @@ Table of Contents
    ID when the client has advertised support for this extended
    functionality.
 
-12.4.  Graceful Degradation
+12.4.  Moving Clients Between Channels
+
+   MC_LEAVE and MC_RETIRE take effect immediately when processed by the
+   receiver.  These frames do not provide a mechanism for draining a
+   channel up to a packet-number boundary.
+
+   A server that wants to minimize loss when moving receivers away from
+   a channel SHOULD stop scheduling new data on the old channel before
+   sending MC_LEAVE or MC_RETIRE, or provide any required replacement
+   data over the associated unicast connection or another channel.
+
+   For example, when switching receivers from one channel to another, a
+   server can stop sending new application data that is important for
+   those receivers on the old channel, send any transition data on the
+   unicast connection or the new channel, and then send MC_LEAVE or
+   MC_RETIRE for the old channel.
+
+12.5.  Graceful Degradation
 
    Clients with multicast QUIC support can stop accepting multicast for
    a variety of reasons.
@@ -1834,7 +1917,7 @@ Table of Contents
    multicast transport is providing and the Adaptive Bitrate algorithms
    the player is using.
 
-12.4.1.  Circuit Breakers
+12.5.1.  Circuit Breakers
 
    Operators of multicast QUIC services should consider that some
    networks may implement circuit breakers such as the one described in
@@ -1849,7 +1932,7 @@ Table of Contents
    according to aggregations of the affected clients so that a sudden
    unicast storm doesn't overload the network further.
 
-12.5.  Server Scalability
+12.6.  Server Scalability
 
    Use of QUIC multicast channels can provide large scalability gains,
    but there still will be significant scaling requirements on server
@@ -1881,7 +1964,7 @@ Table of Contents
    balance uplink load against the need for timely loss, congestion,
    ECN, and liveness feedback.
 
-12.6.  Address Collisions
+12.7.  Address Collisions
 
    Multicast channels at the network layer are addressed with a source
    IP, a destination group IP address, and a destination UDP port.
@@ -1933,7 +2016,7 @@ Table of Contents
        both packets and throw away the data for the un-joined port,
        causing extra congestion and CPU load for the receiving device.
 
-12.7.  Buffering Unauthenticated Packets
+12.8.  Buffering Unauthenticated Packets
 
    Clients need to buffer multicast packets that have been received but
    not yet authenticated if they want to process those packets after the
