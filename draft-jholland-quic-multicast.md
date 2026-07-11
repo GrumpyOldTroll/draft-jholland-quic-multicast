@@ -594,7 +594,7 @@ If the unicast connection migrated, e.g. due to a change of the NAT binding or b
 For example, the client might switch from a network that supports both IPv6 and IPv4 multicast to a network that only supports IPv4. As such, it MUST immediately send an MC_LIMITS frame after it has noticed that it migrated.
 The client MAY rejoin any previously joined channels, if its limits still allow it to. It MUST send MC_STATE(LEFT) frames with reason LIMIT_VIOLATION for any channels it does not rejoin.
 
-Because migration can change multicast reachability and require the client to rejoin a multicast group, the server SHOULD treat each previously joined channel as a new pending multicast attempt and apply {{multicast-cutover}} before reducing unicast delivery.
+Because migration can change multicast reachability and require the client to rejoin a multicast group, the server SHOULD treat each previously joined channel as a new pending multicast attempt and handle validation and cutover as described in {{multicast-cutover}}.
 
 # New Frames
 
