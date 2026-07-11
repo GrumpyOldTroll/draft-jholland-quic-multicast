@@ -443,7 +443,7 @@ ACK_FREQUENCY and IMMEDIATE_ACK frames defined by {{I-D.ietf-quic-ack-frequency}
 The ACK policy for MC_ACK frames is instead defined by the MC_ANNOUNCE frame for the corresponding channel.
 
 After sending ack-eliciting channel packets, a server can use MC_ACK frames that acknowledge those packets as evidence that the client has received and processed them.
-Operational use of this evidence for switching delivery from unicast to multicast is discussed in {{multicast-cutover}}.
+Operational use of this evidence is discussed in {{multicast-cutover}}.
 
 ## Data Carried in Channels
 
