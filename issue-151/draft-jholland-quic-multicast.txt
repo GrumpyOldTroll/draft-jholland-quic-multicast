@@ -743,9 +743,8 @@ Table of Contents
 
    After sending ack-eliciting channel packets, a server can use MC_ACK
    frames that acknowledge those packets as evidence that the client has
-   received and processed them.  Operational use of this evidence for
-   switching delivery from unicast to multicast is discussed in
-   Section 12.4.
+   received and processed them.  Operational use of this evidence is
+   discussed in Section 12.4.
 
 4.5.  Data Carried in Channels
 
