@@ -1979,14 +1979,14 @@ Table of Contents
 
    Once multicast delivery has been validated using MC_ACK evidence, the
    server SHOULD stop or reduce corresponding unicast delivery.  The
-   policy for treating multicast delivery as validated is
-   implementation-specific.  It can require acknowledgment of one or
-   more channel packets, sustained acknowledgment over a period of time,
-   acceptable loss or ECN feedback, or other application-specific
-   conditions.  If sufficient MC_ACK evidence is not received, the
-   server needs to decide whether to keep probing the multicast path or
-   to stop the attempt for that client.  Keeping the client joined can
-   allow multicast delivery to start working later without another join
+   policy for treating multicast delivery as validated is application-
+   specific.  It can require acknowledgment of one or more channel
+   packets, sustained acknowledgment over a period of time, acceptable
+   loss or ECN feedback, or other application-specific conditions.  If
+   sufficient MC_ACK evidence is not received, the server needs to
+   decide whether to keep probing the multicast path or to stop the
+   attempt for that client.  Keeping the client joined can allow
+   multicast delivery to start working later without another join
    request, but it consumes client and server state, can count against
    the client's advertised limits, and can require the server to
    continue sending control information such as MC_INTEGRITY frames.
