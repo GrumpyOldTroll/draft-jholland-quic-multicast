@@ -1072,7 +1072,7 @@ Table of Contents
    Because migration can change multicast reachability and require the
    client to rejoin a multicast group, the server SHOULD treat each
    previously joined channel as a new pending multicast attempt and
-   apply Section 12.4 before reducing unicast delivery.
+   handle validation and cutover as described in Section 12.4.
 
 10.  New Frames
 
