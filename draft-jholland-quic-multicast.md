@@ -1166,7 +1166,7 @@ For DATAGRAM frames or application formats without transport-level duplicate sup
 
 The absence of MC_ACK frames is not by itself a precise fault signal.
 After the server has sent ack-eliciting channel packets, lack of MC_ACK feedback can indicate that no channel packets reached the client, that the client received channel packets but could not decrypt, authenticate, or process them, or that MC_ACK feedback has been delayed or lost.
-Until multicast delivery has been validated, the server treats all of these cases as a failed or pending multicast attempt and, if it is using overlapping unicast delivery, continues that delivery as described above.
+In all of these cases, multicast delivery remains unvalidated.
 
 If a client abandons a joined channel because it receives channel packets but cannot process them, it SHOULD send an MC_STATE frame with State LEFT and a Reason Code that describes the cause.
 UNSYNCHRONIZED_PROPERTIES is used when the client cannot decrypt packets because the channel properties, packet number state, or channel key state are not synchronized with the server.
