@@ -249,31 +249,38 @@ If the server sends such an MC_ANNOUNCE, the client SHOULD treat it as a connect
 
 # Extension Overview
 
-A client has the option of refusal and the power to impose upper bound maxima on several resources (see {{flow-control}}), but otherwise its join status for all multicast channels is entirely managed by the server.
+The server coordinates multicast channel membership, subject to the resource limits advertised by the client (see {{flow-control}}).
+The server requests that a client join a channel by sending an MC_JOIN frame and instructs the client to leave a channel by sending an MC_LEAVE frame.
 
- * A client MUST NOT join a channel without receiving instructions from a server to do so.
- * A client MUST leave joined channels when instructed by the server to do so.
- * A client MAY leave channels or refuse to join channels, regardless of instructions from the server.
+* A client MUST NOT join a channel except in response to an MC_JOIN frame sent by the server for that channel.
+* A client that processes an MC_LEAVE frame for a channel to which it is joined MUST leave that channel.
+* A client MAY decline any MC_JOIN request and MAY leave a joined channel without receiving an MC_LEAVE frame.
 
 ## Channel Management
 
-The client tells its server about some restrictions on resources that it is capable of processing with the initial values in the multicast_client_params transport parameter ({{transport-parameter}}) and later can update these limits with MC_LIMITS {{client-limits-frame}} frames. Servers ensure the set of channels the client is currently requested to join remains within these advertised client limits as covered in {{flow-control}}.
-
-The server asks the client to join channels with MC_JOIN ({{channel-join-frame}}) frames and to leave channels with MC_LEAVE ({{channel-leave-frame}}) frames.
+The client initially advertises limits on the multicast channel resources it currently permits in the multicast_client_params transport parameter ({{transport-parameter}}), and can update those limits using MC_LIMITS ({{client-limits-frame}}) frames.
+The server keeps the set of channels it has asked the client to join within the current limits, as described in {{flow-control}}.
 
 The server uses the MC_ANNOUNCE ({{channel-announce-frame}}) frame before any join or leave frames for the channel to describe the channel properties to the client, including values the client can use to ensure the server's requests remain within the limits it has sent to the server, as well as the secrets necessary to decode the headers of packets in the channel.
-Sending an MC_ANNOUNCE before an MC_JOIN ensures the client can establish the necessary state required to join and retire any connection IDs that might collide with channel IDs.
+A server SHOULD NOT send an MC_ANNOUNCE frame for the same channel more than once to each client except as needed for recovery.
+Sending an MC_ANNOUNCE before an MC_JOIN allows the client to create the local state needed to process a subsequent join request and to retire any connection IDs that conflict with the announced Channel ID.
 MC_KEY frames provide the secrets necessary to decode the payload of packets in the channel.
 {{fig-client-channel-states}} shows the states a channel has from the client's point of view.
 
-Joining a channel after receiving an MC_JOIN frame is OPTIONAL for clients.
-Client responses to join, leave, and retire requests are described in {{client-response}}.
+A client MUST NOT use a Channel ID received in an MC_ANNOUNCE frame as a connection ID for the associated unicast connection.
+If that value is already in use as a connection ID, the client SHOULD retire the conflicting connection ID as soon as possible.
+Because the server knows which connection IDs are in use, it MUST NOT send an MC_JOIN frame for the channel until the client has retired the conflicting connection ID.
 
-The server ensures that in aggregate, all channels that the client has currently been asked to join and that the client has not left, declined to join or retired fit within the limits indicated by the initial values in the transport parameter or last MC_LIMITS ({{client-limits-frame}}) frame the server received.
+A server SHOULD send an MC_ANNOUNCE frame for a channel before sending an MC_KEY frame for that channel.
+
+A server MUST NOT send an MC_JOIN frame for a channel unless it has sent, or is sending in the same packet, both an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.
+
+An MC_JOIN frame requests, but does not require, that the client join the channel.
+Client responses to MC_JOIN, MC_LEAVE, and MC_RETIRE frames are described in {{client-response}}.
 
 This extension does not define an application-layer catalogue or content-selection protocol.
 Application protocols determine what content, service, program, representation, or other application context is relevant to a connection.
-The multicast extension merely provides a transport mechanism by which the server can describe channels that are available in that context and request that the client join or leave them.
+The multicast extension merely provides a transport mechanism by which the server can describe channels that are available in that context, request that the client join them, and instruct the client to leave them.
 A server is not expected to announce every multicast channel that it operates to every client.
 The set of channels announced to any specific client can be limited by application-layer state, prior application requests, receiver limits, server policy, or any combination of these.
 
@@ -403,7 +410,7 @@ One of the target discoveries for experimental evaluation is to determine good d
 
 ## Client Response {#client-response}
 
-A client reports how it has responded to server requests to join, leave, or retire channels using MC_STATE ({{client-channel-state-frame}}) frames.
+A client reports how it has responded to MC_JOIN, MC_LEAVE, and MC_RETIRE frames using MC_STATE ({{client-channel-state-frame}}) frames.
 MC_STATE frames are sent whenever the client's state for the channel changes.
 
 If a client joins a channel after receiving an MC_JOIN frame, it MUST send an MC_STATE frame with State JOINED.
@@ -515,7 +522,10 @@ If the server asks the client to join a channel that would violate the client's 
 
 If the MC_JOIN frame refers to an MC_KEY Sequence Number that the client has not yet received, the client SHOULD send an MC_STATE frame with State DECLINED_JOIN and Reason Code UNSYNCHRONIZED_PROPERTIES.
 
-If the actual contents sent in the channel violate the advertised properties from MC_ANNOUNCE, clients SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code LIMIT_VIOLATION.
+The payload data rate of a channel MUST NOT exceed the Max Rate advertised in MC_ANNOUNCE over any five-second interval.
+A client that observes a channel exceeding its Max Rate SHOULD leave the channel and send an MC_STATE frame with State LEFT and Reason Code MAX_RATE_EXCEEDED.
+
+If channel traffic violates another property advertised in MC_ANNOUNCE, the client SHOULD leave the channel and send an MC_STATE frame with State LEFT and an appropriate Reason Code, using LIMIT_VIOLATION when no more specific Reason Code applies.
 
 After processing an MC_LIMITS frame, if the set of channels that the client is currently requested to join no longer fits within the client's current limits, the server MUST send MC_LEAVE frames for one or more channels.
 For this purpose, the requested set includes channels for which the server has sent MC_JOIN and has not received an MC_STATE frame with State LEFT, DECLINED_JOIN, or RETIRED.
@@ -534,14 +544,14 @@ MC_ACK frames are treated the same as ACK frames for congestion control and loss
 The server maintains a full view of the traffic received by the client via the MC_ACK ({{channel-ack-frame}}) frames and ACK frames it receives, and can detect loss experienced by the client.
 Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.
 
-Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the client's aggregate rate is below its advertised Max Rate.
-Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(LEFT) frame with the "HIGH_LOSS" reason, as well as reducing the Max Rate in MC_LIMITS.
+Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Aggregate Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the client's aggregate rate is below its advertised Max Aggregate Rate.
+Under a higher threshold of sustained persistent loss, the client also SHOULD leave channels, using an MC_STATE(LEFT) frame with the "HIGH_LOSS" reason, as well as reducing the Max Aggregate Rate in MC_LIMITS.
 
 The unicast connection's congestion control is unaffected.
 However a few potential interactions with the unicast connection are worth highlighting:
 
  - if the client notices high loss on the unicast connection while multicast channel packets are arriving, the client MAY leave channels with reason "HIGH_LOSS".
- - if the client notices congestion from unicast this MAY also drive reductions in the client's Max Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Rate (along with an updated MC_LIMITS frame).
+ - if the client notices congestion from unicast this MAY also drive reductions in the client's Max Aggregate Rate, and a lack of unicast congestion under unicast load MAY also drive increases to the client's Max Aggregate Rate (along with an updated MC_LIMITS frame).
 
 Hybrid multicast-unicast congestion control is still an experimental research topic.
 Implementations SHOULD follow the guidelines given in {{Section 4.1.1 of RFC8085}} under the assumption that applications using QUIC multicast will operate as Bulk-Transfer applications.
@@ -594,24 +604,29 @@ If a server or client detect a stateless reset for a channel, they MUST ignore i
 ## Connection Migration
 
 If the unicast connection migrated, e.g. due to a change of the NAT binding or because the UE has changed to a different network, the client properties might change.
-For example, the client might switch from a network that supports both IPv6 and IPv4 multicast to a network that only supports IPv4. As such, it MUST immediately send an MC_LIMITS frame after it has noticed that it migrated.
-The client MAY rejoin any previously joined channels, if its limits still allow it to. It MUST send MC_STATE(LEFT) frames with reason LIMIT_VIOLATION for any channels it does not rejoin.
+For example, the client might switch from a network that supports both IPv6 and IPv4 multicast to a network that only supports IPv4.
+As such, it MUST immediately send an MC_LIMITS frame after it has noticed that it migrated.
 
-The server SHOULD take notice of migrating clients as the delay that is being caused by rejoining a multicast group can lead to exceeding the expected MAX_ACK_DELAY, which a server might interpret as a loss of multicast connectivity.
+After migration, a client MAY re-establish IP-layer multicast reception for a channel to which it remains joined if its current limits still permit that channel.
+If it does not re-establish reception for a channel, it MUST leave the channel and send an MC_STATE frame with State LEFT and an appropriate Reason Code, such as LIMIT_VIOLATION if its new limits no longer allow it.
+
+The server SHOULD take notice of migrating clients as the delay that is being caused by rejoining a multicast group can lead to exceeding the expected Max ACK Delay, which a server might interpret as a loss of multicast connectivity.
 Instead, the server SHOULD treat all multicast channels of a client whose unicast connection just migrated as if it had just joined these channels initially and allow for ample time before expecting the first MC_ACK frames.
 
 # New Frames
 
 ## MC_ANNOUNCE {#channel-announce-frame}
 
-Once a server learns that a client supports multicast through its transport parameters, it can send one or multiple MC_ANNOUNCE frames (type=TBD-11..TBD-12) to share information about available channels with the client.
-The MC_ANNOUNCE frame contains the properties of a channel that do not change during its lifetime.
+MC_ANNOUNCE frames (types TBD-11 and TBD-12; experiments use 0xff3e811 and 0xff3e812) are sent by a server to describe the immutable properties of a multicast channel to a client.
+
+Frames of type TBD-11 describe IPv4 channels.
+Frames of type TBD-12 describe IPv6 channels.
 
 MC_ANNOUNCE frames are formatted as shown in {{fig-mc-channel-announce}}.
 
 ~~~
 MC_ANNOUNCE Frame {
-  Type (i) = TBD-11..TBD-12 (experiments use 0xff3e811/0xff3e812),
+  Type (i) = TBD-11..TBD-12 (experiments use 0xff3e811 and 0xff3e812),
   ID Length (8),
   Channel ID (8..160),
   Source IP (32..128),
@@ -630,54 +645,55 @@ MC_ANNOUNCE Frame {
 ~~~
 {: #fig-mc-channel-announce title="MC_ANNOUNCE Frame Format"}
 
-Frames of type TBD-11 are used for IPv4 and both Source and Group address are 32 bits long. Frames of type TBD-12 are used for IPv6 and both Source and Group address are 128 bits long.
-
 MC_ANNOUNCE frames contain the following fields:
 
-  * ID Length: The length in bytes of the Channel ID field.
-  * Channel ID: The channel ID of the channel that is getting announced.
-  * Source IP: The IP Address of the source of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by the frame type (TBD-11 indicates IPv4, TBD-12 indicates IPv6).
-  * Group IP: The IP Address of the group of the (S,G) for the channel.  Either a 32-bit IPv4 address or a 128-bit IPv6 address, as indicated by the frame type (TBD-11 indicates IPv4, TBD-12 indicates IPv6). This address MUST be a valid SSM destination address as specified in {{RFC4607}}.
-  * UDP Port: The 16-bit UDP Port of traffic for the channel.
-  * Cipher Suite: A value from the "TLS Cipher Suites" registry in the "Transport Layer Security (TLS)  Parameters" registry group {{IANA.tls-parameters}}.
-  The cipher suite determines the AEAD algorithm used for packet protection, the hash function used for key derivation, and the header protection algorithm for channel packets, as described in {{Section 5 of RFC9001}}.
-  The value MUST match a value provided in the Cipher Suite List of the multicast_client_params transport parameter; see {{transport-parameter}}.
-  * Header Secret Length: Provides the length of the Header Secret field.
-  * Header Secret: A secret used to derive the header protection key for channel packets.
-  The header protection key is derived from this secret using the cipher suite identified by the Cipher Suite field and the `"quic hp"` label, as described in {{Section 5.1 of RFC9001}}.
-  The header protection algorithm is the algorithm defined by {{RFC9001}} for the AEAD associated with the Cipher Suite used by this channel.
-  The Header Secret is not used to derive packet protection keys or IVs.
-  * Integrity Hash Algorithm: The hash algorithm used in MC_INTEGRITY frames.
-    * **Author's Note:** Several candidate IANA registries, not sure which one to use?  Some have only text for some possibly useful values.  For now we use the first of these:
-      - <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
-      - <https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18>
-      - (text-only): <https://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xhtml>
-  * Max Rate: The maximum rate in Kibps of the payload data for this channel. Channel data MUST NOT exceed this rate over any 5s window, if it does clients SHOULD leave the channel with reason "MAX_RATE_EXCEEDED".
-  * Max Authentication Delay: The maximum time, in microseconds, that a client is expected to buffer a multicast channel packet before the packet becomes authenticated by an accepted MC_INTEGRITY frame.
-  The delay is measured from receipt of the channel packet until the packet becomes authenticated.
-  See {{buffering-unauthenticated-packets}}.
-  * Max ACK Delay: The maximum amount of time, in microseconds, that a client can intentionally delay sending an MC_ACK frame for ack-eliciting packets received on this channel.
-  This value is used similarly to max_ack_delay ({{Section 18.2 of RFC9000}}), but applies
-  only to MC_ACK frames for this channel.
-  A client SHOULD NOT intentionally delay an MC_ACK for this channel beyond this value.
-  * Ack-Eliciting Threshold: The maximum number of ack-eliciting channel packets that a client can receive on this channel without sending an MC_ACK.
-  This field has the same semantics as the Ack-Eliciting Threshold field of ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), except that it applies only to MC_ACK frame generation for this channel.
-  A value of 0 requests that every ack-eliciting channel packet be acknowledged immediately.
-  A value of 1 corresponds to the default QUIC behavior of acknowledging after receiving two ack-eliciting packets.
-  * Reordering Threshold: A packet-count threshold used to determine when receipt of out-of-order channel packets causes an immediate MC_ACK.
-  This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), except that it applies only to this channel's packet number space and to MC_ACK frames for this channel.
+* ID Length: The length in bytes of the Channel ID field.
 
-A client MUST NOT use the channel ID included in an MC_ANNOUNCE frame as a connection ID for the unicast connection.
-If it is already in use, the client SHOULD retire it as soon as possible.
-As the server knows which connection IDs are in use by the client, it MUST wait with the sending of an MC_JOIN frame until the channel ID associated with it has been retired by the client.
+* Channel ID: The channel ID for the channel whose properties are being described.
 
-If a client receives an MC_ANNOUNCE frame with a Group IP that is not within the SSM destination address range as outlined in {{RFC4607}}, it SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.
+* Source IP: The source IP address of the (S,G) associated with the channel.
+This field is 32 bits for frame type TBD-11 and 128 bits for frame type TBD-12.
 
-As all the properties in MC_ANNOUNCE frames are immutable during the lifetime of a channel, a server SHOULD NOT send an MC_ANNOUNCE frame for the same channel more than once to each client except as needed for recovery.
+* Group IP: The group IP address of the (S,G) associated with the channel.
+This field is 32 bits for frame type TBD-11 and 128 bits for frame type TBD-12.
+This address MUST be a valid SSM destination address as specified in {{RFC4607}}.
 
-A server SHOULD send an MC_ANNOUNCE frame for a channel before sending an MC_KEY frame for that channel.
+* UDP Port: The destination UDP port used for channel packets.
 
-A server MUST NOT send an MC_JOIN frame for a channel unless it has sent, or is sending in the same packet, both an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.
+* Cipher Suite: A value from the "TLS Cipher Suites" registry in the "Transport Layer Security (TLS) Parameters" registry group {{IANA.tls-parameters}}.
+The cipher suite determines the AEAD algorithm used for packet protection, the hash function used for key derivation, and the header protection algorithm for channel packets, as described in {{Section 5 of RFC9001}}.
+The value MUST match a value provided in the Cipher Suite List of the multicast_client_params transport parameter; see {{transport-parameter}}.
+
+* Header Secret Length: The length in bytes of the Header Secret field.
+
+* Header Secret: A secret used to derive the header protection key for channel packets.
+The header protection key is derived from this secret using the cipher suite identified by the Cipher Suite field and the `"quic hp"` label, as described in {{Section 5.1 of RFC9001}}.
+The header protection algorithm is the algorithm defined by {{RFC9001}} for the AEAD associated with the Cipher Suite used by this channel.
+The Header Secret is not used to derive packet protection keys or IVs.
+
+* Integrity Hash Algorithm: The hash algorithm used by MC_INTEGRITY frames for this channel.
+This value MUST match a value provided in the Hash Algorithm List of the multicast_client_params transport parameter; see {{transport-parameter}}.
+
+* Max Rate: The maximum payload data rate, in Kibps, advertised for this channel, measured over any five-second interval.
+Enforcement of this value is described in {{flow-control}}.
+
+* Max Authentication Delay: The maximum time, in microseconds, from receipt of a channel packet until the packet is expected to become authenticated by an accepted MC_INTEGRITY frame.
+See {{buffering-unauthenticated-packets}}.
+
+* Max ACK Delay: The maximum amount of time, in microseconds, that a client can intentionally delay sending an MC_ACK frame for ack-eliciting packets received on this channel.
+This value is used similarly to max_ack_delay ({{Section 18.2 of RFC9000}}), but applies only to MC_ACK frames for this channel.
+
+* Ack-Eliciting Threshold: The maximum number of ack-eliciting channel packets that a client can receive on this channel without sending an MC_ACK.
+This field has the same semantics as the Ack-Eliciting Threshold field of ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), except that it applies only to MC_ACK frame generation for this channel.
+A value of 0 requests acknowledgment of every ack-eliciting channel packet.
+A value of 1 corresponds to the default QUIC behavior of acknowledging after two ack-eliciting packets.
+
+* Reordering Threshold: The packet-count threshold used to determine when receipt of an out-of-order channel packet causes an immediate MC_ACK.
+This field has the same semantics as the Reordering Threshold field of ACK_FREQUENCY ({{I-D.ietf-quic-ack-frequency}}), except that it applies only to this channel's packet number space and to MC_ACK frames for this channel.
+
+Use of Max ACK Delay, Ack-Eliciting Threshold, and Reordering Threshold is described in {{channel-packet-acknowledgment}}.
+
+A client that receives an MC_ANNOUNCE frame containing a Group IP that is not a valid SSM destination address SHOULD close the connection with a connection error of type MC_EXTENSION_ERROR.
 
 ## MC_KEY {#channel-key-frame}
 
@@ -703,17 +719,21 @@ MC_KEY Frame {
 
 MC_KEY frames contain the following fields:
 
-  * ID Length: The length in bytes of the Channel ID field.
-  * Channel ID: The channel ID for the channel associated with this frame.
-  * Key Sequence Number: The key generation identified by this frame.
-  This value MUST NOT be 0.
-  * From Packet Number: The first channel packet number for which the secret in this frame is applicable.
-  The secret applies to channel packets with packet numbers greater than or equal to From Packet Number and with the Key Phase corresponding to this Key Sequence Number as described in {{channel-key-management}}, until superseded by an MC_KEY frame for the same channel with a higher Key Sequence Number.
-  When the Key Sequence Number increases, the From Packet Number MUST increase.
-  * Secret Length: Provides the length of the secret field.
-  * Secret: A channel packet protection secret.
-  Packet protection keys and IVs for channel packets are derived from this secret using the cipher suite identified in the corresponding MC_ANNOUNCE frame and the `"quic key"` and `"quic iv"` labels, as described in {{Section 5.1 of RFC9001}}.
-  This secret is not used to derive the header protection key.
+* ID Length: The length in bytes of the Channel ID field.
+
+* Channel ID: The channel ID for the channel associated with this frame.
+
+* Key Sequence Number: The key generation identified by this frame.
+This value MUST NOT be 0.
+* From Packet Number: The first channel packet number for which the secret in this frame is applicable.
+The secret applies to channel packets with packet numbers greater than or equal to From Packet Number and with the Key Phase corresponding to this Key Sequence Number as described in {{channel-key-management}}, until superseded by an MC_KEY frame for the same channel with a higher Key Sequence Number.
+When the Key Sequence Number increases, the From Packet Number MUST increase.
+
+* Secret Length: Provides the length of the secret field.
+
+* Secret: A channel packet protection secret.
+Packet protection keys and IVs for channel packets are derived from this secret using the cipher suite identified in the corresponding MC_ANNOUNCE frame and the `"quic key"` and `"quic iv"` labels, as described in {{Section 5.1 of RFC9001}}.
+This secret is not used to derive the header protection key.
 
 ## MC_JOIN {#channel-join-frame}
 
@@ -721,7 +741,7 @@ An MC_JOIN frame (type TBD-02) is sent from server to client and requests that t
 The client uses the channel's transport addresses and properties from the corresponding MC_ANNOUNCE frame.
 The MC_KEY Sequence Number field identifies the channel key generation that the server expects the client to have available when processing channel packets.
 
-A client cannot join a multicast channel without first receiving an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.
+A client MUST NOT join a multicast channel in response to an MC_JOIN frame unless it has received both an applicable MC_ANNOUNCE frame and an applicable MC_KEY frame for that channel.
 
 MC_JOIN frames are formatted as shown in {{fig-mc-channel-join-format}}.
 
@@ -758,7 +778,7 @@ Client responses to MC_JOIN are described in {{client-response}}.
 
 ## MC_LEAVE {#channel-leave-frame}
 
-An MC_LEAVE frame (type=TBD-03) is sent by a server to request that the client leave the given channel.
+An MC_LEAVE frame (type TBD-03) is sent by a server to instruct the client to leave the identified channel.
 MC_LEAVE does not retire the channel and the server can later send another MC_JOIN for the same channel as long as it is not retired.
 
 MC_LEAVE frames are formatted as shown in
@@ -778,11 +798,11 @@ MC_LEAVE frames contain the following fields:
 
 * ID Length: The length in bytes of the Channel ID field.
 
-* Channel ID: The channel ID for the channel that the client is requested to leave.
+* Channel ID: The channel ID for the channel that the client is instructed to leave.
 
-* MC_STATE Sequence Number: The most recent Client Channel State Sequence Number for this channel processed by the server when constructing this leave request.
+* MC_STATE Sequence Number: The most recent Client Channel State Sequence Number for this channel processed by the server when constructing this MC_LEAVE frame.
 A value of 0 indicates that no MC_STATE frames have been processed by the server.
-This value allows the client to ignore leave requests that are based on stale client channel state.
+This value allows the client to ignore MC_LEAVE frames that are based on stale client channel state.
 
 A client that receives an MC_LEAVE for a channel that it has already left, declined to join, or retired MUST ignore the frame.
 
@@ -940,7 +960,7 @@ MC_RETIRE frames contain the following fields:
 
 * ID Length: The length in bytes of the Channel ID field.
 
-* Channel ID: The channel ID for the channel that the client is requested to retire.
+* Channel ID: The channel ID for the channel being retired.
 
 A client that processes an MC_RETIRE frame MUST retire the channel immediately and discard all state associated with that channel.
 Client responses to MC_RETIRE are described in {{client-response}}.
@@ -1028,7 +1048,7 @@ If a server receives an MC_STATE frame of type TBD-0b with an undefined Reason C
 ## Retransmission of information
 In addition to the mechanisms used for retransmission described in {{Section 13.3 of RFC9000}} and {{Section 5.2 of RFC9221}} the following rules apply to the newly introduced frames:
 
-- As the properties carried in MC_ANNOUNCE frames can not change during the lifetime of a channel, information contained in them can be retransmitted without any special considerations.
+- As the properties carried in MC_ANNOUNCE frames are immutable for the lifetime of a channel, the information they contain can be retransmitted without special considerations.
 - Since conditions of the client or channel can have changed by the time a retransmission of an MC_JOIN, MC_LEAVE or MC_RETIRE channel becomes necessary, a retransmission might no longer be required or even appropriate. A retransmission SHOULD only occur if the channel in question should still be joined/left/retired.
 - Retransmission of information contained in MC_ACK frames MUST be handled exactly as with regular ACK frames.
 - For MC_KEY, MC_LIMITS, and MC_STATE, retransmissions MUST include the most up-to-date information.
