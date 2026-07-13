@@ -552,9 +552,31 @@ TODO: import the {{I-D.draft-krose-multicast-security}} explanation for why extr
 
 ## Packet Hashes {#packet-hashes}
 
-TODO: explanation and example for how to calculate the packet hash.
-Note that the hash is on the encrypted packet to avoid leaking data about the encrypted contents to those who can see a hash but not the key.
-(This approach also may help make better use of {{I-D.draft-ietf-mboned-ambi}} by making it possible to generate the same hashes for use in both AMBI and QUIC MC_INTEGRITY frames.)
+An accepted MC_INTEGRITY frame authenticates a channel packet by associating its packet number with a cryptographic hash of the protected packet.
+
+The input to the hash function is the complete protected channel packet, exactly as it appears in the UDP payload.
+The input begins with the first octet of the short header and ends with the final octet of the protected payload.
+It therefore includes the header-protected first octet, the Channel ID, the protected Packet Number field, and the complete protected payload, including the AEAD authentication tag.
+
+Channels carry only 1-RTT packets, which use short headers.
+Because a short-header packet has no Length field, a valid channel packet occupies the complete UDP payload; see {{Section 12.2 of RFC9000}}.
+Link-layer, IP, and UDP headers are not part of the hash input.
+No additional context is prepended or appended.
+
+A server MUST apply both packet protection and header protection before calculating the packet hash.
+
+To authenticate a channel packet, a client MUST calculate the packet hash over the protected channel packet as received and verify that it matches the hash associated with the packet's reconstructed packet number in an accepted MC_INTEGRITY frame for the same channel.
+Removing header protection and reconstructing the packet number do not by themselves authenticate the packet.
+
+If H is the Integrity Hash Algorithm advertised for the channel, the packet hash is:
+
+~~~
+packet_hash = H(protected_channel_packet)
+~~~
+
+The resulting packet_hash value is copied directly into the Packet Hashes field without textual or other additional encoding.
+
+Non-normative packet hash test vectors are provided in {{packet-hash-examples}}.
 
 # Recovery {#recovery}
 
@@ -1250,6 +1272,49 @@ TODO: MC_EXTENSION_ERROR error code
 TODO: lots
 
 --- back
+
+# Packet Hash Test Vectors {#packet-hash-examples}
+
+This appendix provides non-normative test vectors for calculating packet hashes.
+
+The following examples use the TLS_CHACHA20_POLY1305_SHA256 cipher suite for channel packet protection and SHA-256 as the Integrity Hash Algorithm.
+They reuse the keying values from {{Appendix A.5 of RFC9001}}, but construct packets with a non-empty Channel ID and the four-byte packet number encoding required for channel packets.
+Both packets contain a single PING frame and use Key Phase 0.
+Values are hexadecimal unless otherwise stated.
+
+~~~
+Packet protection key =
+  c6d98ff3441c3fe1b2182094f69caa2e
+  d4b716b65488960a7a984979fb23e1c8
+Packet protection IV = e0459b3474bdd0e44a41c144
+Header protection key =
+  25a282b9e82f06f21f488917a4fc8f1b
+  73573685608597d0efcb076b0ab7a7a4
+Channel ID = 8394c8f03e515708
+Plaintext packet payload = 01
+
+Packet number = 654360564 (0x2700bff4)
+Unprotected header = 438394c8f03e5157082700bff4
+Protected packet =
+  498394c8f03e515708c232c2f465ddc0
+  fea10a2a521305590135fbba5297
+SHA-256 packet hash =
+  ade45c427385349e7d743fd13d747490
+  e47af80187a8c70ab7651118edb89056
+
+Packet number = 654360565 (0x2700bff5)
+Unprotected header = 438394c8f03e5157082700bff5
+Protected packet =
+  508394c8f03e5157086fe8daad91ed1b
+  dd8fe00db5e04d2d3dbc564a13f1
+SHA-256 packet hash =
+  5f5a1ae8b243071180f7e13a35e43bf6
+  4aa6ac73e4d77f3fb015a741f477dbce
+~~~
+
+An MC_INTEGRITY frame of type TBD-04 covering both packets has Packet Number Start 654360564.
+This frame does not contain a Packet Hashes Length field.
+Its 64-byte Packet Hashes field extends to the end of the containing packet and is the concatenation of the two SHA-256 packet hashes above, in packet-number order.
 
 # Acknowledgments
 {:numbered="false"}
