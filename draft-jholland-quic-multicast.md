@@ -556,6 +556,64 @@ TODO: explanation and example for how to calculate the packet hash.
 Note that the hash is on the encrypted packet to avoid leaking data about the encrypted contents to those who can see a hash but not the key.
 (This approach also may help make better use of {{I-D.draft-ietf-mboned-ambi}} by making it possible to generate the same hashes for use in both AMBI and QUIC MC_INTEGRITY frames.)
 
+
+# Recovery {#recovery}
+
+Loss detection and recovery for packets sent on the associated unicast connection are unchanged from {{RFC9002}}.
+For channel packets, the server applies the RTT estimation and loss detection mechanisms in Sections 5 and 6 of {{RFC9002}}, with the adaptations described in this section.
+Congestion control for multicast channels is described in {{congestion-control}}.
+
+## Channel Loss Detection
+
+Each channel has its own packet number space.
+A server applies acknowledgment processing and loss detection separately for each client and channel.
+An MC_ACK frame received from one client acknowledges channel packets only for that client and MUST NOT alter the recovery state of another client.
+Consequently, the same channel packet can be acknowledged for one client and considered lost for another.
+
+The packet-threshold and time-threshold loss detection mechanisms described in {{Section 6.1 of RFC9002}} apply within each channel packet number space and separately for each client.
+
+For purposes of generating an RTT sample, the send time is the time at which the largest newly acknowledged channel packet was transmitted, and the acknowledgment time is the time at which the corresponding MC_ACK frame is received on the associated unicast connection.
+The resulting measurement includes the delay over the multicast path from server to client and the delay over the unicast return path used for the MC_ACK frame.
+It is not an RTT measurement for either path in isolation.
+
+When adjusting an RTT sample for acknowledgment delay as described in {{Section 5.3 of RFC9002}}, the server MUST use the ACK Delay value from the MC_ACK frame and the Max ACK Delay advertised for the channel in MC_ANNOUNCE.
+An RTT sample derived from an MC_ACK frame MUST NOT update the RTT estimator for the associated unicast path.
+
+A server SHOULD record the actual transmission time of each channel packet for use in loss detection.
+A server implementation can use different
+devices or components to transmit channel packets and process MC_ACK frames.
+Such an implementation needs to account for clock synchronization error and
+delay in communicating packet transmission information between those
+components.
+
+When the uncertainty in an estimated transmission time is bounded, the
+server SHOULD include that uncertainty in time-threshold loss detection and
+PTO periods.  When that uncertainty cannot be bounded, the server SHOULD use
+conservative timer values and MUST NOT use the affected RTT samples to reduce
+an existing loss detection or PTO period.  Packet-threshold loss detection
+does not depend on transmission timestamps and remains available.
+
+If the unicast return path used for MC_ACK frames changes, the server SHOULD reinitialize the corresponding channel RTT estimator for that client.
+
+A probe intended to elicit an MC_ACK frame MUST be sent as an ack-eliciting channel packet.
+A packet sent only on the associated unicast path can test that path or recover lost information, but does not test delivery over the multicast channel.
+A server SHOULD aggregate multicast probes that are needed by multiple clients rather than sending a separate probe for each client.
+
+## Recovering Lost Information
+
+Except for MC_ACK, frames defined in this document are ack-eliciting.
+Declaring a packet lost does not require retransmitting that packet or its
+frames verbatim.  Information that still requires reliable delivery is sent
+in new packets as described in {{Section 13.3 of RFC9000}} and
+{{retransmission-of-information}}.
+
+The server can recover information lost by a client by sending it on the
+associated unicast connection, retransmitting it on the same multicast
+channel, or sending it on another multicast channel that reaches the client.
+The server is responsible for ensuring that information requiring reliable
+delivery ultimately reaches each client.  The choice of recovery path is
+implementation-dependent.
+
 # Recovery {#recovery}
 
 TODO: Articulate key differences with {{RFC9002}}.
