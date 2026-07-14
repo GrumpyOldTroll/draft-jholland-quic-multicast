@@ -127,6 +127,9 @@ Multicast channels are designed to leverage multicast IP and to be shared by man
 One or more servers can use the same QUIC multicast channel to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
 (Note that QUIC connections are defined in {{Section 5 of RFC9000}} and are not changed in this document; each connection is a shared state between a client and a server.)
 
+The lifetime of a multicast channel is independent of the lifetime of any stream or application object carried on it and of the period for which any particular client remains joined.
+A channel can carry multiple streams or application objects and can remain active as clients join and leave.
+
 Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels only support source-specific multicast (SSM) and do not support any-source multicast (ASM) semantics.
 
 Channels carry only 1-RTT packets.
@@ -1071,6 +1074,8 @@ Note that when a newly connected client joins a channel, the client will only be
 This usually means that new streams must be started for application data carried in channel packets whenever there might be new clients that have joined since an earlier stream started. If the server deems it convenient, it could also send preceding data for that stream over the unicast connection to catch the client up.
 
 With broadcast video, this usually means a new stream is necessary for every video segment or group of video frames since new clients will join throughout the broadcast, whereas for video conferencing, it could be possible to start a new stream whenever new clients join the conference without needing a new stream per object.
+
+Starting a new stream for a video segment does not require creating a new multicast channel; a channel can carry many such streams over its lifetime.
 
 ## Application Use Cases
 
