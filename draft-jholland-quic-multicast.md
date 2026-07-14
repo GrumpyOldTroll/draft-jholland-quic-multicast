@@ -1184,19 +1184,25 @@ For example, when switching receivers from one channel to another, a server can 
 
 ## Graceful Degradation {#graceful-degradation}
 
-Clients with multicast QUIC support can stop accepting multicast for a variety of reasons.
+Multicast delivery can become unavailable to a client for a variety of reasons.
+
+When this causes delivery to fall back to unicast, the available unicast capacity might not sustain the delivery rate previously provided over multicast.
 
 Applications like live broadcast-scale video that rely on multicast QUIC may benefit from anticipating that clients might stop using multicast and providing data feeds with similar content that can scale even if many clients stop using multicast, for example by ensuring that a lower-bitrate rendition can still be delivered over unicast to all or most of the clients simultaneously, and ensuring that the server has a way to make the client start using the low-bitrate version when it switches to unicast.
 
 While some existing Adaptive Bitrate video players might have an easy way to provide this, other video players might need specialized logic to provide the server a way to control what bitrate individual clients consume.
 Although under ideal conditions it may often be possible using features like server push ({{server-push}}) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra development at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.
 
-### Circuit Breakers
+### Correlated Multicast Failure and Circuit Breakers
 
 Operators of multicast QUIC services should consider that some networks may implement circuit breakers such as the one described in {{I-D.draft-ietf-mboned-cbacc}}, or similar network-level safety features that might cut off previously operational multicast transport under certain conditions.
 
-A simultaneous loss of MC_ACK feedback from multiple clients that were previously acknowledging channel packets can indicate that multicast delivery has been interrupted in part of the network.
-When responding to such a correlated failure, servers SHOULD pace any increase in unicast delivery across the affected clients to avoid causing additional congestion.
+A simultaneous loss of MC_ACK feedback from multiple clients that were previously acknowledging channel packets can indicate a correlated multicast delivery failure.
+If the server initiates unicast fallback for all affected clients at once, the resulting surge in packet generation, encryption, connection processing, and network traffic can overload the server or a shared network bottleneck.
+
+Per-connection congestion control does not ensure that the aggregate initial surge remains within the capacity of the server or a shared network bottleneck.
+A server SHOULD therefore apply server-wide pacing or admission control when starting or increasing unicast fallback after a correlated multicast failure.
+The server MAY stagger fallback across clients, prioritize selected traffic or clients, or initially use lower-rate delivery modes for unicast fallback.
 
 ## Server Scalability {#server-scalability}
 
