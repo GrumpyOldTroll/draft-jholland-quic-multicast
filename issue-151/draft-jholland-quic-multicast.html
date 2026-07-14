@@ -1051,7 +1051,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Holland, et al.</td>
-<td class="center">Expires 12 January 2027</td>
+<td class="center">Expires 15 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1064,12 +1064,12 @@ svg {
 <dd class="internet-draft">draft-jholland-quic-multicast-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-11" class="published">11 July 2026</time>
+<time datetime="2026-07-14" class="published">14 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-12">12 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-15">15 January 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1130,7 +1130,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 12 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 15 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1306,7 +1306,7 @@ svg {
                 <p id="section-toc.1-1.12.2.6.1"><a href="#section-12.6" class="auto internal xref">12.6</a>.  <a href="#name-graceful-degradation" class="internal xref">Graceful Degradation</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.6.2.1">
-                    <p id="section-toc.1-1.12.2.6.2.1.1"><a href="#section-12.6.1" class="auto internal xref">12.6.1</a>.  <a href="#name-circuit-breakers" class="internal xref">Circuit Breakers</a></p>
+                    <p id="section-toc.1-1.12.2.6.2.1.1"><a href="#section-12.6.1" class="auto internal xref">12.6.1</a>.  <a href="#name-correlated-multicast-failur" class="internal xref">Correlated Multicast Failure and Circuit Breakers</a></p>
 </li>
                 </ul>
 </li>
@@ -2757,18 +2757,22 @@ These frames do not provide a mechanism for draining a channel up to a packet-nu
         <h3 id="name-graceful-degradation">
 <a href="#section-12.6" class="section-number selfRef">12.6. </a><a href="#name-graceful-degradation" class="section-name selfRef">Graceful Degradation</a>
         </h3>
-<p id="section-12.6-1">Clients with multicast QUIC support can stop accepting multicast for a variety of reasons.<a href="#section-12.6-1" class="pilcrow">¶</a></p>
-<p id="section-12.6-2">Applications like live broadcast-scale video that rely on multicast QUIC may benefit from anticipating that clients might stop using multicast and providing data feeds with similar content that can scale even if many clients stop using multicast, for example by ensuring that a lower-bitrate rendition can still be delivered over unicast to all or most of the clients simultaneously, and ensuring that the server has a way to make the client start using the low-bitrate version when it switches to unicast.<a href="#section-12.6-2" class="pilcrow">¶</a></p>
-<p id="section-12.6-3">While some existing Adaptive Bitrate video players might have an easy way to provide this, other video players might need specialized logic to provide the server a way to control what bitrate individual clients consume.
-Although under ideal conditions it may often be possible using features like server push (<a href="#server-push" class="auto internal xref">Section 12.3.1</a>) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra development at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.<a href="#section-12.6-3" class="pilcrow">¶</a></p>
-<div id="circuit-breakers">
+<p id="section-12.6-1">Multicast delivery can become unavailable to a client for a variety of reasons.<a href="#section-12.6-1" class="pilcrow">¶</a></p>
+<p id="section-12.6-2">When this causes delivery to fall back to unicast, the available unicast capacity might not sustain the delivery rate previously provided over multicast.<a href="#section-12.6-2" class="pilcrow">¶</a></p>
+<p id="section-12.6-3">Applications like live broadcast-scale video that rely on multicast QUIC may benefit from anticipating that clients might stop using multicast and providing data feeds with similar content that can scale even if many clients stop using multicast, for example by ensuring that a lower-bitrate rendition can still be delivered over unicast to all or most of the clients simultaneously, and ensuring that the server has a way to make the client start using the low-bitrate version when it switches to unicast.<a href="#section-12.6-3" class="pilcrow">¶</a></p>
+<p id="section-12.6-4">While some existing Adaptive Bitrate video players might have an easy way to provide this, other video players might need specialized logic to provide the server a way to control what bitrate individual clients consume.
+Although under ideal conditions it may often be possible using features like server push (<a href="#server-push" class="auto internal xref">Section 12.3.1</a>) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra development at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.<a href="#section-12.6-4" class="pilcrow">¶</a></p>
+<div id="correlated-multicast-failure-and-circuit-breakers">
 <section id="section-12.6.1">
-          <h4 id="name-circuit-breakers">
-<a href="#section-12.6.1" class="section-number selfRef">12.6.1. </a><a href="#name-circuit-breakers" class="section-name selfRef">Circuit Breakers</a>
+          <h4 id="name-correlated-multicast-failur">
+<a href="#section-12.6.1" class="section-number selfRef">12.6.1. </a><a href="#name-correlated-multicast-failur" class="section-name selfRef">Correlated Multicast Failure and Circuit Breakers</a>
           </h4>
 <p id="section-12.6.1-1">Operators of multicast QUIC services should consider that some networks may implement circuit breakers such as the one described in <span>[<a href="#I-D.draft-ietf-mboned-cbacc" class="cite xref">I-D.draft-ietf-mboned-cbacc</a>]</span>, or similar network-level safety features that might cut off previously operational multicast transport under certain conditions.<a href="#section-12.6.1-1" class="pilcrow">¶</a></p>
-<p id="section-12.6.1-2">A simultaneous loss of MC_ACK feedback from multiple clients that were previously acknowledging channel packets can indicate that multicast delivery has been interrupted in part of the network.
-When responding to such a correlated failure, servers SHOULD pace any increase in unicast delivery across the affected clients to avoid causing additional congestion.<a href="#section-12.6.1-2" class="pilcrow">¶</a></p>
+<p id="section-12.6.1-2">A simultaneous loss of MC_ACK feedback from multiple clients that were previously acknowledging channel packets can indicate a correlated multicast delivery failure.
+If the server initiates unicast fallback for all affected clients at once, the resulting surge in packet generation, encryption, connection processing, and network traffic can overload the server or a shared network bottleneck.<a href="#section-12.6.1-2" class="pilcrow">¶</a></p>
+<p id="section-12.6.1-3">Per-connection congestion control does not ensure that the aggregate initial surge remains within the capacity of the server or a shared network bottleneck.
+A server SHOULD therefore apply server-wide pacing or admission control when starting or increasing unicast fallback after a correlated multicast failure.
+The server MAY stagger fallback across clients, prioritize selected traffic or clients, or initially use lower-rate delivery modes for unicast fallback.<a href="#section-12.6.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
