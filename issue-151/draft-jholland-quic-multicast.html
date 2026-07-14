@@ -1430,8 +1430,8 @@ appear in all capitals, as shown here.<a href="#section-1.1-1" class="pilcrow">�
 <p id="section-2-2">Multicast channels are designed to leverage multicast IP and to be shared by many different connections simultaneously for unidirectional server-initiated data.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">One or more servers can use the same QUIC multicast channel to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
 (Note that QUIC connections are defined in <span><a href="https://rfc-editor.org/rfc/rfc9000#section-5" class="relref">Section 5</a> of [<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> and are not changed in this document; each connection is a shared state between a client and a server.)<a href="#section-2-3" class="pilcrow">¶</a></p>
-<p id="section-2-4">The lifetime of a multicast channel is independent of the lifetime of any stream or application object carried on it and of the period for which any particular client remains joined.
-A channel can carry multiple streams or application objects and can remain active as clients join and leave.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-4">Channel lifetime is determined by application requirements and implementation policy.
+In particular, it need not coincide with the lifetime of any particular stream or with the period for which any particular client remains joined.<a href="#section-2-4" class="pilcrow">¶</a></p>
 <p id="section-2-5">Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels only support source-specific multicast (SSM) and do not support any-source multicast (ASM) semantics.<a href="#section-2-5" class="pilcrow">¶</a></p>
 <p id="section-2-6">Channels carry only 1-RTT packets.
 Packets associated with a channel contain a Channel ID in place of a Destination Connection ID.
@@ -2621,7 +2621,7 @@ MC_ANNOUNCE, MC_INTEGRITY, MC_KEY and MC_RETIRE frames are permitted because the
         </h3>
 <p id="section-12.1-1">Note that when a newly connected client joins a channel, the client will only be able to receive application data carried in stream frames delivered on that channel when they have received the stream data starting from offset 0 of the stream.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 <p id="section-12.1-2">This usually means that new streams must be started for application data carried in channel packets whenever there might be new clients that have joined since an earlier stream started. If the server deems it convenient, it could also send preceding data for that stream over the unicast connection to catch the client up.<a href="#section-12.1-2" class="pilcrow">¶</a></p>
-<p id="section-12.1-3">With broadcast video, this usually means a new stream is necessary for every video segment or group of video frames since new clients will join throughout the broadcast, whereas for video conferencing, it could be possible to start a new stream whenever new clients join the conference without needing a new stream per object.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+<p id="section-12.1-3">With broadcast video, this usually means a new stream is necessary for every video segment or group of video frames since new clients will join throughout the broadcast, whereas for video conferencing, it might be sufficient to start a new stream only when a new client joins the conference.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
 <p id="section-12.1-4">Starting a new stream for a video segment does not require creating a new multicast channel; a channel can carry many such streams over its lifetime.<a href="#section-12.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>

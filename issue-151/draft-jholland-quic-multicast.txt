@@ -216,11 +216,10 @@ Table of Contents
    in this document; each connection is a shared state between a client
    and a server.)
 
-   The lifetime of a multicast channel is independent of the lifetime of
-   any stream or application object carried on it and of the period for
-   which any particular client remains joined.  A channel can carry
-   multiple streams or application objects and can remain active as
-   clients join and leave.
+   Channel lifetime is determined by application requirements and
+   implementation policy.  In particular, it need not coincide with the
+   lifetime of any particular stream or with the period for which any
+   particular client remains joined.
 
    Each QUIC multicast channel has exactly one associated (S,G) that is
    used for the delivery of the multicast packets on the IP layer.
@@ -1804,8 +1803,8 @@ Table of Contents
    With broadcast video, this usually means a new stream is necessary
    for every video segment or group of video frames since new clients
    will join throughout the broadcast, whereas for video conferencing,
-   it could be possible to start a new stream whenever new clients join
-   the conference without needing a new stream per object.
+   it might be sufficient to start a new stream only when a new client
+   joins the conference.
 
    Starting a new stream for a video segment does not require creating a
    new multicast channel; a channel can carry many such streams over its
