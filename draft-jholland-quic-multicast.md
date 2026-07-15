@@ -127,6 +127,9 @@ Multicast channels are designed to leverage multicast IP and to be shared by man
 One or more servers can use the same QUIC multicast channel to send the same data to many clients, as a supplement to the individual QUIC connections between those servers and clients.
 (Note that QUIC connections are defined in {{Section 5 of RFC9000}} and are not changed in this document; each connection is a shared state between a client and a server.)
 
+Channel lifetime is determined by application requirements and implementation policy.
+In particular, it need not coincide with the lifetime of any particular stream or with the period for which any particular client remains joined.
+
 Each QUIC multicast channel has exactly one associated (S,G) that is used for the delivery of the multicast packets on the IP layer. Channels only support source-specific multicast (SSM) and do not support any-source multicast (ASM) semantics.
 
 Channels carry only 1-RTT packets.
@@ -424,7 +427,7 @@ Retiring a joined channel also leaves that channel; the client does not send a s
 
 ## Acknowledging Channel Packets {#channel-packet-acknowledgment}
 
-Clients that receive and decode packets on a multicast channel acknowledge those packets on the unicast connection using MC_ACK ({{channel-ack-frame}}) frames.
+A client acknowledges channel packets that it has received and processed by sending MC_ACK ({{channel-ack-frame}}) frames on the associated unicast connection.
 
 An MC_ACK frame acknowledges packets only in the packet number space of the channel identified by its Channel ID.
 
@@ -449,11 +452,8 @@ When MC_ACK frames are sent less frequently, clients need to retain ACK range in
 ACK_FREQUENCY and IMMEDIATE_ACK frames defined by {{I-D.ietf-quic-ack-frequency}} do not affect MC_ACK generation unless a future extension explicitly defines such behavior.
 The ACK policy for MC_ACK frames is instead defined by the MC_ANNOUNCE frame for the corresponding channel.
 
-After sending ack-eliciting channel packets, a server can determine that a client is receiving packets for a multicast channel when it receives MC_ACK frames for that channel.
-It is up to the server to decide how long to wait before treating the absence of MC_ACK frames as evidence that the client is not receiving packets on the channel, and to take appropriate steps such as sending an MC_LEAVE frame.
-
-A client that is willing to remain joined to a channel SHOULD NOT leave the channel solely because it receives no channel data for an extended period.
-This enables multicast-capable networks to perform popularity-based admission control for multicast channels.
+After sending ack-eliciting channel packets, a server can use MC_ACK frames that acknowledge those packets as evidence that the client has received and processed them.
+Operational use of this evidence is discussed in {{multicast-cutover}}.
 
 ## Data Carried in Channels
 
@@ -477,7 +477,7 @@ If this occurs persistently, or if the number of unauthenticated packets exceeds
 
 A client MAY decline to join a channel, or MAY leave a joined channel, if the Max Authentication Delay value is larger than the client is willing to support.
 
-## Stream Processing
+## Stream Processing {#stream-processing}
 
 Stream IDs in channels are restricted to unidirectional server initiated streams, or those with the least significant 2 bits of the stream ID equal to 3 (see {{Section 2.1 of RFC9000}}).
 
@@ -541,7 +541,7 @@ All frames defined by this document other than MC_ACK are ack-eliciting.
 Packets containing those frames are considered in-flight and count toward congestion control limits as described in {{RFC9002}}.
 MC_ACK frames are treated the same as ACK frames for congestion control and loss recovery purposes and do not make a packet ack-eliciting and thus a packet containing only them does not count as in-flight.
 
-The server maintains a full view of the traffic received by the client via the MC_ACK ({{channel-ack-frame}}) frames and ACK frames it receives, and can detect loss experienced by the client.
+The server uses MC_ACK and ACK frames as feedback about traffic received by the client and can use that feedback to infer loss.
 Under sustained persistent loss that exceeds server-configured thresholds, the server SHOULD instruct the client to leave channels as appropriate to avoid having the client continue to see sustained persistent loss.
 
 Under sustained persistent loss that exceeds client-configured thresholds, the client SHOULD reduce its Max Aggregate Rate and tell the server via MC_LIMITS frames, which also will result in the server instructing the client to leave channels until the client's aggregate rate is below its advertised Max Aggregate Rate.
@@ -610,8 +610,7 @@ As such, it MUST immediately send an MC_LIMITS frame after it has noticed that i
 After migration, a client MAY re-establish IP-layer multicast reception for a channel to which it remains joined if its current limits still permit that channel.
 If it does not re-establish reception for a channel, it MUST leave the channel and send an MC_STATE frame with State LEFT and an appropriate Reason Code, such as LIMIT_VIOLATION if its new limits no longer allow it.
 
-The server SHOULD take notice of migrating clients as the delay that is being caused by rejoining a multicast group can lead to exceeding the expected Max ACK Delay, which a server might interpret as a loss of multicast connectivity.
-Instead, the server SHOULD treat all multicast channels of a client whose unicast connection just migrated as if it had just joined these channels initially and allow for ample time before expecting the first MC_ACK frames.
+Because migration can change multicast reachability and require the client to rejoin a multicast group, the server SHOULD treat each previously joined channel as a new pending multicast attempt and handle validation and cutover as described in {{multicast-cutover}}.
 
 # New Frames
 
@@ -1094,7 +1093,9 @@ Note that when a newly connected client joins a channel, the client will only be
 
 This usually means that new streams must be started for application data carried in channel packets whenever there might be new clients that have joined since an earlier stream started. If the server deems it convenient, it could also send preceding data for that stream over the unicast connection to catch the client up.
 
-With broadcast video, this usually means a new stream is necessary for every video segment or group of video frames since new clients will join throughout the broadcast, whereas for video conferencing, it could be possible to start a new stream whenever new clients join the conference without needing a new stream per object.
+With broadcast video, this usually means a new stream is necessary for every video segment or group of video frames since new clients will join throughout the broadcast, whereas for video conferencing, it might be sufficient to start a new stream only when a new client joins the conference.
+
+Starting a new stream for a video segment does not require creating a new multicast channel; a channel can carry many such streams over its lifetime.
 
 ## Application Use Cases
 
@@ -1158,6 +1159,45 @@ Such a value could for instance be sent in an HTTP/3 response header, and as lon
 Then by choosing the same server-chosen session ID for all the connections, the server would be able to use the same channel to carry the identical complete datagrams, including the server-chosen Session ID, to multiple receivers that the server asks to join the same channel.
 Such a change could either replace the current client-chosen definition for Session ID in server-to-client datagrams, or could add new HTTP/3 frame types that allow a server-chosen Session ID when the client has advertised support for this extended functionality.
 
+## Multicast Delivery Validation and Cutover {#multicast-cutover}
+
+Joining a multicast channel and validating multicast delivery are separate events.
+An MC_STATE frame with State JOINED indicates that the client has accepted the join request and established local state for the channel.
+It does not by itself demonstrate that channel packets reach the client or that the client can decrypt, authenticate, and process those packets.
+A server MUST NOT treat an MC_STATE frame with State JOINED as evidence that multicast delivery is working.
+
+Overlapping unicast and multicast delivery can avoid interruption or delay while multicast delivery is being attempted, but it consumes additional server and network capacity.
+Whether and to what extent to use overlapping delivery is an operational decision.
+In particular, overlapping unicast delivery might be inappropriate when sending the same data separately to every client would overload the server or network.
+
+When a server uses unicast delivery during a multicast attempt, it SHOULD continue delivering corresponding application data over the associated unicast connection until it has positive evidence that multicast delivery is working for that client.
+
+Once multicast delivery has been validated using MC_ACK evidence, the server SHOULD stop or reduce corresponding unicast delivery.
+The policy for treating multicast delivery as validated is application-specific.
+It can require acknowledgment of one or more channel packets, sustained acknowledgment over a period of time, acceptable loss or ECN feedback, or other application-specific conditions.
+If sufficient MC_ACK evidence is not received, the server needs to decide whether to keep probing the multicast path or to stop the attempt for that client.
+Keeping the client joined can allow multicast delivery to start working later without another join request, but it consumes client and server state, can count against the client's advertised limits, and can require the server to continue sending control information such as MC_INTEGRITY frames.
+Sending MC_LEAVE releases those resources and avoids continued multicast traffic or probing for that client, but gives up the opportunity for that join attempt to succeed later.
+A client that is willing to remain joined to a channel SHOULD NOT leave the channel solely because it receives no channel data for an extended period.
+This enables multicast-capable networks to perform popularity-based admission control for multicast channels.
+
+A server can use an implementation-specific validation window to decide when to stop treating a joined channel as a pending multicast attempt.
+The validation window does not control unicast delivery; it only determines when the server changes strategy, such as by sending MC_LEAVE, reducing probe traffic, or retrying multicast later.
+The window ought to account for multicast group join latency, packet transmission and authentication delay, the Max ACK Delay advertised for the channel, RTT on the associated unicast connection, and expected packet loss or reordering.
+
+During cutover, a server needs to account for duplicate delivery.
+Duplicate STREAM data is handled as described in {{stream-processing}}.
+For DATAGRAM frames or application formats without transport-level duplicate suppression, application protocols or servers need to ensure that duplicate delivery during the validation window is safe or can be detected and ignored.
+
+The absence of MC_ACK frames is not by itself a precise fault signal.
+After the server has sent ack-eliciting channel packets, lack of MC_ACK feedback can indicate that no channel packets reached the client, that the client received channel packets but could not decrypt, authenticate, or process them, or that MC_ACK feedback has been delayed or lost.
+In all of these cases, multicast delivery remains unvalidated.
+
+If a client abandons a joined channel because it receives channel packets but cannot process them, it SHOULD send an MC_STATE frame with State LEFT and a Reason Code that describes the cause.
+UNSYNCHRONIZED_PROPERTIES is used when the client cannot decrypt packets because the channel properties, packet number state, or channel key state are not synchronized with the server.
+AUTHENTICATION_DELAY_EXCEEDED is used when packets cannot be authenticated within the buffering interval the client is willing to support.
+EXCESSIVE_SPURIOUS_TRAFFIC is used when packets received for the channel's network address cannot be associated with the joined channel or otherwise appear to be unrelated, corrupted, misconfigured, or attacker-injected traffic.
+
 ## Moving Clients Between Channels {#moving-clients-between-channels}
 
 MC_LEAVE and MC_RETIRE take effect immediately when processed by the receiver.
@@ -1169,18 +1209,25 @@ For example, when switching receivers from one channel to another, a server can 
 
 ## Graceful Degradation {#graceful-degradation}
 
-Clients with multicast QUIC support can stop accepting multicast for a variety of reasons.
+Multicast delivery can become unavailable to a client for a variety of reasons.
+
+When this causes delivery to fall back to unicast, the available unicast capacity might not sustain the delivery rate previously provided over multicast.
 
 Applications like live broadcast-scale video that rely on multicast QUIC may benefit from anticipating that clients might stop using multicast and providing data feeds with similar content that can scale even if many clients stop using multicast, for example by ensuring that a lower-bitrate rendition can still be delivered over unicast to all or most of the clients simultaneously, and ensuring that the server has a way to make the client start using the low-bitrate version when it switches to unicast.
 
 While some existing Adaptive Bitrate video players might have an easy way to provide this, other video players might need specialized logic to provide the server a way to control what bitrate individual clients consume.
 Although under ideal conditions it may often be possible using features like server push ({{server-push}}) to use unmodified existing HTTP-based video players with multicast QUIC, in practice it may require extra development at the application level to make a player that robustly delivers a good user experience under variable network conditions, depending on the scalability gains that multicast transport is providing and the Adaptive Bitrate algorithms the player is using.
 
-### Circuit Breakers
+### Correlated Multicast Failure and Circuit Breakers
 
 Operators of multicast QUIC services should consider that some networks may implement circuit breakers such as the one described in {{I-D.draft-ietf-mboned-cbacc}}, or similar network-level safety features that might cut off previously operational multicast transport under certain conditions.
 
-The servers will notice the transport loss from the lack of MC_ACK frames from receivers in a network that cut off multicast transport, but it may be beneficial when possible in a transport cutoff event correlated across many clients to pace the recovery response according to aggregations of the affected clients so that a sudden unicast storm doesn't overload the network further.
+A simultaneous loss of MC_ACK feedback from multiple clients that were previously acknowledging channel packets can indicate a correlated multicast delivery failure.
+If the server initiates unicast fallback for all affected clients at once, the resulting surge in packet generation, encryption, connection processing, and network traffic can overload the server or a shared network bottleneck.
+
+Per-connection congestion control does not ensure that the aggregate initial surge remains within the capacity of the server or a shared network bottleneck.
+A server SHOULD therefore apply server-wide pacing or admission control when starting or increasing unicast fallback after a correlated multicast failure.
+The server MAY stagger fallback across clients, prioritize selected traffic or clients, or initially use lower-rate delivery modes for unicast fallback.
 
 ## Server Scalability {#server-scalability}
 
@@ -1230,13 +1277,11 @@ For such channels, servers can reduce wasted work by sending integrity informati
 
 ## Spurious Channel Traffic
 
-A client can receive multicast packets that it cannot associate with a joined channel, that cannot be authenticated using accepted MC_INTEGRITY information, or that cannot be decrypted using an applicable channel
-secret.
-Such packets can be caused by corruption, loss or delay of control information, misconfiguration, or injection by an attacker.
+A client can receive multicast packets at a network address used by a joined channel that cannot be associated with that channel or that appear to be unrelated, corrupted, misconfigured, or injected by an attacker.
+Packets that are awaiting MC_INTEGRITY information within the buffering interval for the channel are not spurious solely because they are not yet authenticated.
 
 A client MAY discard such packets without further processing.
 If spurious traffic is persistently received for an (S,G) used by one or more joined channels, and the traffic interferes with reception or causes excessive resource use, the client MAY leave the affected channels and send MC_STATE with State LEFT and Reason Code EXCESSIVE_SPURIOUS_TRAFFIC.
-
 
 # Security Considerations
 
