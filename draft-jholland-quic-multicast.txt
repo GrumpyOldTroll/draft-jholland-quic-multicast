@@ -5,12 +5,12 @@
 QUIC Working Group                                            J. Holland
 Internet-Draft                                 Akamai Technologies, Inc.
 Intended status: Experimental                                  L. Pardue
-Expires: 15 January 2027                                                
+Expires: 16 January 2027                                                
                                                                M. Franke
                                                                TU Berlin
                                                                  K. Rose
                                                Akamai Technologies, Inc.
-                                                            14 July 2026
+                                                            15 July 2026
 
 
                       Multicast Extension for QUIC
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 January 2027.
+   This Internet-Draft will expire on 16 January 2027.
 
 Copyright Notice
 
@@ -115,13 +115,14 @@ Table of Contents
        12.3.1.  HTTP/3 Server Push
        12.3.2.  HTTP/3 WebTransport Streams
        12.3.3.  Datagrams
-     12.4.  Moving Clients Between Channels
-     12.5.  Graceful Degradation
-       12.5.1.  Circuit Breakers
-     12.6.  Server Scalability
-     12.7.  Address Collisions
-     12.8.  Buffering Unauthenticated Packets
-     12.9.  Spurious Channel Traffic
+     12.4.  Multicast Delivery Validation and Cutover
+     12.5.  Moving Clients Between Channels
+     12.6.  Graceful Degradation
+       12.6.1.  Correlated Multicast Failure and Circuit Breakers
+     12.7.  Server Scalability
+     12.8.  Address Collisions
+     12.9.  Buffering Unauthenticated Packets
+     12.10. Spurious Channel Traffic
    13. Security Considerations
    14. IANA Considerations
    15. References
@@ -214,6 +215,11 @@ Table of Contents
    connections are defined in Section 5 of [RFC9000] and are not changed
    in this document; each connection is a shared state between a client
    and a server.)
+
+   Channel lifetime is determined by application requirements and
+   implementation policy.  In particular, it need not coincide with the
+   lifetime of any particular stream or with the period for which any
+   particular client remains joined.
 
    Each QUIC multicast channel has exactly one associated (S,G) that is
    used for the delivery of the multicast packets on the IP layer.
@@ -327,7 +333,7 @@ Table of Contents
    the client.  It is recommended that applications designed to leverage
    the multicast capabilities of this extension also provide graceful
    degradation for endpoints that do not or cannot make use of the
-   multicast functionality (see Section 12.5).
+   multicast functionality (see Section 12.6).
 
    The server has access to all data transmitted on any multicast
    channel it uses, and could optionally send this data with unicast
@@ -701,9 +707,9 @@ Table of Contents
 
 4.4.  Acknowledging Channel Packets
 
-   Clients that receive and decode packets on a multicast channel
-   acknowledge those packets on the unicast connection using MC_ACK
-   (Section 10.6) frames.
+   A client acknowledges channel packets that it has received and
+   processed by sending MC_ACK (Section 10.6) frames on the associated
+   unicast connection.
 
    An MC_ACK frame acknowledges packets only in the packet number space
    of the channel identified by its Channel ID.
@@ -746,17 +752,10 @@ Table of Contents
    for MC_ACK frames is instead defined by the MC_ANNOUNCE frame for the
    corresponding channel.
 
-   After sending ack-eliciting channel packets, a server can determine
-   that a client is receiving packets for a multicast channel when it
-   receives MC_ACK frames for that channel.  It is up to the server to
-   decide how long to wait before treating the absence of MC_ACK frames
-   as evidence that the client is not receiving packets on the channel,
-   and to take appropriate steps such as sending an MC_LEAVE frame.
-
-   A client that is willing to remain joined to a channel SHOULD NOT
-   leave the channel solely because it receives no channel data for an
-   extended period.  This enables multicast-capable networks to perform
-   popularity-based admission control for multicast channels.
+   After sending ack-eliciting channel packets, a server can use MC_ACK
+   frames that acknowledge those packets as evidence that the client has
+   received and processed them.  Operational use of this evidence is
+   discussed in Section 12.4.
 
 4.5.  Data Carried in Channels
 
@@ -947,12 +946,11 @@ Table of Contents
    eliciting and thus a packet containing only them does not count as
    in-flight.
 
-   The server maintains a full view of the traffic received by the
-   client via the MC_ACK (Section 10.6) frames and ACK frames it
-   receives, and can detect loss experienced by the client.  Under
-   sustained persistent loss that exceeds server-configured thresholds,
-   the server SHOULD instruct the client to leave channels as
-   appropriate to avoid having the client continue to see sustained
+   The server uses MC_ACK and ACK frames as feedback about traffic
+   received by the client and can use that feedback to infer loss.
+   Under sustained persistent loss that exceeds server-configured
+   thresholds, the server SHOULD instruct the client to leave channels
+   as appropriate to avoid having the client continue to see sustained
    persistent loss.
 
    Under sustained persistent loss that exceeds client-configured
@@ -1092,13 +1090,10 @@ Table of Contents
    MC_STATE frame with State LEFT and an appropriate Reason Code, such
    as LIMIT_VIOLATION if its new limits no longer allow it.
 
-   The server SHOULD take notice of migrating clients as the delay that
-   is being caused by rejoining a multicast group can lead to exceeding
-   the expected Max ACK Delay, which a server might interpret as a loss
-   of multicast connectivity.  Instead, the server SHOULD treat all
-   multicast channels of a client whose unicast connection just migrated
-   as if it had just joined these channels initially and allow for ample
-   time before expecting the first MC_ACK frames.
+   Because migration can change multicast reachability and require the
+   client to rejoin a multicast group, the server SHOULD treat each
+   previously joined channel as a new pending multicast attempt and
+   handle validation and cutover as described in Section 12.4.
 
 10.  New Frames
 
@@ -1184,7 +1179,7 @@ Table of Contents
    *  Max Authentication Delay: The maximum time, in microseconds, from
       receipt of a channel packet until the packet is expected to become
       authenticated by an accepted MC_INTEGRITY frame.  See
-      Section 12.8.
+      Section 12.9.
 
    *  Max ACK Delay: The maximum amount of time, in microseconds, that a
       client can intentionally delay sending an MC_ACK frame for ack-
@@ -1780,8 +1775,12 @@ Table of Contents
    With broadcast video, this usually means a new stream is necessary
    for every video segment or group of video frames since new clients
    will join throughout the broadcast, whereas for video conferencing,
-   it could be possible to start a new stream whenever new clients join
-   the conference without needing a new stream per object.
+   it might be sufficient to start a new stream only when a new client
+   joins the conference.
+
+   Starting a new stream for a video segment does not require creating a
+   new multicast channel; a channel can carry many such streams over its
+   lifetime.
 
 12.2.  Application Use Cases
 
@@ -1935,7 +1934,90 @@ Table of Contents
    ID when the client has advertised support for this extended
    functionality.
 
-12.4.  Moving Clients Between Channels
+12.4.  Multicast Delivery Validation and Cutover
+
+   Joining a multicast channel and validating multicast delivery are
+   separate events.  An MC_STATE frame with State JOINED indicates that
+   the client has accepted the join request and established local state
+   for the channel.  It does not by itself demonstrate that channel
+   packets reach the client or that the client can decrypt,
+   authenticate, and process those packets.  A server MUST NOT treat an
+   MC_STATE frame with State JOINED as evidence that multicast delivery
+   is working.
+
+   Overlapping unicast and multicast delivery can avoid interruption or
+   delay while multicast delivery is being attempted, but it consumes
+   additional server and network capacity.  Whether and to what extent
+   to use overlapping delivery is an operational decision.  In
+   particular, overlapping unicast delivery might be inappropriate when
+   sending the same data separately to every client would overload the
+   server or network.
+
+   When a server uses unicast delivery during a multicast attempt, it
+   SHOULD continue delivering corresponding application data over the
+   associated unicast connection until it has positive evidence that
+   multicast delivery is working for that client.
+
+   Once multicast delivery has been validated using MC_ACK evidence, the
+   server SHOULD stop or reduce corresponding unicast delivery.  The
+   policy for treating multicast delivery as validated is application-
+   specific.  It can require acknowledgment of one or more channel
+   packets, sustained acknowledgment over a period of time, acceptable
+   loss or ECN feedback, or other application-specific conditions.  If
+   sufficient MC_ACK evidence is not received, the server needs to
+   decide whether to keep probing the multicast path or to stop the
+   attempt for that client.  Keeping the client joined can allow
+   multicast delivery to start working later without another join
+   request, but it consumes client and server state, can count against
+   the client's advertised limits, and can require the server to
+   continue sending control information such as MC_INTEGRITY frames.
+   Sending MC_LEAVE releases those resources and avoids continued
+   multicast traffic or probing for that client, but gives up the
+   opportunity for that join attempt to succeed later.  A client that is
+   willing to remain joined to a channel SHOULD NOT leave the channel
+   solely because it receives no channel data for an extended period.
+   This enables multicast-capable networks to perform popularity-based
+   admission control for multicast channels.
+
+   A server can use an implementation-specific validation window to
+   decide when to stop treating a joined channel as a pending multicast
+   attempt.  The validation window does not control unicast delivery; it
+   only determines when the server changes strategy, such as by sending
+   MC_LEAVE, reducing probe traffic, or retrying multicast later.  The
+   window ought to account for multicast group join latency, packet
+   transmission and authentication delay, the Max ACK Delay advertised
+   for the channel, RTT on the associated unicast connection, and
+   expected packet loss or reordering.
+
+   During cutover, a server needs to account for duplicate delivery.
+   Duplicate STREAM data is handled as described in Section 4.6.  For
+   DATAGRAM frames or application formats without transport-level
+   duplicate suppression, application protocols or servers need to
+   ensure that duplicate delivery during the validation window is safe
+   or can be detected and ignored.
+
+   The absence of MC_ACK frames is not by itself a precise fault signal.
+   After the server has sent ack-eliciting channel packets, lack of
+   MC_ACK feedback can indicate that no channel packets reached the
+   client, that the client received channel packets but could not
+   decrypt, authenticate, or process them, or that MC_ACK feedback has
+   been delayed or lost.  In all of these cases, multicast delivery
+   remains unvalidated.
+
+   If a client abandons a joined channel because it receives channel
+   packets but cannot process them, it SHOULD send an MC_STATE frame
+   with State LEFT and a Reason Code that describes the cause.
+   UNSYNCHRONIZED_PROPERTIES is used when the client cannot decrypt
+   packets because the channel properties, packet number state, or
+   channel key state are not synchronized with the server.
+   AUTHENTICATION_DELAY_EXCEEDED is used when packets cannot be
+   authenticated within the buffering interval the client is willing to
+   support.  EXCESSIVE_SPURIOUS_TRAFFIC is used when packets received
+   for the channel's network address cannot be associated with the
+   joined channel or otherwise appear to be unrelated, corrupted,
+   misconfigured, or attacker-injected traffic.
+
+12.5.  Moving Clients Between Channels
 
    MC_LEAVE and MC_RETIRE take effect immediately when processed by the
    receiver.  These frames do not provide a mechanism for draining a
@@ -1952,10 +2034,14 @@ Table of Contents
    unicast connection or the new channel, and then send MC_LEAVE or
    MC_RETIRE for the old channel.
 
-12.5.  Graceful Degradation
+12.6.  Graceful Degradation
 
-   Clients with multicast QUIC support can stop accepting multicast for
-   a variety of reasons.
+   Multicast delivery can become unavailable to a client for a variety
+   of reasons.
+
+   When this causes delivery to fall back to unicast, the available
+   unicast capacity might not sustain the delivery rate previously
+   provided over multicast.
 
    Applications like live broadcast-scale video that rely on multicast
    QUIC may benefit from anticipating that clients might stop using
@@ -1978,7 +2064,7 @@ Table of Contents
    multicast transport is providing and the Adaptive Bitrate algorithms
    the player is using.
 
-12.5.1.  Circuit Breakers
+12.6.1.  Correlated Multicast Failure and Circuit Breakers
 
    Operators of multicast QUIC services should consider that some
    networks may implement circuit breakers such as the one described in
@@ -1986,14 +2072,24 @@ Table of Contents
    features that might cut off previously operational multicast
    transport under certain conditions.
 
-   The servers will notice the transport loss from the lack of MC_ACK
-   frames from receivers in a network that cut off multicast transport,
-   but it may be beneficial when possible in a transport cutoff event
-   correlated across many clients to pace the recovery response
-   according to aggregations of the affected clients so that a sudden
-   unicast storm doesn't overload the network further.
+   A simultaneous loss of MC_ACK feedback from multiple clients that
+   were previously acknowledging channel packets can indicate a
+   correlated multicast delivery failure.  If the server initiates
+   unicast fallback for all affected clients at once, the resulting
+   surge in packet generation, encryption, connection processing, and
+   network traffic can overload the server or a shared network
+   bottleneck.
 
-12.6.  Server Scalability
+   Per-connection congestion control does not ensure that the aggregate
+   initial surge remains within the capacity of the server or a shared
+   network bottleneck.  A server SHOULD therefore apply server-wide
+   pacing or admission control when starting or increasing unicast
+   fallback after a correlated multicast failure.  The server MAY
+   stagger fallback across clients, prioritize selected traffic or
+   clients, or initially use lower-rate delivery modes for unicast
+   fallback.
+
+12.7.  Server Scalability
 
    Use of QUIC multicast channels can provide large scalability gains,
    but there still will be significant scaling requirements on server
@@ -2024,7 +2120,7 @@ Table of Contents
    uplink load against the need for timely loss, congestion, ECN, and
    liveness feedback.
 
-12.7.  Address Collisions
+12.8.  Address Collisions
 
    Multicast channels at the network layer are addressed with a source
    IP, a destination group IP address, and a destination UDP port.
@@ -2076,7 +2172,7 @@ Table of Contents
        both packets and throw away the data for the un-joined port,
        causing extra congestion and CPU load for the receiving device.
 
-12.8.  Buffering Unauthenticated Packets
+12.9.  Buffering Unauthenticated Packets
 
    Clients need to buffer multicast packets that have been received but
    not yet authenticated if they want to process those packets after the
@@ -2124,14 +2220,14 @@ Table of Contents
    transmission and by avoiding late retransmission of integrity
    information after the packet's expected usefulness has expired.
 
-12.9.  Spurious Channel Traffic
+12.10.  Spurious Channel Traffic
 
-   A client can receive multicast packets that it cannot associate with
-   a joined channel, that cannot be authenticated using accepted
-   MC_INTEGRITY information, or that cannot be decrypted using an
-   applicable channel secret.  Such packets can be caused by corruption,
-   loss or delay of control information, misconfiguration, or injection
-   by an attacker.
+   A client can receive multicast packets at a network address used by a
+   joined channel that cannot be associated with that channel or that
+   appear to be unrelated, corrupted, misconfigured, or injected by an
+   attacker.  Packets that are awaiting MC_INTEGRITY information within
+   the buffering interval for the channel are not spurious solely
+   because they are not yet authenticated.
 
    A client MAY discard such packets without further processing.  If
    spurious traffic is persistently received for an (S,G) used by one or
